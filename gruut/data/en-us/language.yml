@@ -1,0 +1,49 @@
+---
+
+language:
+  name: "U.S. English"
+  code: "en-us"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt.gz"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  replace:
+    "-": " "
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "&": " and "
+  tokenizer_exclude:
+    - "'"
+    - "’"
+    - "‘"
+
+abbreviations:
+  capt: "captain"
+  co: "company"
+  col: "colonel"
+  dr: "doctor"
+  drs: "doctors"
+  esq: "esquire"
+  ft: "fort"
+  gen: "general"
+  hon: "honorable"
+  jr: "junior"
+  ltd: "limited"
+  lt: "lieutenant"
+  maj: "major"
+  mr: "mister"
+  mrs: "misess"
+  rev: "reverend"
+  sgt: "sergeant"
+  st: "saint"
+

@@ -1,0 +1,5 @@
+__pycache__/
+.mypy_cache/
+*.egg-info/
+/.venv/
+/download/

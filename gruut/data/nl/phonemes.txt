@@ -1,0 +1,68 @@
+# Nederlands Dutch (nl-nl)
+# phoneme example [homophone] [homophone]...
+
+# Sources:
+# https://nl.wiktionary.org/wiki/WikiWoordenboek:Standaardweergave_uitspraak_Nederlands
+# https://en.wikipedia.org/wiki/Dutch_phonology
+
+# Normal vowels
+a h[aa]r
+ɑ k[a]n
+e m[ee]r
+ɛ p[e]t
+i b[i]et ɪ
+o [oo]g
+ɔ [o]s ʌ ʊ
+y [uu]r
+ʏ [u]k
+ø [eu]ro
+u [oe]ver
+ə g[e]makkelijk
+
+# Elongated vowels
+aː j[a]
+ɑː f[a]rm
+eː v[ee]r
+ɛː [oe]ver
+iː anal[y]se ɪ
+ɔː r[o]ze oː
+yː centrif[u]ge
+uː c[oo]l
+œː man[oeu]vre œ
+ʏː res[ea]rch
+
+# Dipthongs
+ɛi [ij]s
+ɑu [au]gurk
+œy [ui]l ʌʊ
+
+# Plosives (stops)
+p [p]as
+b [b]ij
+t [t]ien
+d [d]en
+c [tj]alk
+ʔ na[-]apen
+k [k]at
+ɡ [g]oal g
+
+# Fricatives
+f [f]oto
+v [v]ier
+s [s]ok
+z [z]es
+x [ch]emie
+ɣ [g]at χ
+h [h]eer ɦ
+ʃ [sj]aal
+ʒ [j]am
+
+# Other consonants
+m [m]an
+n [n]ul ɲ
+ŋ to[ng]
+ɱ i[n]fuus
+l [l]ip ɫ
+ɹ [r]ol r
+j [j]as
+w [w]iel ʋ β
