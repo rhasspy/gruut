@@ -27,8 +27,14 @@ class Phonemizer:
     def __init__(self, config, lexicon: typing.Optional[LEXICON_TYPE] = None):
         self.config = config
 
+        # Short pause symbols (commas, etc.)
         self.minor_breaks: typing.Set[str] = set(
             pydash.get(self.config, "symbols.minor_breaks", [])
+        )
+
+        # End of sentence symbol
+        self.major_break: typing.Optional[str] = pydash.get(
+            self.config, "symbols.major_break"
         )
 
         # Case transformation (lower/upper)
@@ -68,7 +74,12 @@ class Phonemizer:
         for word_idx, word in enumerate(words):
             if word in self.minor_breaks:
                 # Minor break (short pause)
-                sentence_prons.append([[str(IPA.BREAK_MINOR)]])
+                sentence_prons.append([[IPA.BREAK_MINOR.value]])
+                continue
+
+            if word == self.major_break:
+                # Major break (sentence boundary)
+                sentence_prons.append([[IPA.BREAK_MAJOR.value]])
                 continue
 
             word_prons = self.lexicon.get(word)

@@ -1,0 +1,24 @@
+---
+
+language:
+  name: "Dutch"
+  code: "nl"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt.gz"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_break: "."
+  replace:
+    "-": " "
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""

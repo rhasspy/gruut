@@ -65,6 +65,7 @@ def do_tokenize(config, args):
     from .toksen import Tokenizer
 
     tokenizer = Tokenizer(config)
+    major_break = pydash.get(config, "symbols.major_break")
 
     writer = jsonlines.Writer(sys.stdout)
     for line in sys.stdin:
@@ -72,8 +73,24 @@ def do_tokenize(config, args):
         if not line:
             continue
 
-        for sentence in tokenizer.tokenize(line):
-            writer.write(dataclasses.asdict(sentence))
+        sentences = list(tokenizer.tokenize(line))
+        raw_words = []
+        clean_words = []
+
+        for sentence in sentences:
+            raw_words.extend(sentence.raw_words)
+            clean_words.extend(sentence.clean_words)
+            if major_break:
+                clean_words.append(major_break)
+
+        writer.write(
+            {
+                "raw_text": line,
+                "raw_words": raw_words,
+                "clean_words": clean_words,
+                "sentences": [dataclasses.asdict(s) for s in sentences],
+            }
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -112,8 +129,8 @@ def do_phonemize(config, args):
         sentence_obj["pronunciation"] = first_pron
 
         # Create string of first pronunciation
-        sentence_obj["pronunciation_text"] = " ".join(
-            " ".join(word_pron) for word_pron in first_pron
+        sentence_obj["pronunciation_text"] = args.word_separator.join(
+            args.phoneme_separator.join(word_pron) for word_pron in first_pron
         )
 
         # Print back out with extra info
@@ -178,6 +195,16 @@ def get_args() -> argparse.Namespace:
         "phonemize", help="Look up or guess word pronunciations from JSONL sentences"
     )
     phonemize_parser.set_defaults(func=do_phonemize)
+    phonemize_parser.add_argument(
+        "--word-separator",
+        default=" ",
+        help="Separator to add between words in output pronunciation (default: space)",
+    )
+    phonemize_parser.add_argument(
+        "--phoneme-separator",
+        default=" ",
+        help="Separator to add between words in output pronunciation (default: space)",
+    )
 
     # ---------------
     # phones2phonemes
