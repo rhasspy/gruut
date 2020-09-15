@@ -67,7 +67,7 @@ def do_tokenize(config, args):
     tokenizer = Tokenizer(config)
     major_break = pydash.get(config, "symbols.major_break")
 
-    writer = jsonlines.Writer(sys.stdout)
+    writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -105,10 +105,12 @@ def do_phonemize(config, args):
     Prints a line of JSON for each input line.
     """
     from .phonemize import Phonemizer
+    from .espeak import ipa_to_espeak
+    from .sampa import ipa_to_sampa
 
     phonemizer = Phonemizer(config)
 
-    writer = jsonlines.Writer(sys.stdout)
+    writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -117,7 +119,9 @@ def do_phonemize(config, args):
         sentence_obj = json.loads(line)
         clean_words = sentence_obj["clean_words"]
 
-        sentence_prons = phonemizer.phonemize(clean_words)
+        sentence_prons = phonemizer.phonemize(
+            clean_words, word_indexes=args.word_indexes
+        )
         sentence_obj["pronunciations"] = sentence_prons
 
         # Pick first pronunciation for each word
@@ -131,6 +135,29 @@ def do_phonemize(config, args):
         # Create string of first pronunciation
         sentence_obj["pronunciation_text"] = args.word_separator.join(
             args.phoneme_separator.join(word_pron) for word_pron in first_pron
+        )
+
+        # Get Sampa pronunciation
+        sentence_obj["sampa"] = [
+            [ipa_to_sampa(phoneme) for phoneme in word_pron] for word_pron in first_pron
+        ]
+
+        sentence_obj["sampa_text"] = " ".join(
+            "".join(word_pron) for word_pron in sentence_obj["sampa"]
+        ).strip()
+
+        # Get eSpeak pronunciation
+        sentence_obj["espeak"] = [
+            [ipa_to_espeak(phoneme) for phoneme in word_pron]
+            for word_pron in first_pron
+        ]
+
+        sentence_obj["espeak_text"] = (
+            "[["
+            + " ".join(
+                "".join(word_pron) for word_pron in sentence_obj["espeak"]
+            ).strip()
+            + "]]"
         )
 
         # Print back out with extra info
@@ -149,7 +176,7 @@ def do_phones_to_phonemes(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = Phonemes.from_text(phonemes_file)
 
-    writer = jsonlines.Writer(sys.stdout)
+    writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
         line = line.strip()
         if line:
@@ -204,6 +231,11 @@ def get_args() -> argparse.Namespace:
         "--phoneme-separator",
         default=" ",
         help="Separator to add between words in output pronunciation (default: space)",
+    )
+    phonemize_parser.add_argument(
+        "--word-indexes",
+        action="store_true",
+        help="Allow word(n) form for specifying nth pronunciation of word from lexicon",
     )
 
     # ---------------

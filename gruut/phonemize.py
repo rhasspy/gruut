@@ -1,6 +1,7 @@
 """Class for getting phonetic pronunciations for cleaned text"""
 import logging
 import os
+import re
 import typing
 from pathlib import Path
 
@@ -17,6 +18,8 @@ _LOGGER = logging.getLogger("gruut.phonemize")
 # List of phonemes for each word
 PRONUNCIATION_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
 
+
+WORD_WITH_INDEX = re.compile(r"^([^_]+)_(\d+)$")
 
 # -----------------------------------------------------------------------------
 
@@ -65,7 +68,7 @@ class Phonemizer:
             _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
 
     def phonemize(
-        self, words: typing.List[str]
+        self, words: typing.List[str], word_indexes: bool = False
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
@@ -82,10 +85,24 @@ class Phonemizer:
                 sentence_prons.append([[IPA.BREAK_MAJOR.value]])
                 continue
 
+            index: typing.Optional[int] = None
+            if word_indexes:
+                index_match = WORD_WITH_INDEX.match(word)
+                if index_match:
+                    word = index_match.group(1)
+                    index = int(index_match.group(2))
+
             word_prons = self.lexicon.get(word)
             if word_prons:
                 # In lexicon
-                sentence_prons.append(word_prons)
+                if index is None:
+                    # All pronunciations
+                    sentence_prons.append(word_prons)
+                else:
+                    # Specific pronunciation.
+                    # Clamp 1-based index.
+                    pron_index = max(0, index - 1) % len(word_prons)
+                    sentence_prons.append([word_prons[pron_index]])
             else:
                 # Need to guess
                 sentence_prons.append([])
@@ -103,6 +120,8 @@ class Phonemizer:
 
             # Fill in missing words
             for word_idx, word in missing_words:
-                sentence_prons[word_idx] = self.lexicon[word]
+                word_prons = self.lexicon.get(word)
+                if word_prons:
+                    sentence_prons[word_idx] = word_prons
 
         return sentence_prons
