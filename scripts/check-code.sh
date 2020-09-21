@@ -11,7 +11,6 @@ if [[ -d "${venv}" ]]; then
 fi
 
 python_files=("${src_dir}/gruut/"*.py)
-python_files+=("${src_dir}/tests/"*.py)
 
 # -----------------------------------------------------------------------------
 

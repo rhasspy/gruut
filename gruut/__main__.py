@@ -8,6 +8,7 @@ import os
 import sys
 from pathlib import Path
 
+import gruut_ipa
 import jsonlines
 import pydash
 import yaml
@@ -105,8 +106,6 @@ def do_phonemize(config, args):
     Prints a line of JSON for each input line.
     """
     from .phonemize import Phonemizer
-    from .espeak import ipa_to_espeak
-    from .sampa import ipa_to_sampa
 
     phonemizer = Phonemizer(config)
 
@@ -139,7 +138,8 @@ def do_phonemize(config, args):
 
         # Get Sampa pronunciation
         sentence_obj["sampa"] = [
-            [ipa_to_sampa(phoneme) for phoneme in word_pron] for word_pron in first_pron
+            [gruut_ipa.ipa_to_sampa(phoneme) for phoneme in word_pron]
+            for word_pron in first_pron
         ]
 
         sentence_obj["sampa_text"] = " ".join(
@@ -148,7 +148,7 @@ def do_phonemize(config, args):
 
         # Get eSpeak pronunciation
         sentence_obj["espeak"] = [
-            [ipa_to_espeak(phoneme) for phoneme in word_pron]
+            [gruut_ipa.ipa_to_espeak(phoneme) for phoneme in word_pron]
             for word_pron in first_pron
         ]
 
@@ -169,12 +169,10 @@ def do_phonemize(config, args):
 
 def do_phones_to_phonemes(config, args):
     """Transform/group phones in a pronuncation into language phonemes"""
-    from . import Phonemes
-
     phonemes_path = Path(pydash.get(config, "language.phonemes"))
 
     with open(phonemes_path, "r") as phonemes_file:
-        phonemes = Phonemes.from_text(phonemes_file)
+        phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:

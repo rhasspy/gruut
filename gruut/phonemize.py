@@ -6,9 +6,9 @@ import typing
 from pathlib import Path
 
 import pydash
+from gruut_ipa import IPA
 from phonetisaurus import predict
 
-from . import IPA
 from .utils import LEXICON_TYPE, load_lexicon, maybe_gzip_open
 
 # -----------------------------------------------------------------------------
@@ -68,7 +68,12 @@ class Phonemizer:
             _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
 
     def phonemize(
-        self, words: typing.List[str], word_indexes: bool = False
+        self,
+        words: typing.List[str],
+        word_indexes: bool = False,
+        guess_word: typing.Optional[
+            typing.Callable[[str], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
+        ] = None,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
@@ -93,6 +98,14 @@ class Phonemizer:
                     index = int(index_match.group(2))
 
             word_prons = self.lexicon.get(word)
+
+            if not word_prons and guess_word:
+                # Use supplied function
+                word_prons = guess_word(word)
+                if word_prons:
+                    # Update lexicon
+                    self.lexicon[word] = word_prons
+
             if word_prons:
                 # In lexicon
                 if index is None:
