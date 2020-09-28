@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pydash
 import yaml
+
 from gruut_ipa import Phonemes
 
 from .phonemize import Phonemizer

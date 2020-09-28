@@ -19,6 +19,7 @@ symbols:
     - ":"
     - ";"
   major_break: "."
+  question_mark: true
   replace:
     "-": " "
     "[\\<\\>\\(\\)\\[\\]\"]+": ""

@@ -31,8 +31,19 @@ class Tokenizer:
         self.config = config
         self.language = pydash.get(self.config, "language.code")
 
+        # Short pause symbols (commas, etc.)
         self.minor_breaks: typing.Set[str] = set(
             pydash.get(self.config, "symbols.minor_breaks", [])
+        )
+
+        # End of sentence symbol
+        self.major_break: typing.Optional[str] = pydash.get(
+            self.config, "symbols.major_break"
+        )
+
+        # If True, keep question marks
+        self.question_mark = bool(
+            pydash.get(self.config, "symbols.question_mark", False)
         )
 
         # Regex to match numbers (digits)
@@ -115,8 +126,15 @@ class Tokenizer:
             for token in sentence:
                 raw_words.append(token.text)
 
-                if token.text in self.minor_breaks:
-                    # Keep minor breaks (short pauses)
+                if (token.text in self.minor_breaks) or (
+                    token.text == self.major_break
+                ):
+                    # Keep breaks (pauses)
+                    clean_words.append(token.text)
+                    continue
+
+                if self.question_mark and token.text == "?":
+                    # Keep question marks
                     clean_words.append(token.text)
                     continue
 

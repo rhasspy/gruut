@@ -8,10 +8,11 @@ import os
 import sys
 from pathlib import Path
 
-import gruut_ipa
 import jsonlines
 import pydash
 import yaml
+
+import gruut_ipa
 
 from .utils import env_constructor
 
@@ -66,7 +67,6 @@ def do_tokenize(config, args):
     from .toksen import Tokenizer
 
     tokenizer = Tokenizer(config)
-    major_break = pydash.get(config, "symbols.major_break")
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
@@ -81,8 +81,6 @@ def do_tokenize(config, args):
         for sentence in sentences:
             raw_words.extend(sentence.raw_words)
             clean_words.extend(sentence.clean_words)
-            if major_break:
-                clean_words.append(major_break)
 
         writer.write(
             {

@@ -6,8 +6,9 @@ import typing
 from pathlib import Path
 
 import pydash
-from gruut_ipa import IPA
 from phonetisaurus import predict
+
+from gruut_ipa import IPA
 
 from .utils import LEXICON_TYPE, load_lexicon, maybe_gzip_open
 
@@ -38,6 +39,11 @@ class Phonemizer:
         # End of sentence symbol
         self.major_break: typing.Optional[str] = pydash.get(
             self.config, "symbols.major_break"
+        )
+
+        # If True, question marks add rising intonation to the previous word
+        self.question_mark = bool(
+            pydash.get(self.config, "symbols.question_mark", False)
         )
 
         # Case transformation (lower/upper)
@@ -88,6 +94,18 @@ class Phonemizer:
             if word == self.major_break:
                 # Major break (sentence boundary)
                 sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+                continue
+
+            if word == "?":
+                if self.question_mark and word_idx > 0:
+                    # Add rising intonation to previous word
+                    prev_prons = sentence_prons[word_idx - 1]
+                    for prev_idx, prev_pron in enumerate(prev_prons):
+                        prev_prons[prev_idx] = [IPA.INTONATION_RISING.value] + list(
+                            prev_pron
+                        )
+
+                # Skip question mark
                 continue
 
             index: typing.Optional[int] = None
