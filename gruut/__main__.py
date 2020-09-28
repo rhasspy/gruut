@@ -117,7 +117,7 @@ def do_phonemize(config, args):
         clean_words = sentence_obj["clean_words"]
 
         sentence_prons = phonemizer.phonemize(
-            clean_words, word_indexes=args.word_indexes
+            clean_words, word_indexes=args.word_indexes, word_breaks=args.word_breaks
         )
         sentence_obj["pronunciations"] = sentence_prons
 
@@ -232,6 +232,11 @@ def get_args() -> argparse.Namespace:
         "--word-indexes",
         action="store_true",
         help="Allow word(n) form for specifying nth pronunciation of word from lexicon",
+    )
+    phonemize_parser.add_argument(
+        "--word-breaks",
+        action="store_true",
+        help="Add the IPA word break symbol (#) between each word",
     )
 
     # ---------------

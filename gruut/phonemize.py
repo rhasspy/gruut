@@ -80,34 +80,46 @@ class Phonemizer:
         guess_word: typing.Optional[
             typing.Callable[[str], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
         ] = None,
+        word_breaks: bool = False,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
         missing_words: typing.List[typing.Tuple[int, str]] = []
+        between_words = False
 
         for word_idx, word in enumerate(words):
             if word in self.minor_breaks:
                 # Minor break (short pause)
                 sentence_prons.append([[IPA.BREAK_MINOR.value]])
+                between_words = False
                 continue
 
             if word == self.major_break:
                 # Major break (sentence boundary)
                 sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+                between_words = False
                 continue
 
             if word == "?":
-                if self.question_mark and word_idx > 0:
+                if self.question_mark and sentence_prons:
                     # Add rising intonation to previous word
-                    prev_prons = sentence_prons[word_idx - 1]
+                    prev_prons = sentence_prons[-1]
                     for prev_idx, prev_pron in enumerate(prev_prons):
                         prev_prons[prev_idx] = [IPA.INTONATION_RISING.value] + list(
                             prev_pron
                         )
 
-                # Skip question mark
+                # Assume major break
+                sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+                between_words = False
                 continue
 
+            if word_breaks and between_words:
+                # Add IPA word break symbol between words
+                sentence_prons.append([[IPA.BREAK_WORD.value]])
+
+            # Actual word
+            between_words = True
             index: typing.Optional[int] = None
             if word_indexes:
                 index_match = WORD_WITH_INDEX.match(word)
