@@ -29,6 +29,9 @@ symbols:
     - "’"
     - "‘"
 
+numbers:
+  currency: USD
+
 abbreviations:
   capt: "captain"
   co: "company"

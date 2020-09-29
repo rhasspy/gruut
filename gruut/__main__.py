@@ -74,7 +74,13 @@ def do_tokenize(config, args):
         if not line:
             continue
 
-        sentences = list(tokenizer.tokenize(line))
+        sentences = list(
+            tokenizer.tokenize(
+                line,
+                number_converters=args.number_converters,
+                replace_currency=(not args.disable_currency),
+            )
+        )
         raw_words = []
         clean_words = []
 
@@ -209,6 +215,16 @@ def get_args() -> argparse.Namespace:
     tokenize_parser = sub_parsers.add_parser(
         "tokenize", help="Sentencize/tokenize raw text, clean, and expand numbers"
     )
+    tokenize_parser.add_argument(
+        "--disable-currency",
+        action="store_true",
+        help="Disable automatic replacement of currency with words (e.g., $1 -> one dollar)",
+    )
+    tokenize_parser.add_argument(
+        "--number-converters",
+        action="store_true",
+        help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
+    )
     tokenize_parser.set_defaults(func=do_tokenize)
 
     # ---------
@@ -231,7 +247,7 @@ def get_args() -> argparse.Namespace:
     phonemize_parser.add_argument(
         "--word-indexes",
         action="store_true",
-        help="Allow word(n) form for specifying nth pronunciation of word from lexicon",
+        help="Allow word_n form for specifying nth pronunciation of word from lexicon",
     )
     phonemize_parser.add_argument(
         "--word-breaks",
