@@ -36,9 +36,9 @@ class Phonemizer:
             pydash.get(self.config, "symbols.minor_breaks", [])
         )
 
-        # End of sentence symbol
-        self.major_break: typing.Optional[str] = pydash.get(
-            self.config, "symbols.major_break"
+        # End of sentence symbols
+        self.major_breaks: typing.Set[str] = set(
+            pydash.get(self.config, "symbols.major_breaks", [])
         )
 
         # If True, question marks add rising intonation to the previous word
@@ -94,25 +94,25 @@ class Phonemizer:
                 between_words = False
                 continue
 
-            if word == self.major_break:
+            if word in self.major_breaks:
                 # Major break (sentence boundary)
                 sentence_prons.append([[IPA.BREAK_MAJOR.value]])
                 between_words = False
                 continue
 
-            if word == "?":
-                if self.question_mark and sentence_prons:
-                    # Add rising intonation to previous word
-                    prev_prons = sentence_prons[-1]
-                    for prev_idx, prev_pron in enumerate(prev_prons):
-                        prev_prons[prev_idx] = [IPA.INTONATION_RISING.value] + list(
-                            prev_pron
-                        )
+            # if word == "?":
+            #     if self.question_mark and sentence_prons:
+            #         # Add rising intonation to previous word
+            #         prev_prons = sentence_prons[-1]
+            #         for prev_idx, prev_pron in enumerate(prev_prons):
+            #             prev_prons[prev_idx] = [IPA.INTONATION_RISING.value] + list(
+            #                 prev_pron
+            #             )
 
-                # Assume major break
-                sentence_prons.append([[IPA.BREAK_MAJOR.value]])
-                between_words = False
-                continue
+            #     # Assume major break
+            #     sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+            #     between_words = False
+            #     continue
 
             if word_breaks and between_words:
                 # Add IPA word break symbol between words

@@ -18,8 +18,10 @@ symbols:
     - ","
     - ":"
     - ";"
-  major_break: "."
-  question_mark: true
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
   replace:
     "-": " "
     "[\\<\\>\\(\\)\\[\\]\"]+": ""

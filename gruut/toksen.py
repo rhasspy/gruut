@@ -37,9 +37,9 @@ class Tokenizer:
             pydash.get(self.config, "symbols.minor_breaks", [])
         )
 
-        # End of sentence symbol
-        self.major_break: typing.Optional[str] = pydash.get(
-            self.config, "symbols.major_break"
+        # End of sentence symbols
+        self.major_breaks: typing.Set[str] = set(
+            pydash.get(self.config, "symbols.major_breaks", [])
         )
 
         # If True, keep question marks
@@ -68,7 +68,13 @@ class Tokenizer:
         if not babel_locale_str:
             # en-us -> en_US
             locale_parts = self.language.split("-", maxsplit=1)
-            babel_locale_str = locale_parts[0].lower() + "_" + locale_parts[1].upper()
+
+            if len(locale_parts) < 2:
+                babel_locale_str = locale_parts[0]
+            else:
+                babel_locale_str = (
+                    locale_parts[0].lower() + "_" + locale_parts[1].upper()
+                )
 
         self.babel_locale_str = babel_locale_str
         self.babel_locale = babel.Locale(self.babel_locale_str)
@@ -150,6 +156,7 @@ class Tokenizer:
 
         # Process each sentence
         last_token_currency: typing.Optional[str] = None
+        last_token_was_break: bool = False
 
         for sentence in doc.sents:
             raw_words = []
@@ -165,16 +172,23 @@ class Tokenizer:
                     continue
 
                 if (token.text in self.minor_breaks) or (
-                    token.text == self.major_break
+                    token.text in self.major_breaks
                 ):
                     # Keep breaks (pauses)
-                    clean_words.append(token.text)
+                    if not last_token_was_break:
+                        clean_words.append(token.text)
+
+                        # Avoid multiple breaks
+                        last_token_was_break = True
+
                     continue
 
-                if self.question_mark and token.text == "?":
-                    # Keep question marks
-                    clean_words.append(token.text)
-                    continue
+                last_token_was_break = False
+
+                # if self.question_mark and token.text == "?":
+                #     # Keep question marks
+                #     clean_words.append(token.text)
+                #     continue
 
                 if (
                     token.is_space
