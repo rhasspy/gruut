@@ -14,6 +14,8 @@ g2p:
 symbols:
   casing: "lower"
   number_regex: "^-?\\d+([,.]\\d+)*$"
+  token_split: "\\s+"
+  token_join: " "
   minor_breaks:
     - ","
     - ":"
@@ -23,5 +25,14 @@ symbols:
     - "?"
     - "!"
   replace:
-    "-": " "
     "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"

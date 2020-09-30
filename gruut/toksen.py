@@ -7,11 +7,11 @@ from dataclasses import dataclass, field
 import babel
 import babel.numbers
 import pydash
-import spacy
 from num2words import num2words
-from spacy.tokens import Doc
 
 _LOGGER = logging.getLogger("gruut.toksen")
+
+_NON_WORD = re.compile(r"^(\W|_)+$")
 
 # -----------------------------------------------------------------------------
 
@@ -47,6 +47,19 @@ class Tokenizer:
             pydash.get(self.config, "symbols.question_mark", False)
         )
 
+        # Regex to split words
+        self.token_split_pattern = re.compile(
+            pydash.get(self.config, "symbols.token_split", r"\s+")
+        )
+
+        # String to join words
+        self.token_join = pydash.get(self.config, "symbols.token_join", " ")
+
+        # Characters that will cause breaks within words
+        self.punctuations: typing.Set[str] = set(
+            pydash.get(self.config, "symbols.punctuations", [])
+        )
+
         # Regex to match numbers (digits)
         self.number_pattern: typing.Optional[re.Pattern] = None
         self.number_converter_pattern: typing.Optional[re.Pattern] = None
@@ -55,9 +68,12 @@ class Tokenizer:
         if number_regex:
             self.number_pattern = re.compile(number_regex)
 
+            # Slip _converter into the regex
             if number_regex[-1] == "$":
+                # Tuck behind end of expression $
                 number_converter_regex = number_regex[:-1] + r"\w+$"
             else:
+                # Append directly
                 number_converter_regex = number_regex + r"\w+$"
 
             _LOGGER.debug("Number converter regex: %s", number_converter_regex)
@@ -119,27 +135,6 @@ class Tokenizer:
             # short form -> [expansion words]
             self.abbreviations[abbrev_key] = abbrev_value
 
-        if nlp:
-            self.nlp = nlp
-        else:
-            # Load spaCy model
-            _LOGGER.debug("Loading spaCy model for %s", self.language)
-            self.nlp = spacy.load(self.language, disable=["tagger", "parser", "ner"])
-            self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
-
-            self.tokenizer_exclude = set(
-                pydash.get(self.config, "symbols.tokenizer_exclude", [])
-            )
-
-            if self.tokenizer_exclude:
-                # Exclude tokenizer rules with specific characters (e.g., apostrophes for contractions)
-                # https://stackoverflow.com/questions/59579049/how-to-tell-spacy-not-to-split-any-words-with-apostrophs-using-retokenizer
-                self.nlp.tokenizer.rules = {
-                    key: value
-                    for key, value in self.nlp.tokenizer.rules.items()
-                    if self.tokenizer_exclude.isdisjoint(set(key))
-                }
-
     def tokenize(
         self, text: str, number_converters: bool = False, replace_currency: bool = True
     ) -> typing.Iterable[Sentence]:
@@ -148,35 +143,56 @@ class Tokenizer:
         for pattern, replacement in self.replacements:
             text = pattern.sub(replacement, text)
 
-        # Increase max length as necessary.
-        # This should be fine since we're not using the parser or NER.
-        self.nlp.max_length = max(self.nlp.max_length, len(text))
+        # Tokenize
+        raw_tokens = self.token_split_pattern.split(text)
 
-        doc: Doc = self.nlp(text)
+        # Break raw tokens into sentences and sub-tokens according to
+        # punctuation.
+        # Performance is going to be bad, but this is a first pass.
+        sentence_tokens: typing.List[typing.List[str]] = [[]]
+        for token in raw_tokens:
+            # Word or word with punctuation or currency symbol
+            sub_tokens = [""]
+            for c in token:
+                if (c in self.punctuations) or (c in self.currency_names):
+                    sub_tokens.append(c)
+                    sub_tokens.append("")
+                else:
+                    sub_tokens[-1] += c
+
+            sentence_tokens[-1].extend([t for t in sub_tokens if t])
+
+            if token in self.major_breaks:
+                # New sentence
+                sentence_tokens.append([])
 
         # Process each sentence
         last_token_currency: typing.Optional[str] = None
         last_token_was_break: bool = False
 
-        for sentence in doc.sents:
+        for sentence in sentence_tokens:
             raw_words = []
             clean_words = []
 
             # Process each token
             for token in sentence:
-                raw_words.append(token.text)
+                token = token.strip()
 
-                if token.is_currency and replace_currency:
-                    # Token will influence next number
-                    last_token_currency = token.text
+                if not token:
+                    # Skip empty tokens
                     continue
 
-                if (token.text in self.minor_breaks) or (
-                    token.text in self.major_breaks
-                ):
+                raw_words.append(token)
+
+                if (token in self.currency_names) and replace_currency:
+                    # Token will influence next number
+                    last_token_currency = token
+                    continue
+
+                if (token in self.minor_breaks) or (token in self.major_breaks):
                     # Keep breaks (pauses)
                     if not last_token_was_break:
-                        clean_words.append(token.text)
+                        clean_words.append(token)
 
                         # Avoid multiple breaks
                         last_token_was_break = True
@@ -185,17 +201,12 @@ class Tokenizer:
 
                 last_token_was_break = False
 
-                # if self.question_mark and token.text == "?":
+                # if self.question_mark and token == "?":
                 #     # Keep question marks
-                #     clean_words.append(token.text)
+                #     clean_words.append(token)
                 #     continue
 
-                if (
-                    token.is_space
-                    or token.is_punct
-                    or token.like_url
-                    or token.like_email
-                ):
+                if (token in self.punctuations) or (_NON_WORD.match(token)):
                     # Skip non-words
                     continue
 
@@ -204,20 +215,20 @@ class Tokenizer:
                 # Try to process as a number first
                 number_match = None
                 if number_converters and self.number_converter_pattern:
-                    number_match = self.number_converter_pattern.match(token.text)
+                    number_match = self.number_converter_pattern.match(token)
                 elif self.number_pattern:
-                    number_match = self.number_pattern.match(token.text)
+                    number_match = self.number_pattern.match(token)
 
                 if number_match:
                     try:
-                        digit_str = token.text
+                        digit_str = token
                         num2words_kwargs = {"lang": self.num2words_lang}
 
                         if number_converters:
                             # Look for 123_converter pattern.
                             # Available num2words converters are:
                             # cardinal (default), ordinal, ordinal_num, year, currency
-                            digit_str, converter_str = token.text.split("_", maxsplit=1)
+                            digit_str, converter_str = token.split("_", maxsplit=1)
 
                             if converter_str:
                                 num2words_kwargs["to"] = converter_str
@@ -262,24 +273,26 @@ class Tokenizer:
                                 # Remove 'zero cents' part
                                 num_str = num_str.split("|", maxsplit=1)[0]
 
-                        # Tokenize number string itself, discarding non-wods
-                        num_doc = self.nlp(num_str)
-                        for num_sent in num_doc.sents:
-                            for num_token in num_sent:
-                                if num_token.is_space or num_token.is_punct:
-                                    # Skip non-words
-                                    continue
+                        # Remove all non-word characters
+                        num_str = re.sub(r"\W", " ", num_str).strip()
 
-                                clean_words.append(num_token.text)
+                        # Tokenize number string itself
+                        num_tokens = self.token_split_pattern.split(num_str)
+
+                        if self.casing:
+                            # Apply casing transformation
+                            num_tokens = [self.casing(t) for t in num_tokens]
+
+                        clean_words.extend(num_tokens)
 
                         # Successfully processed as a number
                         process_as_word = False
                     except Exception:
-                        _LOGGER.exception(token.text)
+                        _LOGGER.exception(token)
 
                 if process_as_word:
                     # Not a number
-                    words = [token.text]
+                    words = [token]
 
                     # Apply casing transformation
                     if self.casing:
@@ -305,6 +318,8 @@ class Tokenizer:
 
             # -----------------------------------------------------------------
 
+            raw_text = self.token_join.join(sentence)
+
             yield Sentence(
-                raw_text=sentence.text, raw_words=raw_words, clean_words=clean_words
+                raw_text=raw_text, raw_words=raw_words, clean_words=clean_words
             )

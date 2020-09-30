@@ -13,6 +13,8 @@ g2p:
 
 symbols:
   casing: "lower"
+  token_split: "\\s+"
+  token_join: " "
   number_regex: "^-?\\d+([,.]\\d+)*$"
   minor_breaks:
     - ","
@@ -23,13 +25,18 @@ symbols:
     - "?"
     - "!"
   replace:
-    "-": " "
     "[\\<\\>\\(\\)\\[\\]\"]+": ""
     "&": " and "
-  tokenizer_exclude:
-    - "'"
-    - "’"
-    - "‘"
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"
 
 numbers:
   currency: USD
@@ -53,4 +60,3 @@ abbreviations:
   rev: "reverend"
   sgt: "sergeant"
   st: "saint"
-

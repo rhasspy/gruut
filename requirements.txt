@@ -5,4 +5,3 @@ num2words==0.5.10
 phonetisaurus==0.0.1
 pydash==4.7.6
 pyyaml==5.3
-spacy==2.3.2
