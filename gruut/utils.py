@@ -1,5 +1,6 @@
 """Utility methods for gruut"""
 import gzip
+import itertools
 import os
 import re
 import typing
@@ -88,6 +89,16 @@ def maybe_gzip_open(
         return gzip.open(path_or_str, gzip_mode)
 
     return open(path_or_str, mode)
+
+
+# -----------------------------------------------------------------------------
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 # -----------------------------------------------------------------------------

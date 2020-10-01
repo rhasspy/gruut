@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 
 import jsonlines
@@ -14,7 +15,7 @@ import yaml
 
 import gruut_ipa
 
-from .utils import env_constructor
+from .utils import env_constructor, pairwise
 
 # -----------------------------------------------------------------------------
 
@@ -199,6 +200,67 @@ def do_phones_to_phonemes(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_coverage(config, args):
+    """Get phoneme coverage"""
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+
+    # List of possible phonemes in the language
+    phonemes = [p.text for p in gruut_lang.phonemes]
+
+    _LOGGER.debug("Getting phoneme pairs from lexicon")
+
+    # Get set of phoneme pairs from the lexicon.
+    # This is done instead of using all possible phoneme pairs, because there
+    # are many pairs that either humans cannot produce or are not used.
+    # We assume the lexicon will contain an example of each useful pairs.
+    all_pairs = set()
+    for word_prons in gruut_lang.phonemizer.lexicon.values():
+        for word_pron in word_prons:
+            all_pairs.update(pairwise(word_pron))
+
+    single_counts = Counter()
+    pair_counts = Counter()
+
+    # Process output from phonemize command
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+
+        # JSON object with "pronunciation" property
+        phonemize_obj = json.loads(line)
+        sentence_prons = []
+        for word_pron in phonemize_obj.get("pronunciation", []):
+            word_pron = [p for p in word_pron if not gruut_ipa.IPA.is_break(p)]
+            sentence_prons.extend(word_pron)
+
+        # Count single phonemes
+        for p in sentence_prons:
+            single_counts[p] += 1
+
+        # Count phoneme pairs
+        for p1, p2 in pairwise(sentence_prons):
+            pair_counts[(p1, p2)] += 1
+
+    # Print coverage report
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    writer.write(
+        {
+            "singles": {p: single_counts[p] for p in phonemes},
+            "pairs": {" ".join(pair): pair_counts[pair] for pair in all_pairs},
+            "coverage": {
+                "single": len(single_counts) / len(phonemes),
+                "pair": len(pair_counts) / len(all_pairs),
+            },
+        }
+    )
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -268,8 +330,23 @@ def get_args() -> argparse.Namespace:
         help="Keep primary/secondary stress markers",
     )
 
+    # --------
+    # coverage
+    # --------
+    coverage_parser = sub_parsers.add_parser(
+        "coverage", help="Calculate coverage of phoneme singletons and pairs"
+    )
+    coverage_parser.set_defaults(func=do_coverage)
+
+    # ----------------
     # Shared arguments
-    for sub_parser in [tokenize_parser, phonemize_parser, phones2phonemes_parser]:
+    # ----------------
+    for sub_parser in [
+        tokenize_parser,
+        phonemize_parser,
+        phones2phonemes_parser,
+        coverage_parser,
+    ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
         )
