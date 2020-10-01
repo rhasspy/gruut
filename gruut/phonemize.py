@@ -87,7 +87,7 @@ class Phonemizer:
         missing_words: typing.List[typing.Tuple[int, str]] = []
         between_words = False
 
-        for word_idx, word in enumerate(words):
+        for word in words:
             if word in self.minor_breaks:
                 # Minor break (short pause)
                 sentence_prons.append([[IPA.BREAK_MINOR.value]])
@@ -148,8 +148,8 @@ class Phonemizer:
                     sentence_prons.append([word_prons[pron_index]])
             else:
                 # Need to guess
+                missing_words.append((len(sentence_prons), word))
                 sentence_prons.append([])
-                missing_words.append((word_idx, word))
 
         words_to_guess = set(w for _, w in missing_words)
 
