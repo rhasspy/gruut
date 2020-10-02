@@ -87,14 +87,26 @@ class Phonemizer:
         missing_words: typing.List[typing.Tuple[int, str]] = []
         between_words = False
 
+        if word_breaks:
+            # Add initial word break
+            sentence_prons.append([[IPA.BREAK_WORD.value]])
+
         for word in words:
             if word in self.minor_breaks:
+                if word_breaks and between_words:
+                    # Add end of word break
+                    sentence_prons.append([[IPA.BREAK_WORD.value]])
+
                 # Minor break (short pause)
                 sentence_prons.append([[IPA.BREAK_MINOR.value]])
                 between_words = False
                 continue
 
             if word in self.major_breaks:
+                if word_breaks and between_words:
+                    # Add end of word break
+                    sentence_prons.append([[IPA.BREAK_WORD.value]])
+
                 # Major break (sentence boundary)
                 sentence_prons.append([[IPA.BREAK_MAJOR.value]])
                 between_words = False
