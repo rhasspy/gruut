@@ -99,7 +99,7 @@ class Phonemizer:
 
                 # Minor break (short pause)
                 sentence_prons.append([[IPA.BREAK_MINOR.value]])
-                between_words = False
+                between_words = True
                 continue
 
             if word in self.major_breaks:
@@ -178,5 +178,9 @@ class Phonemizer:
                 word_prons = self.lexicon.get(word)
                 if word_prons:
                     sentence_prons[word_idx] = word_prons
+
+        if between_words and word_breaks:
+            # Add final word break
+            sentence_prons.append([[IPA.BREAK_WORD.value]])
 
         return sentence_prons
