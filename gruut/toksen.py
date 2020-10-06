@@ -323,3 +323,13 @@ class Tokenizer:
             yield Sentence(
                 raw_text=raw_text, raw_words=raw_words, clean_words=clean_words
             )
+
+    def is_word(self, word: str) -> bool:
+        """True if word is not empty, a break, or punctuation"""
+        word = word.strip()
+        return (
+            len(word) > 0
+            and (word not in self.minor_breaks)
+            and (word not in self.major_breaks)
+            and (word not in self.punctuations)
+        )
