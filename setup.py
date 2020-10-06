@@ -32,6 +32,7 @@ data_files = [str(f.relative_to(module_dir)) for f in data_dir.rglob("*")]
 
 setuptools.setup(
     name="gruut",
+    description="A tokenizer, text cleaner, and phonemizer for many human languages.",
     version=version,
     author="Michael Hansen",
     author_email="mike@rhasspy.org",
