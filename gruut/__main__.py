@@ -69,6 +69,9 @@ def do_tokenize(config, args):
 
     tokenizer = Tokenizer(config)
 
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading text from stdin...", file=sys.stderr)
+
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
         line = line.strip()
@@ -113,6 +116,9 @@ def do_phonemize(config, args):
     from .phonemize import Phonemizer
 
     phonemizer = Phonemizer(config)
+
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading tokenize JSONL from stdin...", file=sys.stderr)
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
@@ -179,6 +185,9 @@ def do_phones_to_phonemes(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading pronunciations from stdin...", file=sys.stderr)
+
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in sys.stdin:
         line = line.strip()
@@ -224,6 +233,9 @@ def do_coverage(config, args):
     pair_counts = Counter()
 
     # Process output from phonemize command
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading phonemize JSONL from stdin...", file=sys.stderr)
+
     for line in sys.stdin:
         line = line.strip()
         if not line:
