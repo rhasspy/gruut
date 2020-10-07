@@ -1,7 +1,7 @@
 Babel==2.8.0
-gruut-ipa==0.1.0
+gruut-ipa~=0.1.0
 jsonlines==1.2.0
 num2words==0.5.10
-phonetisaurus==0.1.0
+phonetisaurus~=0.1.0
 pydash==4.7.6
 pyyaml==5.3
