@@ -15,7 +15,7 @@ import yaml
 
 import gruut_ipa
 
-from .utils import env_constructor, pairwise
+from .utils import env_constructor, load_lexicon, pairwise
 
 # -----------------------------------------------------------------------------
 
@@ -273,6 +273,33 @@ def do_coverage(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_phonemize_lexicon(config, args):
+    """Convert phonetic lexicon to phonemic lexicon"""
+    phonemes_path = Path(pydash.get(config, "language.phonemes"))
+
+    with open(phonemes_path, "r") as phonemes_file:
+        phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
+
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading lexicon from stdin...")
+
+    lexicon = load_lexicon(sys.stdin)
+    for word, word_prons in lexicon.items():
+        for word_pron in word_prons:
+            word_pron_str = "".join(word_pron)
+            pron_phonemes = phonemes.split(word_pron_str, keep_stress=args.keep_stress)
+
+            pron_phonemes_str = " ".join(p.text for p in pron_phonemes).strip()
+            if pron_phonemes_str:
+                print(word, pron_phonemes_str)
+            else:
+                # Don't print words with empty phonemic pronunciations
+                _LOGGER.warning("No pronunciation for %s %s", word, word_pron)
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -350,6 +377,20 @@ def get_args() -> argparse.Namespace:
     )
     coverage_parser.set_defaults(func=do_coverage)
 
+    # -----------------
+    # phonemize-lexicon
+    # -----------------
+    phonemize_lexicon_parser = sub_parsers.add_parser(
+        "phonemize-lexicon",
+        help="Read a CMU dict-like lexicon and phonemize pronunciations",
+    )
+    phonemize_lexicon_parser.set_defaults(func=do_phonemize_lexicon)
+    phonemize_lexicon_parser.add_argument(
+        "--keep-stress",
+        action="store_true",
+        help="Keep primary/secondary stress markers",
+    )
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -358,6 +399,7 @@ def get_args() -> argparse.Namespace:
         phonemize_parser,
         phones2phonemes_parser,
         coverage_parser,
+        phonemize_lexicon_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
