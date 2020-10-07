@@ -1,7 +1,7 @@
 ---
 
 language:
-  name: "Dutch"
+  name: "Nederlands"
   code: "nl"
   phonemes: !env "${config_dir}/phonemes.txt"
 
