@@ -259,12 +259,18 @@ class Tokenizer:
                             digit_str, locale=self.babel_locale_str
                         )
 
+                        # True if number has non-zero fractional part
+                        num_has_frac = (num % 1) != 0
+
+                        if not num_has_frac:
+                            # num2words uses the number as an index sometimes,
+                            # so it *has* to be an integer.
+                            num = int(num)
+
                         # Convert to words (e.g., 100 -> one hundred)
                         num_str = num2words(num, **num2words_kwargs)
 
                         if has_currency:
-                            # True if number has non-zero fractional part
-                            num_has_frac = (num % 1) != 0
 
                             if num_has_frac:
                                 # Discard separator
