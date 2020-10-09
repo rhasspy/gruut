@@ -17,6 +17,7 @@ gruut currently supports:
 
 * U.S. English (`en-us`)
 * Dutch (`nl`)
+* Czech (`cs-cz`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
