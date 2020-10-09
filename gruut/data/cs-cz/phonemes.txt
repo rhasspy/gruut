@@ -1,0 +1,49 @@
+# https://en.wikipedia.org/wiki/Czech_phonology
+
+# Short vowels
+a p[a]k æ ɑ
+ɛ z[e] e ə
+ɪ tad[y] i y ɪ̯
+u tom[u] ʊ ʌ ʊ̯
+o ah[o]j ɔ ᴐ ɒ
+
+# Long vowels
+ɛː žádn[é] eː
+iː ř[í]kala ɪː
+aː n[á]s ɑː
+uː p[ů]jdu ʊː ɐ
+oː žener[ó]zní ɔː
+
+# Dipthongs
+au̯ [au]gur aʊ̯
+eu̯ [eu]ro ɛʊ̯
+ou̯ form[ou] ɔʊ̯
+
+# Consonants
+r p[r]o ɹ ɾ rː r̩
+r̝ řád r̝̊
+t [t]oho
+k pa[k]
+l pů[l] l̩
+s je[s]tli
+n d[n]eska ŋ nː n̩
+v [v]lastně
+m [m]u ɱ m̩
+p [p]ůl
+d [d]alší
+j aho[j] ʲ
+b [b]yla
+ɲ o[n]i
+z předcho[z]í
+t͡s do[c]ela
+t͡ʃ [č]lověk
+ʃ ne[ž]
+ɦ dlou[h]o h
+f dou[f]ám
+c [t]ím
+x by[ch]om
+ɡ ně[k]do g
+d͡ʒ min[dž]a
+ʒ mů[ž]ete
+ɟ li[d]i
+ʔ [u]vedl ˀ

@@ -1,0 +1,46 @@
+---
+
+language:
+  name: "čeština"
+  code: "cs-cz"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt.gz"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  babel_locale: "cs_CZ"
+  num2words_lang: "cz"
+  token_split: "\\s+"
+  token_join: " "
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - "„"
+    - "“"
+    - "”"
+    - "«"
+    - "»"
+    - "’"
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"
