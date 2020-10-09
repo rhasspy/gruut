@@ -92,11 +92,16 @@ def do_tokenize(config, args):
             raw_words.extend(sentence.raw_words)
             clean_words.extend(sentence.clean_words)
 
+        if args.exclude_non_words:
+            # Exclude punctuations, etc.
+            clean_words = [w for w in clean_words if tokenizer.is_word(w)]
+
         writer.write(
             {
                 "raw_text": line,
                 "raw_words": raw_words,
                 "clean_words": clean_words,
+                "clean_text": " ".join(clean_words),
                 "sentences": [dataclasses.asdict(s) for s in sentences],
             }
         )
@@ -185,11 +190,16 @@ def do_phones_to_phonemes(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
-    if os.isatty(sys.stdin.fileno()):
-        print("Reading pronunciations from stdin...", file=sys.stderr)
+    if args.phones:
+        phones = args.phones
+    else:
+        # Read from stdin
+        phones = sys.stdin
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading pronunciations from stdin...", file=sys.stderr)
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
-    for line in sys.stdin:
+    for line in phones:
         line = line.strip()
         if line:
             line_phonemes = phonemes.split(line, keep_stress=args.keep_stress)
@@ -284,17 +294,35 @@ def do_phonemize_lexicon(config, args):
         print("Reading lexicon from stdin...")
 
     lexicon = load_lexicon(sys.stdin)
+    unknown_counts = Counter()
+
     for word, word_prons in lexicon.items():
         for word_pron in word_prons:
             word_pron_str = "".join(word_pron)
             pron_phonemes = phonemes.split(word_pron_str, keep_stress=args.keep_stress)
-
             pron_phonemes_str = " ".join(p.text for p in pron_phonemes).strip()
-            if pron_phonemes_str:
-                print(word, pron_phonemes_str)
-            else:
+
+            if not pron_phonemes_str:
                 # Don't print words with empty phonemic pronunciations
-                _LOGGER.warning("No pronunciation for %s %s", word, word_pron)
+                _LOGGER.warning("No pronunciation for '%s': %s", word, word_pron)
+                continue
+
+            # Drop words with unknown phonemes
+            unknown = []
+            for phoneme in pron_phonemes:
+                if phoneme.unknown:
+                    unknown_counts[phoneme.text] += 1
+                    unknown.append(phoneme.text)
+
+            if unknown:
+                _LOGGER.warning("Unknown phonemes in '%s': %s", word, unknown)
+                continue
+
+            print(word, pron_phonemes_str)
+
+    if unknown_counts:
+        _LOGGER.warning("%s unknown phonemes:", len(unknown_counts))
+        _LOGGER.warning(unknown_counts.most_common())
 
 
 # -----------------------------------------------------------------------------
@@ -325,6 +353,11 @@ def get_args() -> argparse.Namespace:
         "--number-converters",
         action="store_true",
         help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
+    )
+    tokenize_parser.add_argument(
+        "--exclude-non-words",
+        action="store_true",
+        help="Remove punctionation, etc. from clean words",
     )
     tokenize_parser.set_defaults(func=do_tokenize)
 
@@ -363,6 +396,9 @@ def get_args() -> argparse.Namespace:
         "phones2phonemes", help="Group phonetic pronunciation into language phonemes"
     )
     phones2phonemes_parser.set_defaults(func=do_phones_to_phonemes)
+    phones2phonemes_parser.add_argument(
+        "phones", nargs="*", help="Phone strings to group (default: stdin)"
+    )
     phones2phonemes_parser.add_argument(
         "--keep-stress",
         action="store_true",
