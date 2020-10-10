@@ -69,11 +69,18 @@ def do_tokenize(config, args):
 
     tokenizer = Tokenizer(config)
 
-    if os.isatty(sys.stdin.fileno()):
-        print("Reading text from stdin...", file=sys.stderr)
+    if args.text:
+        # Use arguments
+        texts = args.text
+    else:
+        # Use stdin
+        texts = args.stdin
+
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading text from stdin...", file=sys.stderr)
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
-    for line in sys.stdin:
+    for line in texts:
         line = line.strip()
         if not line:
             continue
@@ -343,6 +350,9 @@ def get_args() -> argparse.Namespace:
     # --------
     tokenize_parser = sub_parsers.add_parser(
         "tokenize", help="Sentencize/tokenize raw text, clean, and expand numbers"
+    )
+    tokenize_parser.add_argument(
+        "text", nargs="*", help="Text to tokenize (default: stdin)"
     )
     tokenize_parser.add_argument(
         "--disable-currency",
