@@ -335,6 +335,47 @@ def do_phonemize_lexicon(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_compare_phonemes(config, args):
+    """Print comparison of two languages' phonemes"""
+    from . import Language
+
+    gruut_lang1 = Language.load(args.language)
+    gruut_lang2 = Language.load(args.language2)
+
+    assert gruut_lang1, f"Unsupported language: {args.language}"
+    assert gruut_lang2, f"Unsupported language: {args.language2}"
+
+    phonemes1 = {p.text: p for p in gruut_lang1.phonemes}
+    phonemes2 = {p.text: p for p in gruut_lang2.phonemes}
+
+    same = []
+    different1 = []
+
+    for p1_text, p1 in phonemes1.items():
+        if p1_text in phonemes2:
+            same.append(p1)
+        else:
+            different1.append(p1)
+
+    different2 = []
+    for p2_text, p2 in phonemes2.items():
+        if p2_text not in phonemes1:
+            different2.append(p2)
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    writer.write(
+        {
+            "languages": [args.language, args.language2],
+            "same": [p.to_dict() for p in same],
+            "different1": [p.to_dict() for p in different1],
+            "different2": [p.to_dict() for p in different2],
+        }
+    )
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -438,6 +479,18 @@ def get_args() -> argparse.Namespace:
     )
 
     # ----------------
+    # compare-phonemes
+    # ----------------
+    compare_phonemes_parser = sub_parsers.add_parser(
+        "compare-phonemes",
+        help="Print a JSON comparison of phonemes from two languages",
+    )
+    compare_phonemes_parser.set_defaults(func=do_compare_phonemes)
+    compare_phonemes_parser.add_argument(
+        "language2", help="Second language to compare to first language"
+    )
+
+    # ----------------
     # Shared arguments
     # ----------------
     for sub_parser in [
@@ -446,6 +499,7 @@ def get_args() -> argparse.Namespace:
         phones2phonemes_parser,
         coverage_parser,
         phonemize_lexicon_parser,
+        compare_phonemes_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"

@@ -36,6 +36,19 @@ class Language:
         self.tokenizer = Tokenizer(config)
         self.phonemizer = Phonemizer(config)
         self.phonemes = Phonemes.from_language(self.language)
+        self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
+
+        # Load accents
+        accents = self.config.get("accents", {})
+        for accent_lang, accent_map in accents.items():
+            final_map = {}
+            for from_phoneme, to_phonemes in accent_map.items():
+                if isinstance(to_phonemes, str):
+                    to_phonemes = [to_phonemes]
+
+                final_map[from_phoneme] = to_phonemes
+
+            self.accents[accent_lang] = final_map
 
     @staticmethod
     def load(language: str) -> typing.Optional["Language"]:
