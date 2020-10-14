@@ -135,6 +135,8 @@ class Tokenizer:
             # short form -> [expansion words]
             self.abbreviations[abbrev_key] = abbrev_value
 
+    # -------------------------------------------------------------------------
+
     def tokenize(
         self, text: str, number_converters: bool = False, replace_currency: bool = True
     ) -> typing.Iterable[Sentence]:
@@ -149,8 +151,11 @@ class Tokenizer:
         # Break raw tokens into sentences and sub-tokens according to
         # punctuation.
         # Performance is going to be bad, but this is a first pass.
+        raw_sentence_tokens: typing.List[typing.List[str]] = [[]]
         sentence_tokens: typing.List[typing.List[str]] = [[]]
         for token in raw_tokens:
+            raw_sentence_tokens[-1].append(token)
+
             # Word or word with punctuation or currency symbol
             sub_tokens = [""]
             for c in token:
@@ -160,17 +165,23 @@ class Tokenizer:
                 else:
                     sub_tokens[-1] += c
 
-            sentence_tokens[-1].extend([t for t in sub_tokens if t])
+            # Accumulate sub-tokens into sentence tokens
+            for sub_token in sub_tokens:
+                if not sub_token:
+                    continue
 
-            if token in self.major_breaks:
-                # New sentence
-                sentence_tokens.append([])
+                sentence_tokens[-1].append(sub_token)
+
+                if sub_token in self.major_breaks:
+                    # New sentence
+                    sentence_tokens.append([])
+                    raw_sentence_tokens.append([])
 
         # Process each sentence
         last_token_currency: typing.Optional[str] = None
         last_token_was_break: bool = False
 
-        for sentence in sentence_tokens:
+        for sentence_idx, sentence in enumerate(sentence_tokens):
             raw_words = []
             clean_words = []
 
@@ -324,11 +335,16 @@ class Tokenizer:
 
             # -----------------------------------------------------------------
 
-            raw_text = self.token_join.join(sentence)
+            # Use raw sentence tokens from first stage so whitespace is (mostly) retained
+            raw_text = self.token_join.join(raw_sentence_tokens[sentence_idx])
 
-            yield Sentence(
-                raw_text=raw_text, raw_words=raw_words, clean_words=clean_words
-            )
+            # Don't yield empty sentences
+            if raw_words or clean_words:
+                yield Sentence(
+                    raw_text=raw_text, raw_words=raw_words, clean_words=clean_words
+                )
+
+    # -------------------------------------------------------------------------
 
     def is_word(self, word: str) -> bool:
         """True if word is not empty, a break, or punctuation"""

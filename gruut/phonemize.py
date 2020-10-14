@@ -5,8 +5,8 @@ import re
 import typing
 from pathlib import Path
 
+import phonetisaurus
 import pydash
-from phonetisaurus import predict
 
 from gruut_ipa import IPA
 
@@ -73,6 +73,8 @@ class Phonemizer:
 
             _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
 
+    # -------------------------------------------------------------------------
+
     def phonemize(
         self,
         words: typing.List[str],
@@ -81,6 +83,8 @@ class Phonemizer:
             typing.Callable[[str], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
         ] = None,
         word_breaks: bool = False,
+        minor_breaks: bool = True,
+        major_breaks: bool = True,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
@@ -98,7 +102,9 @@ class Phonemizer:
                     sentence_prons.append([[IPA.BREAK_WORD.value]])
 
                 # Minor break (short pause)
-                sentence_prons.append([[IPA.BREAK_MINOR.value]])
+                if minor_breaks:
+                    sentence_prons.append([[IPA.BREAK_MINOR.value]])
+
                 between_words = True
                 continue
 
@@ -108,7 +114,9 @@ class Phonemizer:
                     sentence_prons.append([[IPA.BREAK_WORD.value]])
 
                 # Major break (sentence boundary)
-                sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+                if major_breaks:
+                    sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+
                 between_words = False
                 continue
 
@@ -167,9 +175,7 @@ class Phonemizer:
 
         if words_to_guess:
             _LOGGER.debug("Guessing pronunciations for %s", words_to_guess)
-            for word, word_phonemes in predict(
-                words=words_to_guess, model_path=self.g2p_model_path
-            ):
+            for word, word_phonemes in self.predict(words=words_to_guess):
                 # Add to lexicon
                 self.lexicon[word] = [word_phonemes]
 
@@ -184,3 +190,14 @@ class Phonemizer:
             sentence_prons.append([[IPA.BREAK_WORD.value]])
 
         return sentence_prons
+
+    # -------------------------------------------------------------------------
+
+    def predict(
+        self, words: typing.Iterable[str], **kwargs
+    ) -> typing.Iterable[typing.Tuple[str, typing.List[str]]]:
+        """Predict word pronunciations using built-in g2p model"""
+        for result in phonetisaurus.predict(
+            words, model_path=self.g2p_model_path, **kwargs
+        ):
+            yield result

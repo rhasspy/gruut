@@ -15,7 +15,7 @@ import yaml
 
 import gruut_ipa
 
-from .utils import env_constructor, load_lexicon, pairwise
+from .utils import env_constructor, load_lexicon, maybe_gzip_open, pairwise
 
 # -----------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ def do_tokenize(config, args):
         texts = args.text
     else:
         # Use stdin
-        texts = args.stdin
+        texts = sys.stdin
 
         if os.isatty(sys.stdin.fileno()):
             print("Reading text from stdin...", file=sys.stderr)
@@ -92,26 +92,47 @@ def do_tokenize(config, args):
                 replace_currency=(not args.disable_currency),
             )
         )
-        raw_words = []
-        clean_words = []
 
-        for sentence in sentences:
-            raw_words.extend(sentence.raw_words)
-            clean_words.extend(sentence.clean_words)
+        if args.split_sentences:
+            # One output line per sentence
+            for sentence in sentences:
+                clean_words = sentence.clean_words
 
-        if args.exclude_non_words:
-            # Exclude punctuations, etc.
-            clean_words = [w for w in clean_words if tokenizer.is_word(w)]
+                if args.exclude_non_words:
+                    # Exclude punctuations, etc.
+                    clean_words = [w for w in clean_words if tokenizer.is_word(w)]
 
-        writer.write(
-            {
-                "raw_text": line,
-                "raw_words": raw_words,
-                "clean_words": clean_words,
-                "clean_text": " ".join(clean_words),
-                "sentences": [dataclasses.asdict(s) for s in sentences],
-            }
-        )
+                writer.write(
+                    {
+                        "raw_text": sentence.raw_text,
+                        "raw_words": sentence.raw_words,
+                        "clean_words": clean_words,
+                        "clean_text": " ".join(clean_words),
+                        "sentences": [],
+                    }
+                )
+        else:
+            # One output line per input line
+            raw_words = []
+            clean_words = []
+
+            for sentence in sentences:
+                raw_words.extend(sentence.raw_words)
+                clean_words.extend(sentence.clean_words)
+
+            if args.exclude_non_words:
+                # Exclude punctuations, etc.
+                clean_words = [w for w in clean_words if tokenizer.is_word(w)]
+
+            writer.write(
+                {
+                    "raw_text": line,
+                    "raw_words": raw_words,
+                    "clean_words": clean_words,
+                    "clean_text": " ".join(clean_words),
+                    "sentences": [dataclasses.asdict(s) for s in sentences],
+                }
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -290,6 +311,58 @@ def do_coverage(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_optimize_sentences(config, args):
+    """Find phonetically rich sentences"""
+    from . import Language
+    from .optimize import get_optimal_sentences
+
+    gruut_lang = Language.load(args.language)
+    lexicon = gruut_lang.phonemizer.lexicon
+
+    if args.text:
+        # Read from args
+        texts = args.text
+    else:
+        # Read from stdin
+        texts = sys.stdin
+
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading sentences from stdin...")
+
+    # Get optimal sentences
+    optimal_sentences = get_optimal_sentences(
+        texts,
+        gruut_lang,
+        lexicon,
+        word_breaks=args.word_breaks,
+        silence_phone=args.silence_phone,
+        max_sentences=args.max_sentences,
+        max_passes=args.max_passes,
+        min_length=args.min_length,
+        max_length=args.max_length,
+    )
+
+    # Print results
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    writer.write(
+        {
+            "single_coverage": optimal_sentences.single_coverage,
+            "pair_coverage": optimal_sentences.pair_coverage,
+            "pair_score": optimal_sentences.pair_score,
+            "sentences": [
+                {
+                    "sentence": dataclasses.asdict(pron_sentence.sentence),
+                    "pronunciations": pron_sentence.pronunciations,
+                }
+                for pron_sentence in optimal_sentences.sentences
+            ],
+        }
+    )
+
+
+# -----------------------------------------------------------------------------
+
+
 def do_phonemize_lexicon(config, args):
     """Convert phonetic lexicon to phonemic lexicon"""
     phonemes_path = Path(pydash.get(config, "language.phonemes"))
@@ -297,10 +370,17 @@ def do_phonemize_lexicon(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
-    if os.isatty(sys.stdin.fileno()):
-        print("Reading lexicon from stdin...")
+    if args.lexicon:
+        # Read from file
+        lexicon_file = maybe_gzip_open(args.lexicon, "r")
+    else:
+        # Read from stdin
+        lexicon_file = sys.stdin
 
-    lexicon = load_lexicon(sys.stdin)
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading lexicon from stdin...")
+
+    lexicon = load_lexicon(lexicon_file)
     unknown_counts = Counter()
 
     for word, word_prons in lexicon.items():
@@ -410,6 +490,11 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Remove punctionation, etc. from clean words",
     )
+    tokenize_parser.add_argument(
+        "--split-sentences",
+        action="store_true",
+        help="Output one line for every sentence",
+    )
     tokenize_parser.set_defaults(func=do_tokenize)
 
     # ---------
@@ -464,12 +549,57 @@ def get_args() -> argparse.Namespace:
     )
     coverage_parser.set_defaults(func=do_coverage)
 
+    # ------------------
+    # optimize-sentences
+    # ------------------
+    optimize_sentences_parser = sub_parsers.add_parser(
+        "optimize-sentences", help="Find minimal number of phonetically rich sentences"
+    )
+    optimize_sentences_parser.add_argument(
+        "text", nargs="*", help="Candidate sentences (default: stdin)"
+    )
+    optimize_sentences_parser.add_argument(
+        "--word-breaks",
+        action="store_true",
+        help="Add word break symbol between each word",
+    )
+    optimize_sentences_parser.add_argument(
+        "--silence-phone",
+        action="store_true",
+        help="Consider beginning/end of sentence",
+    )
+    optimize_sentences_parser.add_argument(
+        "--max-passes",
+        type=int,
+        default=10,
+        help="Maximum number of optimization passes (default: 10)",
+    )
+    optimize_sentences_parser.add_argument(
+        "--max-sentences",
+        type=int,
+        help="Maximum number of sentences to keep (default: None)",
+    )
+    optimize_sentences_parser.add_argument(
+        "--min-length",
+        type=int,
+        help="Minimum number of words in a sentence (default: None)",
+    )
+    optimize_sentences_parser.add_argument(
+        "--max-length",
+        type=int,
+        help="Maximum number of words in a sentence (default: None)",
+    )
+    optimize_sentences_parser.set_defaults(func=do_optimize_sentences)
+
     # -----------------
     # phonemize-lexicon
     # -----------------
     phonemize_lexicon_parser = sub_parsers.add_parser(
         "phonemize-lexicon",
         help="Read a CMU dict-like lexicon and phonemize pronunciations",
+    )
+    phonemize_lexicon_parser.add_argument(
+        "lexicon", nargs="?", help="Path to lexicon (default: stdin)"
     )
     phonemize_lexicon_parser.set_defaults(func=do_phonemize_lexicon)
     phonemize_lexicon_parser.add_argument(
@@ -498,6 +628,7 @@ def get_args() -> argparse.Namespace:
         phonemize_parser,
         phones2phonemes_parser,
         coverage_parser,
+        optimize_sentences_parser,
         phonemize_lexicon_parser,
         compare_phonemes_parser,
     ]:
