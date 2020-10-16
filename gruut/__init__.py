@@ -37,6 +37,7 @@ class Language:
         self.phonemizer = Phonemizer(config)
         self.phonemes = Phonemes.from_language(self.language)
         self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
+        self.keep_stress = bool(pydash.get(self.config, "language.keep_stress", False))
 
         # Load accents
         accents = self.config.get("accents", {})

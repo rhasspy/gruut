@@ -365,6 +365,12 @@ def do_optimize_sentences(config, args):
 
 def do_phonemize_lexicon(config, args):
     """Convert phonetic lexicon to phonemic lexicon"""
+    casing = None
+    if args.casing == "upper":
+        casing = str.upper
+    elif args.casing == "lower":
+        casing = str.lower
+
     phonemes_path = Path(pydash.get(config, "language.phonemes"))
 
     with open(phonemes_path, "r") as phonemes_file:
@@ -384,6 +390,9 @@ def do_phonemize_lexicon(config, args):
     unknown_counts = Counter()
 
     for word, word_prons in lexicon.items():
+        if casing:
+            word = casing(word)
+
         for word_pron in word_prons:
             word_pron_str = "".join(word_pron)
             pron_phonemes = phonemes.split(word_pron_str, keep_stress=args.keep_stress)
@@ -606,6 +615,12 @@ def get_args() -> argparse.Namespace:
         "--keep-stress",
         action="store_true",
         help="Keep primary/secondary stress markers",
+    )
+    phonemize_lexicon_parser.add_argument(
+        "--casing",
+        choices=["lower", "upper", "ignore"],
+        default="ignore",
+        help="Case transformation to apply to words",
     )
 
     # ----------------
