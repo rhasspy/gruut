@@ -1,0 +1,67 @@
+# Vowels
+a d[a]s ɑ
+aː j[a]hr ɑː
+ɛ w[e]nn
+ə ein[e] ɘ
+ɐ od[er] ɐ̯
+ɛː k[ä]se
+eː g[e]gen e
+ɪ w[i]rd ĭ
+iː d[ie] i
+ɔ d[o]ch
+oː w[o] o ɔu ɔʊ̯
+œ k[ö]nnen
+øː l[ös]en
+ʊ m[u]ss
+uː g[u]t u
+ʏ m[ü]cke
+yː f[ü]r y ʏː œ̃ː 
+
+# Nasal Vowels from Loanwords
+ãː restaur[ant] ã ɑ̃
+õː sais[on]
+ɛ̃ː cous[in]
+
+# Diphthongs
+ɔʏ̯ [eu]le ø
+aɪ̯ h[ei]m a͜i
+aʊ̯ h[au]s a͡ʊ a͜u
+
+# Plosives
+p o[b]st
+b [b]itte
+t nich[t]
+d [d]er
+k [k]ann
+g [g]eht ɡ
+ʔ be[a]mter
+
+# Nasal Consonants
+m [m]it m̩
+n ei[n] ɱ n̩
+ŋ la[ng] ŋ̩
+
+# Fricatives
+f [v]on
+v [w]as
+s au[s]
+z [s]ie
+ʃ [sch]on
+ʒ [g]enie
+ç mi[ch] c
+x bu[ch]
+χ ba[ch]
+ʁ da[r]auf ɽ r ɾ ʀ
+h [h]ut
+
+# Approximants
+j [j]a
+
+# Lateral Approximants
+l a[l]s l̩
+
+# Affricates
+p͡f [pf]erd pf
+t͡s [z]eit  ​t͡s t͜s
+t͡ʃ deu[tsch] ʧ
+d͡ʒ [dsch]ungel

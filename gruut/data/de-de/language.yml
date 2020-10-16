@@ -1,0 +1,44 @@
+---
+
+language:
+  name: "Deutsch"
+  code: "de-de"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt.gz"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  token_split: "\\s+"
+  token_join: " "
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - "„"
+    - "“"
+    - "”"
+    - "«"
+    - "»"
+    - "’"
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"
