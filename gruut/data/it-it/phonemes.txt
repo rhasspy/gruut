@@ -1,0 +1,37 @@
+# https://en.wikipedia.org/wiki/Italian_phonology
+
+# Vowels
+ɛ ad[e]sso ɛː ə
+ɔ c[o]lla ɔː ɔ̃
+a senz[a] aː à ɑ̃ ɒ æ ä ɑ
+e p[e]rò eː
+i cos[ì] iː ɪ I ì ɪː
+o un[o] oː ʊ
+u t[u]tte uː u̯
+
+# Consonants
+ɲ o[gn]uno
+ʎ consi[gli]o ʎː
+ʃ u[s]cita ∫
+b [b]ella
+d [d]ue
+d͡ʒ [g]ente dʒ
+d͡z [z]ona dz d͡zː
+f [f]orte
+ɡ [g]rave g
+j d[i]eci
+k [q]uesto c
+l so[l]tanto
+m al[m]eno
+n a[n]cora
+ɱ i[n]fame
+ŋ a[n]che
+p [p]erò
+r pe[r]ò ʁ ɹ
+s [s]ia
+t quan[t]o
+t͡ʃ per[ci]ò tʃ
+t͡s for[z]a ts t͡sː
+v a[v]anti
+w q[u]attro
+z pae[s]e
