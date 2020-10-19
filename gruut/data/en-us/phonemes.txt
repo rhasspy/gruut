@@ -1,26 +1,26 @@
 # Normal vowels
-ɑ f[a]ther
+ɑ f[a]ther a aː
 æ c[a]t
-ɛ b[e]d
+ɛ b[e]d ɜ ɜː
 i cit[y]
-ɪ s[i]t
-ɔ l[aw]
-ʊ p[u]t
+ɪ s[i]t ɨ
+ɔ l[aw] ɔː ɒ
+ʊ p[u]t ʊ̯
 ʌ r[u]n
 
 # Elognated vowels
 iː s[ee]
 ɑː n[o]t
-uː s[oo]n
+uː s[oo]n u
 
 # Schwas
 ə [a]llow
-ɝ corn[er] ɝː
+ɝ corn[er] ɝː ɚ
 
 # Dipthongs
-eɪ r[ai]se
-aɪ r[i]ce
-oʊ kn[ow]
+eɪ r[ai]se e eɪ̯
+aɪ r[i]ce aɪ̯
+oʊ kn[ow] o
 ɔɪ n[oi]se
 aʊ h[ou]se
 
@@ -48,10 +48,10 @@ z [z]ing
 h [h]am
 
 # Other consonants
-l [l]ong
-m [m]ock
-n [kn]ock
+l [l]ong l̩ ɫ ʟ̩ l̩
+m [m]ock m̩
+n [kn]ock n̩
 ŋ thi[ng]
-ɹ [wr]ong r
+ɹ [wr]ong r ɾ
 w [w]asp
 j [y]acht
