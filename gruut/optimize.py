@@ -1,9 +1,14 @@
 """Methods to find phonetically rich sentences for a language"""
 import logging
+import os
 import random
 import typing
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
+
+import jsonlines
+from dataclasses_json import DataClassJsonMixin
 
 import gruut_ipa
 
@@ -23,7 +28,7 @@ DIPHONE_TYPE = typing.Tuple[str, str]
 
 
 @dataclass
-class PronouncedSentence:
+class PronouncedSentence(DataClassJsonMixin):
     """Tokenized sentence with pronunciation"""
 
     sentence: Sentence
@@ -55,6 +60,7 @@ def get_optimal_sentences(
     word_breaks: bool = False,
     min_length: typing.Optional[int] = None,
     max_length: typing.Optional[int] = None,
+    cache_file_path: typing.Optional[typing.Union[str, Path]] = None,
 ) -> OptimalSentences:
     """Find minimal set of sentences with diphone example coverage"""
     phonemes = set(p.text for p in lang.phonemes)
@@ -75,113 +81,123 @@ def get_optimal_sentences(
 
     sentences: typing.List[PronouncedSentence] = []
 
-    # Diphone counts for all sentence.
-    # Same ordring as sentences list.
-    sentence_pair_counters: typing.List[typing.Counter[DIPHONE_TYPE]] = []
+    if cache_file_path and os.path.isfile(cache_file_path):
+        _LOGGER.debug("Loading sentences/pronunciations from %s", cache_file_path)
+        with open(cache_file_path, "r") as cache_file:
+            for line in cache_file:
+                line = line.strip()
+                if line:
+                    sentences.append(PronouncedSentence.from_json(line))
 
-    # Index of best sentence found (pre-optimization)
-    best_sentence_idx: typing.Optional[int] = None
+        _LOGGER.debug("Loaded %s sentence(s)", len(sentences))
+    else:
+        # Load sentences
+        clean_sentences: typing.List[Sentence] = []
+        missing_words: typing.Set[str] = set()
 
-    # Score of best sentence (pre-optimization)
-    best_score: int = 0
+        _LOGGER.debug("Loading sentences...")
+        num_sentences = 0
+        num_too_short = 0
+        num_too_long = 0
 
-    # Load sentences
-    clean_sentences: typing.List[Sentence] = []
-    missing_words: typing.Set[str] = set()
-
-    _LOGGER.debug("Loading sentences...")
-    num_sentences = 0
-    num_too_short = 0
-    num_too_long = 0
-
-    for line in text_iter:
-        line = line.strip()
-        if not line:
-            continue
-
-        for sentence in lang.tokenizer.tokenize(line):
-            num_sentences += 1
-
-            # Don't consider non-words in length calculation
-            only_words = [w for w in sentence.clean_words if lang.tokenizer.is_word(w)]
-
-            if (min_length is not None) and (len(only_words) < min_length):
-                # Below minimum length
-                num_too_short += 1
+        for line in text_iter:
+            line = line.strip()
+            if not line:
                 continue
 
-            if (max_length is not None) and (len(only_words) > max_length):
-                # Above maximum length
-                num_too_long += 1
-                continue
+            for sentence in lang.tokenizer.tokenize(line):
+                num_sentences += 1
 
-            clean_sentences.append(sentence)
+                # Don't consider non-words in length calculation
+                only_words = [
+                    w for w in sentence.clean_words if lang.tokenizer.is_word(w)
+                ]
 
-            # Collect missing words
-            for word in only_words:
-                if word not in lexicon:
-                    missing_words.add(word)
+                if (min_length is not None) and (len(only_words) < min_length):
+                    # Below minimum length
+                    num_too_short += 1
+                    continue
 
-    # Report stats
-    if num_too_short > 0:
-        _LOGGER.warning(
-            "Dropped %s/%s sentence(s) for < %s word(s)",
-            num_too_short,
-            num_sentences,
-            min_length,
-        )
+                if (max_length is not None) and (len(only_words) > max_length):
+                    # Above maximum length
+                    num_too_long += 1
+                    continue
 
-    if num_too_long > 0:
-        _LOGGER.warning(
-            "Dropped %s/%s sentence(s) for > %s word(s)",
-            num_too_long,
-            num_sentences,
-            max_length,
-        )
+                clean_sentences.append(sentence)
 
-    # Guess missing words in a single pass
-    if missing_words:
-        _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
+                # Collect missing words
+                for word in only_words:
+                    if word not in lexicon:
+                        missing_words.add(word)
 
-        # Add words to lexicon
-        for word, word_pron in lang.phonemizer.predict(missing_words, nbest=1):
-            lexicon[word] = [word_pron]
-
-    # Phonemize missing sentences
-    for sentence in clean_sentences:
-        # Not currently using breaks
-        sentence_prons = lang.phonemizer.phonemize(
-            sentence.clean_words,
-            word_breaks=word_breaks,
-            minor_breaks=False,
-            major_breaks=False,
-        )
-
-        if sentence_prons:
-            # Choose first pronunciation only
-            first_pronunciation = []
-            skip_sentence = False
-            for wp in sentence_prons:
-                if not wp:
-                    skip_sentence = True
-                    break
-
-                first_pronunciation.append(wp[0])
-
-            if skip_sentence:
-                _LOGGER.warning(
-                    "Skipping sentence due to missing pronunciations: %s",
-                    sentence.raw_text,
-                )
-                continue
-
-            sentences.append(
-                PronouncedSentence(
-                    sentence=sentence, pronunciations=[first_pronunciation]
-                )
+        # Report stats
+        if num_too_short > 0:
+            _LOGGER.warning(
+                "Dropped %s/%s sentence(s) for < %s word(s)",
+                num_too_short,
+                num_sentences,
+                min_length,
             )
 
-    _LOGGER.debug("Loaded %s sentence(s)", len(sentences))
+        if num_too_long > 0:
+            _LOGGER.warning(
+                "Dropped %s/%s sentence(s) for > %s word(s)",
+                num_too_long,
+                num_sentences,
+                max_length,
+            )
+
+        # Guess missing words in a single pass
+        if missing_words:
+            _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
+
+            # Add words to lexicon
+            for word, word_pron in lang.phonemizer.predict(missing_words, nbest=1):
+                lexicon[word] = [word_pron]
+
+        # Phonemize missing sentences
+        for sentence in clean_sentences:
+            # Not currently using breaks
+            sentence_prons = lang.phonemizer.phonemize(
+                sentence.clean_words,
+                word_breaks=word_breaks,
+                minor_breaks=False,
+                major_breaks=False,
+                guess_word=lambda word: None,
+            )
+
+            if sentence_prons:
+                # Choose first pronunciation only
+                first_pronunciation = []
+                skip_sentence = False
+                for wp in sentence_prons:
+                    if not wp:
+                        skip_sentence = True
+                        break
+
+                    first_pronunciation.append(wp[0])
+
+                if skip_sentence:
+                    _LOGGER.warning(
+                        "Skipping sentence due to missing pronunciations: %s",
+                        sentence.raw_text,
+                    )
+                    continue
+
+                sentences.append(
+                    PronouncedSentence(
+                        sentence=sentence, pronunciations=[first_pronunciation]
+                    )
+                )
+
+        _LOGGER.debug("Loaded %s sentence(s)", len(sentences))
+
+        if cache_file_path:
+            _LOGGER.debug("Caching sentences in %s", cache_file_path)
+            with open(cache_file_path, "w") as cache_file:
+                writer = jsonlines.Writer(cache_file)
+                for pron_sentence in sentences:
+                    writer.write(pron_sentence.to_json(ensure_ascii=False))
 
     # -------------------------------------------------------------------------
 
@@ -207,6 +223,16 @@ def get_optimal_sentences(
         return num_pairs / len(all_pairs)
 
     # -------------------------------------------------------------------------
+
+    # Diphone counts for all sentence.
+    # Same ordring as sentences list.
+    sentence_pair_counters: typing.List[typing.Counter[DIPHONE_TYPE]] = []
+
+    # Index of best sentence found (pre-optimization)
+    best_sentence_idx: typing.Optional[int] = None
+
+    # Score of best sentence (pre-optimization)
+    best_score: int = 0
 
     all_sentences_counts: typing.Counter[DIPHONE_TYPE] = Counter()
     sentence_scores: typing.List[float] = []
@@ -286,7 +312,7 @@ def get_optimal_sentences(
     for pass_idx in range(max_passes):
         score_changed = False
         _LOGGER.debug(
-            "Pass %s (coverage=%s, N=%s/%s, score=%s)",
+            "Pass %s (pair coverage=%s, N=%s/%s, score=%s)",
             pass_idx + 1,
             coverage(pair_counts_so_far),
             len(sentences_so_far),

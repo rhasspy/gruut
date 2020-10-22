@@ -340,6 +340,7 @@ def do_optimize_sentences(config, args):
         max_passes=args.max_passes,
         min_length=args.min_length,
         max_length=args.max_length,
+        cache_file_path=args.cache_file,
     )
 
     # Print results
@@ -597,6 +598,9 @@ def get_args() -> argparse.Namespace:
         "--max-length",
         type=int,
         help="Maximum number of words in a sentence (default: None)",
+    )
+    optimize_sentences_parser.add_argument(
+        "--cache-file", help="File used to cache sentences and pronunciations"
     )
     optimize_sentences_parser.set_defaults(func=do_optimize_sentences)
 

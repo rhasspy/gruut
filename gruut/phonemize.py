@@ -148,11 +148,13 @@ class Phonemizer:
                     index = int(index_match.group(2))
 
             word_prons = self.lexicon.get(word)
+            word_guessed = False
 
             if not word_prons and guess_word:
                 # Use supplied function
+                word_guessed = True
                 word_prons = guess_word(word)
-                if word_prons:
+                if word_prons is not None:
                     # Update lexicon
                     self.lexicon[word] = word_prons
 
@@ -167,8 +169,11 @@ class Phonemizer:
                     pron_index = max(0, index - 1) % len(word_prons)
                     sentence_prons.append([word_prons[pron_index]])
             else:
-                # Need to guess
-                missing_words.append((len(sentence_prons), word))
+                if not word_guessed:
+                    # Need to guess
+                    missing_words.append((len(sentence_prons), word))
+
+                # Add placeholder
                 sentence_prons.append([])
 
         words_to_guess = set(w for _, w in missing_words)
