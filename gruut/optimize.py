@@ -285,6 +285,10 @@ def get_optimal_sentences(
 
     # -------------------------------------------------------------------------
 
+    extra_phonemes = sentence_phonemes - phonemes
+    if extra_phonemes:
+        _LOGGER.warning("Extra phonemes: %s", extra_phonemes)
+
     _LOGGER.debug(
         "Best possible coverage: single=%s, pair=%s",
         len(sentence_phonemes) / len(phonemes),

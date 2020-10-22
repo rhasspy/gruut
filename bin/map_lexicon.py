@@ -31,7 +31,7 @@ def main():
         word, *phones = _WHITESPACE.split(line)
         mapped_phones = []
         for phone in phones:
-            mapped_phone = phone_map.get(phone, phone)
+            mapped_phone = phone_map[phone]
             if mapped_phone != args.drop:
                 mapped_phones.append(mapped_phone)
 
