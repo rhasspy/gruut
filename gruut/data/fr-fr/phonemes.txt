@@ -1,0 +1,46 @@
+# Vowels
+i s[i]
+y s[u]
+u s[ous]
+e f[ée]
+ø c[eux]
+o s[ot]
+ə c[e]
+ɛ f[ait]
+ɛː f[ê]te
+œ s[œu]r
+ɔ s[o]rt
+a s[a] ɑ
+
+# Nasalated vowels
+ɔ̃ s[on]
+ɛ̃ br[in]
+ɑ̃ s[ans]
+œ̃ br[un]
+
+# Semi-vowels
+j [h]ier
+ɥ pl[u]ie
+w [ou]i
+
+# Consonants
+m [m]ou
+n [n]ous
+ŋ ku[ng]-fu
+p [p]ou
+t [t]out
+k [c]ou
+b [b]oue
+d [d]oux
+ɡ [g]oût
+f [f]ou
+s [s]ous
+ʃ [ch]ou
+v [v]ous
+z [z]ou
+ʒ [j]oue
+ʁ [r]ou
+l [l]oup
+
+# From loan words
+ɲ [gn]ouf
