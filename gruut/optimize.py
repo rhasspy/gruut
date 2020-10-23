@@ -10,7 +10,7 @@ from pathlib import Path
 import jsonlines
 from dataclasses_json import DataClassJsonMixin
 
-import gruut_ipa
+from gruut_ipa import IPA
 
 from . import Language
 from .phonemize import PRONUNCIATION_TYPE
@@ -61,11 +61,12 @@ def get_optimal_sentences(
     min_length: typing.Optional[int] = None,
     max_length: typing.Optional[int] = None,
     cache_file_path: typing.Optional[typing.Union[str, Path]] = None,
+    keep_stress: bool = False,
 ) -> OptimalSentences:
     """Find minimal set of sentences with diphone example coverage"""
     phonemes = set(p.text for p in lang.phonemes)
     if word_breaks:
-        phonemes.add(gruut_ipa.IPA.BREAK_WORD)
+        phonemes.add(IPA.BREAK_WORD)
 
     if silence_phone:
         phonemes.add(_SILENCE_PHONE)
@@ -256,8 +257,20 @@ def get_optimal_sentences(
 
             # Add example words indexes for pair
             for word_phonemes in sentence_pron:
-                clean_phonemes.extend(word_phonemes)
-                sentence_phonemes.update(word_phonemes)
+                if keep_stress:
+                    clean_phonemes.extend(word_phonemes)
+                    sentence_phonemes.update(word_phonemes)
+                else:
+                    # Strip stress
+                    for word_phoneme in word_phonemes:
+                        if word_phoneme and word_phoneme[0] in {
+                            IPA.STRESS_PRIMARY,
+                            IPA.STRESS_SECONDARY,
+                        }:
+                            word_phoneme = word_phoneme[1:]
+
+                        clean_phonemes.append(word_phoneme)
+                        sentence_phonemes.add(word_phoneme)
 
             if silence_phone:
                 # End of sentence
