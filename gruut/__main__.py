@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Command-line interface to gruut"""
 import argparse
+import csv
 import dataclasses
+import itertools
 import json
 import logging
 import os
@@ -437,30 +439,32 @@ def do_compare_phonemes(config, args):
 
     phonemes1 = {p.text: p for p in gruut_lang1.phonemes}
     phonemes2 = {p.text: p for p in gruut_lang2.phonemes}
-
-    same = []
-    different1 = []
-
-    for p1_text, p1 in phonemes1.items():
-        if p1_text in phonemes2:
-            same.append(p1)
-        else:
-            different1.append(p1)
-
-    different2 = []
-    for p2_text, p2 in phonemes2.items():
-        if p2_text not in phonemes1:
-            different2.append(p2)
-
-    writer = jsonlines.Writer(sys.stdout, flush=True)
-    writer.write(
-        {
-            "languages": [args.language, args.language2],
-            "same": [p.to_dict() for p in same],
-            "different1": [p.to_dict() for p in different1],
-            "different2": [p.to_dict() for p in different2],
-        }
+    both_phonemes = sorted(
+        {p_text for p_text in itertools.chain(phonemes1.keys(), phonemes2.keys())}
     )
+
+    writer = csv.writer(sys.stdout, delimiter=args.delimiter)
+    writer.writerow(
+        ("example1", gruut_lang1.language, gruut_lang2.language, "example2")
+    )
+
+    for p_text in both_phonemes:
+        p1_text = ""
+        p1_example = ""
+        p2_text = ""
+        p2_example = ""
+
+        p1 = phonemes1.get(p_text)
+        if p1:
+            p1_text = p1.text
+            p1_example = p1.example
+
+        p2 = phonemes2.get(p_text)
+        if p2:
+            p2_text = p2.text
+            p2_example = p2.example
+
+        writer.writerow((p1_example, p1_text, p2_text, p2_example))
 
 
 # -----------------------------------------------------------------------------
@@ -632,11 +636,14 @@ def get_args() -> argparse.Namespace:
     # ----------------
     compare_phonemes_parser = sub_parsers.add_parser(
         "compare-phonemes",
-        help="Print a JSON comparison of phonemes from two languages",
+        help="Print a text comparison of phonemes from two languages",
     )
     compare_phonemes_parser.set_defaults(func=do_compare_phonemes)
     compare_phonemes_parser.add_argument(
         "language2", help="Second language to compare to first language"
+    )
+    compare_phonemes_parser.add_argument(
+        "--delimiter", default=",", help="Field delimiter"
     )
 
     # ----------------
