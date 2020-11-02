@@ -21,6 +21,8 @@ gruut currently supports:
 * German (`de-de`)
 * French (`fr-fr`)
 * Italian (`it-it`)
+* Spanish (`es-es`)
+* Russian (`ru-ru`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
