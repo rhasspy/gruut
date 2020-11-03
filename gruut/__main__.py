@@ -439,9 +439,7 @@ def do_compare_phonemes(config, args):
 
     phonemes1 = {p.text: p for p in gruut_lang1.phonemes}
     phonemes2 = {p.text: p for p in gruut_lang2.phonemes}
-    both_phonemes = sorted(
-        {p_text for p_text in itertools.chain(phonemes1.keys(), phonemes2.keys())}
-    )
+    both_phonemes = sorted(set(itertools.chain(phonemes1.keys(), phonemes2.keys())))
 
     writer = csv.writer(sys.stdout, delimiter=args.delimiter)
     writer.writerow(
