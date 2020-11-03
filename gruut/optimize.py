@@ -263,14 +263,17 @@ def get_optimal_sentences(
                 else:
                     # Strip stress
                     for word_phoneme in word_phonemes:
-                        if word_phoneme and word_phoneme[0] in {
-                            IPA.STRESS_PRIMARY,
-                            IPA.STRESS_SECONDARY,
-                        }:
-                            word_phoneme = word_phoneme[1:]
+                        if not word_phoneme:
+                            continue
 
-                        clean_phonemes.append(word_phoneme)
-                        sentence_phonemes.add(word_phoneme)
+                        clean_word_phoneme = ""
+                        for codepoint in word_phoneme:
+                            if not IPA.is_stress(codepoint):
+                                clean_word_phoneme += codepoint
+
+                        if clean_word_phoneme:
+                            clean_phonemes.append(clean_word_phoneme)
+                            sentence_phonemes.add(clean_word_phoneme)
 
             if silence_phone:
                 # End of sentence
