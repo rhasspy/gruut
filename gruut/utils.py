@@ -44,8 +44,7 @@ def load_lexicon(
         if not line:
             continue
 
-        word, phoneme_str = word_regex.split(line, maxsplit=1)
-        phonemes = tuple(phoneme_regex.split(phoneme_str))
+        word, phoneme_strs = word_regex.split(line, maxsplit=1)
 
         word_match = _WORD_WITH_NUMBER.match(word)
         if word_match:
@@ -56,12 +55,21 @@ def load_lexicon(
             # Apply case transformation
             word = casing(word)
 
-        word_prons = lexicon.get(word)
-        if word_prons:
-            if phonemes not in word_prons:
-                word_prons.append(phonemes)
-        else:
-            lexicon[word] = [phonemes]
+        # Multiple pronunciations separated by commas
+        for phoneme_str in phoneme_strs.split(","):
+            # Remove /separators/
+            phoneme_str = phoneme_str.strip().replace("/", "")
+            if not phoneme_str:
+                continue
+
+            phonemes = tuple(phoneme_regex.split(phoneme_str))
+
+            word_prons = lexicon.get(word)
+            if word_prons:
+                if phonemes not in word_prons:
+                    word_prons.append(phonemes)
+            else:
+                lexicon[word] = [phonemes]
 
     return lexicon
 
