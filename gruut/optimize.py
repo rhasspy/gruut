@@ -2,6 +2,7 @@
 import logging
 import os
 import random
+import re
 import typing
 from collections import Counter
 from dataclasses import dataclass
@@ -78,7 +79,7 @@ def get_optimal_sentences(
     all_pairs = set()
     for word_prons in lang.phonemizer.lexicon.values():
         for word_pron in word_prons:
-            all_pairs.update(pairwise(word_pron))
+            all_pairs.update(pairwise(remove_stress(word_pron, keep_stress)))
 
     sentences: typing.List[PronouncedSentence] = []
 
@@ -154,7 +155,7 @@ def get_optimal_sentences(
 
             # Add words to lexicon
             for word, word_pron in lang.phonemizer.predict(missing_words, nbest=1):
-                lexicon[word] = [word_pron]
+                lexicon[word] = [remove_stress(word_pron, keep_stress)]
 
         # Phonemize missing sentences
         for sentence in clean_sentences:
@@ -257,23 +258,9 @@ def get_optimal_sentences(
 
             # Add example words indexes for pair
             for word_phonemes in sentence_pron:
-                if keep_stress:
-                    clean_phonemes.extend(word_phonemes)
-                    sentence_phonemes.update(word_phonemes)
-                else:
-                    # Strip stress
-                    for word_phoneme in word_phonemes:
-                        if not word_phoneme:
-                            continue
-
-                        clean_word_phoneme = ""
-                        for codepoint in word_phoneme:
-                            if not IPA.is_stress(codepoint):
-                                clean_word_phoneme += codepoint
-
-                        if clean_word_phoneme:
-                            clean_phonemes.append(clean_word_phoneme)
-                            sentence_phonemes.add(clean_word_phoneme)
+                word_phonemes = remove_stress(word_phonemes, keep_stress)
+                clean_phonemes.extend(word_phonemes)
+                sentence_phonemes.update(word_phonemes)
 
             if silence_phone:
                 # End of sentence
@@ -477,3 +464,22 @@ def get_optimal_sentences(
         pair_score=best_score,
         pair_counts=best_pair_counts,
     )
+
+
+# -------------------------------------------------------------------
+
+REGEX_STRESS = re.compile(f"[{IPA.STRESS_PRIMARY}{IPA.STRESS_SECONDARY}]")
+
+
+def remove_stress(
+    word_pron: typing.Union[typing.Tuple[str], typing.List[str]],
+    keep_stress: bool = False,
+) -> typing.List[str]:
+    if keep_stress:
+        return word_pron
+
+    word_pron = list(word_pron)
+    for i, p in enumerate(word_pron):
+        word_pron[i] = REGEX_STRESS.sub("", p)
+
+    return word_pron
