@@ -77,7 +77,7 @@ def get_optimal_sentences(
     # are many pairs that either humans cannot produce or are not used.
     # We assume the lexicon will contain an example of each useful pairs.
     all_pairs = set()
-    for word_prons in lang.phonemizer.lexicon.values():
+    for word_prons in lexicon.values():
         for word_pron in word_prons:
             all_pairs.update(pairwise(remove_stress(word_pron, keep_stress)))
 
