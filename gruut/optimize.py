@@ -472,9 +472,10 @@ REGEX_STRESS = re.compile(f"[{IPA.STRESS_PRIMARY}{IPA.STRESS_SECONDARY}]")
 
 
 def remove_stress(
-    word_pron: typing.Union[typing.Tuple[str], typing.List[str]],
+    word_pron: typing.Union[typing.Tuple[str, ...], typing.List[str]],
     keep_stress: bool = False,
-) -> typing.List[str]:
+) -> typing.Union[typing.Tuple[str, ...], typing.List[str]]:
+    """Optionally remove stress from a word pronunciation"""
     if keep_stress:
         return word_pron
 

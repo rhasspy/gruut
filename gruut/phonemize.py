@@ -1,7 +1,9 @@
 """Class for getting phonetic pronunciations for cleaned text"""
+import gzip
 import logging
 import os
 import re
+import shutil
 import typing
 from pathlib import Path
 
@@ -202,6 +204,15 @@ class Phonemizer:
         self, words: typing.Iterable[str], **kwargs
     ) -> typing.Iterable[typing.Tuple[str, typing.List[str]]]:
         """Predict word pronunciations using built-in g2p model"""
+        if not self.g2p_model_path.is_file():
+            # Look for a gzipped model and extract it
+            g2p_gzip_path = Path(str(self.g2p_model_path) + ".gz")
+            if g2p_gzip_path.is_file():
+                _LOGGER.debug("Unzipping %s", g2p_gzip_path)
+                with open(self.g2p_model_path, "wb") as out_file:
+                    with gzip.open(g2p_gzip_path, "rb") as in_file:
+                        shutil.copyfileobj(in_file, out_file)
+
         for result in phonetisaurus.predict(
             words, model_path=self.g2p_model_path, **kwargs
         ):
