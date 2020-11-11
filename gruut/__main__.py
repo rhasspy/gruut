@@ -220,6 +220,8 @@ def do_phones_to_phonemes(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
+    keep_stress = pydash.get(config, "language.keep_stress", False)
+
     if args.phones:
         phones = args.phones
     else:
@@ -232,7 +234,7 @@ def do_phones_to_phonemes(config, args):
     for line in phones:
         line = line.strip()
         if line:
-            line_phonemes = phonemes.split(line, keep_stress=args.keep_stress)
+            line_phonemes = phonemes.split(line, keep_stress=keep_stress)
             phonemes_list = [p.text for p in line_phonemes]
 
             writer.write(
@@ -379,6 +381,8 @@ def do_phonemize_lexicon(config, args):
     with open(phonemes_path, "r") as phonemes_file:
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
+    keep_stress = pydash.get(config, "language.keep_stress", False)
+
     if args.lexicon:
         # Read from file
         lexicon_file = maybe_gzip_open(args.lexicon, "r")
@@ -398,7 +402,7 @@ def do_phonemize_lexicon(config, args):
 
         for word_pron in word_prons:
             word_pron_str = "".join(word_pron)
-            pron_phonemes = phonemes.split(word_pron_str, keep_stress=args.keep_stress)
+            pron_phonemes = phonemes.split(word_pron_str, keep_stress=keep_stress)
             pron_phonemes_str = " ".join(p.text for p in pron_phonemes).strip()
 
             if not pron_phonemes_str:
@@ -547,11 +551,6 @@ def get_args() -> argparse.Namespace:
     phones2phonemes_parser.add_argument(
         "phones", nargs="*", help="Phone strings to group (default: stdin)"
     )
-    phones2phonemes_parser.add_argument(
-        "--keep-stress",
-        action="store_true",
-        help="Keep primary/secondary stress markers",
-    )
 
     # --------
     # coverage
@@ -617,11 +616,6 @@ def get_args() -> argparse.Namespace:
         "lexicon", nargs="?", help="Path to lexicon (default: stdin)"
     )
     phonemize_lexicon_parser.set_defaults(func=do_phonemize_lexicon)
-    phonemize_lexicon_parser.add_argument(
-        "--keep-stress",
-        action="store_true",
-        help="Keep primary/secondary stress markers",
-    )
     phonemize_lexicon_parser.add_argument(
         "--casing",
         choices=["lower", "upper", "ignore"],
