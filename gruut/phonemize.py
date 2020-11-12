@@ -8,9 +8,9 @@ import threading
 import typing
 from pathlib import Path
 
-import phonetisaurus
 import pydash
 
+import phonetisaurus
 from gruut_ipa import IPA
 
 from .utils import LEXICON_TYPE, load_lexicon, maybe_gzip_open
@@ -58,6 +58,7 @@ class Phonemizer:
             self.casing = str.upper
 
         self.g2p_model_path = Path(pydash.get(self.config, "g2p.model"))
+        self.g2p_lock = threading.RLock()
 
         self.lexicon: LEXICON_TYPE = {}
         if lexicon:
