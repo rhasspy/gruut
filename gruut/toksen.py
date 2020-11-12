@@ -32,6 +32,9 @@ class Tokenizer:
         self.config = config
         self.language = pydash.get(self.config, "language.code")
 
+        # Symbol to skip immediately after an abbreviation
+        self.abbreviation_skip = pydash.get(self.config, "symbols.abbreviation_skip")
+
         # Short pause symbols (commas, etc.)
         self.minor_breaks: typing.Set[str] = set(
             pydash.get(self.config, "symbols.minor_breaks", [])
@@ -166,16 +169,40 @@ class Tokenizer:
                     sub_tokens[-1] += c
 
             # Accumulate sub-tokens into sentence tokens
+            last_token_was_abbreviation = False
             for sub_token in sub_tokens:
                 if not sub_token:
                     continue
 
-                sentence_tokens[-1].append(sub_token)
+                if last_token_was_abbreviation and (
+                    sub_token == self.abbreviation_skip
+                ):
+                    # Skip period after abbreviation
+                    continue
 
-                if sub_token in self.major_breaks:
-                    # New sentence
-                    sentence_tokens.append([])
-                    raw_sentence_tokens.append([])
+                # Expand abbreviations
+                expanded_tokens = []
+                if self.abbreviations:
+                    check_token = sub_token
+                    if self.casing:
+                        check_token = self.casing(sub_token)
+
+                    # Expansions may be multiple words.
+                    expansion = self.abbreviations.get(check_token)
+                    if expansion:
+                        expanded_tokens.extend(expansion)
+                        last_token_was_abbreviation = True
+                    else:
+                        expanded_tokens.append(check_token)
+
+                # Append to current sentence
+                for ex_token in expanded_tokens:
+                    sentence_tokens[-1].append(ex_token)
+
+                    if ex_token in self.major_breaks:
+                        # New sentence
+                        sentence_tokens.append([])
+                        raw_sentence_tokens.append([])
 
         # Process each sentence
         last_token_currency: typing.Optional[str] = None
@@ -314,20 +341,6 @@ class Tokenizer:
                     # Apply casing transformation
                     if self.casing:
                         words = [self.casing(w) for w in words]
-
-                    # Expand abbreviations
-                    if self.abbreviations:
-                        expanded_words = []
-                        for word in words:
-                            # Expansions may be multiple words.
-                            # They will not having casing/replacements applied.
-                            expansion = self.abbreviations.get(word)
-                            if expansion:
-                                expanded_words.extend(expansion)
-                            else:
-                                expanded_words.append(word)
-
-                        words = expanded_words
 
                     clean_words.extend(words)
 
