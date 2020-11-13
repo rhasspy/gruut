@@ -194,6 +194,8 @@ class Tokenizer:
                         last_token_was_abbreviation = True
                     else:
                         expanded_tokens.append(check_token)
+                else:
+                    expanded_tokens.append(sub_token)
 
                 # Append to current sentence
                 for ex_token in expanded_tokens:

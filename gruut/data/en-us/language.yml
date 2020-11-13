@@ -15,6 +15,7 @@ symbols:
   casing: "lower"
   token_split: "\\s+"
   token_join: " "
+  abbreviation_skip: "."
   number_regex: "^-?\\d+([,.]\\d+)*$"
   minor_breaks:
     - ","
