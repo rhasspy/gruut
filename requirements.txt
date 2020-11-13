@@ -1,6 +1,6 @@
 Babel==2.8.0
 dataclasses-json==0.4.2
-gruut-ipa~=0.3.0
+gruut-ipa~=0.4.0
 jsonlines==1.2.0
 num2words==0.5.10
 phonetisaurus~=0.2.0

@@ -152,16 +152,7 @@ def do_phonemize(config, args):
 
     phonemizer = Phonemizer(config)
 
-    if os.isatty(sys.stdin.fileno()):
-        print("Reading tokenize JSONL from stdin...", file=sys.stderr)
-
-    writer = jsonlines.Writer(sys.stdout, flush=True)
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-
-        sentence_obj = json.loads(line)
+    def process_sentence(sentence_obj):
         clean_words = sentence_obj["clean_words"]
 
         sentence_prons = phonemizer.phonemize(
@@ -208,6 +199,42 @@ def do_phonemize(config, args):
 
         # Print back out with extra info
         writer.write(sentence_obj)
+
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading tokenize JSONL from stdin...", file=sys.stderr)
+
+    sentence_objs = []
+    missing_words = set()
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+
+        sentence_obj = json.loads(line)
+
+        if args.read_all:
+            # Store and check for missing words
+            sentence_objs.append(sentence_obj)
+
+            for word in sentence_obj["clean_words"]:
+                if word not in phonemizer.lexicon:
+                    missing_words.add(word)
+        else:
+            # Process immediate
+            process_sentence(sentence_obj)
+
+    if sentence_objs:
+        # Guess missing words together (faster)
+        if missing_words:
+            _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
+            for word, word_pron in phonemizer.predict(missing_words, nbest=1):
+                phonemizer.lexicon[word] = [word_pron]
+
+        # Process delayed sentences
+        for sentence_obj in sentence_objs:
+            process_sentence(sentence_obj)
 
 
 # -----------------------------------------------------------------------------
@@ -269,7 +296,10 @@ def do_coverage(config, args):
     all_pairs = set()
     for word_prons in gruut_lang.phonemizer.lexicon.values():
         for word_pron in word_prons:
-            all_pairs.update(pairwise(word_pron))
+            for p1, p2 in pairwise(word_pron):
+                p1 = gruut_ipa.IPA.without_stress(p1)
+                p2 = gruut_ipa.IPA.without_stress(p2)
+                all_pairs.update((p1, p2))
 
     single_counts = Counter()
     pair_counts = Counter()
@@ -292,11 +322,21 @@ def do_coverage(config, args):
 
         # Count single phonemes
         for p in sentence_prons:
+            p = gruut_ipa.IPA.without_stress(p)
             single_counts[p] += 1
 
         # Count phoneme pairs
         for p1, p2 in pairwise(sentence_prons):
+            p1 = gruut_ipa.IPA.without_stress(p1)
+            p2 = gruut_ipa.IPA.without_stress(p2)
+
             pair_counts[(p1, p2)] += 1
+            all_pairs.add((p1, p2))
+
+    # Check phonemes
+    for p in single_counts:
+        if p not in phonemes:
+            _LOGGER.warning("Extra phoneme: %s", p)
 
     # Print coverage report
     writer = jsonlines.Writer(sys.stdout, flush=True)
@@ -539,6 +579,11 @@ def get_args() -> argparse.Namespace:
         "--word-breaks",
         action="store_true",
         help="Add the IPA word break symbol (#) between each word",
+    )
+    phonemize_parser.add_argument(
+        "--read-all",
+        action="store_true",
+        help="Read all sentences and guess words before output",
     )
 
     # ---------------
