@@ -218,6 +218,10 @@ class Phonemizer:
                         with gzip.open(g2p_gzip_path, "rb") as in_file:
                             shutil.copyfileobj(in_file, out_file)
 
+        # Apply case transformation
+        if self.casing:
+            words = [self.casing(w) for w in words]
+
         for result in phonetisaurus.predict(
             words, model_path=self.g2p_model_path, **kwargs
         ):
