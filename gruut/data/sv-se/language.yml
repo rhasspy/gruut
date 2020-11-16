@@ -1,0 +1,48 @@
+---
+
+language:
+  name: "svenska"
+  code: "sv-se"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt.gz"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+abbreviations:
+  st: "sankt"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  token_split: "\\s+"
+  token_join: " "
+  abbreviation_skip: "."
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - "„"
+    - "“"
+    - "”"
+    - "«"
+    - "»"
+    - "’"
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"

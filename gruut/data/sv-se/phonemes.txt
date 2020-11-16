@@ -1,0 +1,40 @@
+# https://en.wikipedia.org/wiki/Swedish_phonology
+
+# Vowels
+ɪ s[i]ll
+ʏ s[y]ll
+ʊ b[o]tt
+ʉː f[u]l
+ɑː m[a]t
+a m[a]tt ä
+eː h[e]l
+ɛ h[e]tta
+ɛː h[ä]l
+iː s[i]l
+oː m[å]l ö
+ɵ f[u]ll
+øː n[ö]t
+ɔ m[o]ll
+œ n[ö]tt
+uː b[o]t
+yː s[y]l
+
+# Consonants
+ɡ [g]od g gː gː
+ɕ [kj]ol ʂ ɕː ʂː
+ɧ [sj]ok ɧː
+b [b]ok bː
+d [d]op ɖ dː ɖː
+f [f]ot fː
+h [h]ot hː
+j [j]ord jː
+k [k]on kː
+l [l]ov lː ɭ ɭː
+m [m]od mː
+n [n]od nː ɳ ɳː
+ŋ lå[ng] ŋː
+p [p]ol pː
+r [r]ov rː
+s [s]ot sː
+t [t]ok ʈ tː ʈː
+v [v]åt vː
