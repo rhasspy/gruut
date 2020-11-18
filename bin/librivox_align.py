@@ -96,14 +96,17 @@ def main():
             # Clean up newlines in text
             mp3_text = ""
             for line_index in range(start_line - 1, end_line):
-                mp3_text += text[line_index].strip()
+                mp3_text += text[line_index].strip() + "\n"
 
             # Run through gruut tokenizer to expand abbreviations, numbers, etc.
-            for sentence in gruut_lang.tokenizer.tokenize(mp3_text):
-                clean_text = " ".join(sentence.clean_words)
+            raw_text_path = mp3_path.with_suffix(".raw.txt")
+            with open(raw_text_path, "w") as raw_text_file:
+                for sentence in gruut_lang.tokenizer.tokenize(mp3_text):
+                    clean_text = " ".join(sentence.clean_words)
 
-                # Each sentence in on a line now
-                print(clean_text, file=mp3_text_file)
+                    # Each sentence in on a line now
+                    print(clean_text, file=mp3_text_file)
+                    print(sentence.raw_text, file=raw_text_file)
 
             mp3_text_file.seek(0)
             task.text_file_path_absolute = mp3_text_file.name
