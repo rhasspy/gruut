@@ -37,9 +37,16 @@ class Language:
         self.phonemizer = Phonemizer(config)
         self.phonemes = Phonemes.from_language(self.language)
         self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
+
+        # If True, primary/seconary stress should be kept during phonemization
         self.keep_stress = bool(pydash.get(self.config, "language.keep_stress", False))
 
-        # Load accents
+        # If True, acute/grave accents should be kept during phonemization
+        self.keep_accents = bool(
+            pydash.get(self.config, "language.keep_accents", False)
+        )
+
+        # Load language-specific "accents" (different than acute/grave)
         accents = self.config.get("accents", {})
         for accent_lang, accent_map in accents.items():
             final_map = {}

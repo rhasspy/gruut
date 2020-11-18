@@ -4,6 +4,7 @@ language:
   name: "svenska"
   code: "sv-se"
   phonemes: !env "${config_dir}/phonemes.txt"
+  keep_accents: true
 
 lexicons:
   - !env "${config_dir}/lexicon.txt.gz"
