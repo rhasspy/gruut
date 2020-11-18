@@ -422,6 +422,7 @@ def do_phonemize_lexicon(config, args):
         phonemes = gruut_ipa.Phonemes.from_text(phonemes_file)
 
     keep_stress = pydash.get(config, "language.keep_stress", False)
+    keep_accents = pydash.get(config, "language.keep_accents", False)
 
     if args.lexicon:
         # Read from file
@@ -442,7 +443,9 @@ def do_phonemize_lexicon(config, args):
 
         for word_pron in word_prons:
             word_pron_str = "".join(word_pron)
-            pron_phonemes = phonemes.split(word_pron_str, keep_stress=keep_stress)
+            pron_phonemes = phonemes.split(
+                word_pron_str, keep_stress=keep_stress, keep_accents=keep_accents
+            )
             pron_phonemes_str = " ".join(p.text for p in pron_phonemes).strip()
 
             if not pron_phonemes_str:
