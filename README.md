@@ -23,6 +23,7 @@ gruut currently supports:
 * Italian (`it-it`)
 * Spanish (`es-es`)
 * Russian (`ru-ru`)
+* Vietnamese (`vi-n`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
@@ -41,7 +42,7 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 ## Installation
 
 ```sh
-$ pip install gruut
+$ pip install 'https://github.com/rhasspy/gruut/releases/download/v0.4.0/gruut-0.4.0.tar.gz'
 ```
 
 for Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi/releases).
