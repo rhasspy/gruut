@@ -6,6 +6,7 @@ import re
 import shutil
 import threading
 import typing
+import unicodedata
 from pathlib import Path
 
 import pydash
@@ -49,6 +50,8 @@ class Phonemizer:
             pydash.get(self.config, "symbols.question_mark", False)
         )
 
+        self.has_tones = bool(pydash.get(self.config, "language.tones", []))
+
         # Case transformation (lower/upper)
         casing = pydash.get(self.config, "symbols.casing")
         self.casing: typing.Optional[typing.Callable[[str], str]] = None
@@ -91,11 +94,16 @@ class Phonemizer:
         word_breaks: bool = False,
         minor_breaks: bool = True,
         major_breaks: bool = True,
+        separate_tones: typing.Optional[bool] = False,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
         missing_words: typing.List[typing.Tuple[int, str]] = []
         between_words = False
+
+        if separate_tones is None:
+            # Separate only if language has tones
+            separate_tones = self.has_tones
 
         if word_breaks:
             # Add initial word break
@@ -162,18 +170,32 @@ class Phonemizer:
                 word_prons = guess_word(word)
                 if word_prons is not None:
                     # Update lexicon
-                    self.lexicon[word] = word_prons
+                    self.lexicon[word] = [
+                        Phonemizer.maybe_separate_tones(wp, separate_tones)
+                        for wp in word_prons
+                    ]
 
             if word_prons:
                 # In lexicon
                 if index is None:
                     # All pronunciations
-                    sentence_prons.append(word_prons)
+                    sentence_prons.append(
+                        [
+                            Phonemizer.maybe_separate_tones(wp, separate_tones)
+                            for wp in word_prons
+                        ]
+                    )
                 else:
                     # Specific pronunciation.
                     # Clamp 1-based index.
                     pron_index = max(0, index - 1) % len(word_prons)
-                    sentence_prons.append([word_prons[pron_index]])
+                    sentence_prons.append(
+                        [
+                            Phonemizer.maybe_separate_tones(
+                                word_prons[pron_index], separate_tones
+                            )
+                        ]
+                    )
             else:
                 if not word_guessed:
                     # Need to guess
@@ -194,7 +216,10 @@ class Phonemizer:
             for word_idx, word in missing_words:
                 word_prons = self.lexicon.get(word)
                 if word_prons:
-                    sentence_prons[word_idx] = word_prons
+                    sentence_prons[word_idx] = [
+                        Phonemizer.maybe_separate_tones(wp, separate_tones)
+                        for wp in word_prons
+                    ]
 
         if between_words and word_breaks:
             # Add final word break
@@ -226,3 +251,37 @@ class Phonemizer:
             words, model_path=self.g2p_model_path, **kwargs
         ):
             yield result
+
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def maybe_separate_tones(
+        word_pron: PRONUNCIATION_TYPE, separate_tones: bool = False
+    ) -> PRONUNCIATION_TYPE:
+        """If separate_tones is True, tones will be separated out as additional strings"""
+        if not separate_tones:
+            return word_pron
+
+        new_word_pron = []
+        for phoneme_str in word_pron:
+            new_phoneme_str = ""
+            tone = ""
+
+            in_tone = False
+            codepoints = unicodedata.normalize("NFD", phoneme_str)
+            for c in codepoints:
+                if in_tone and (c in {IPA.TONE_GLOTTALIZED, IPA.TONE_SHORT}):
+                    # Interpret as part of tone
+                    tone += c
+                elif IPA.is_tone(c):
+                    tone += c
+                    in_tone = True
+                else:
+                    # Add to phoneme
+                    new_phoneme_str += c
+
+            new_word_pron.append(unicodedata.normalize("NFC", new_phoneme_str))
+            if tone:
+                new_word_pron.append(unicodedata.normalize("NFC", tone))
+
+        return new_word_pron

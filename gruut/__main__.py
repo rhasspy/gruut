@@ -156,7 +156,10 @@ def do_phonemize(config, args):
         clean_words = sentence_obj["clean_words"]
 
         sentence_prons = phonemizer.phonemize(
-            clean_words, word_indexes=args.word_indexes, word_breaks=args.word_breaks
+            clean_words,
+            word_indexes=args.word_indexes,
+            word_breaks=args.word_breaks,
+            separate_tones=args.separate_tones,
         )
         sentence_obj["pronunciations"] = sentence_prons
 
@@ -230,7 +233,9 @@ def do_phonemize(config, args):
         if missing_words:
             _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
             for word, word_pron in phonemizer.predict(missing_words, nbest=1):
-                phonemizer.lexicon[word] = [word_pron]
+                phonemizer.lexicon[word] = [
+                    Phonemizer.maybe_separate_tones(word_pron, args.separate_tones)
+                ]
 
         # Process delayed sentences
         for sentence_obj in sentence_objs:
@@ -582,6 +587,9 @@ def get_args() -> argparse.Namespace:
         "--word-breaks",
         action="store_true",
         help="Add the IPA word break symbol (#) between each word",
+    )
+    phonemize_parser.add_argument(
+        "--separate-tones", action="store_true", help="Separate out tones"
     )
     phonemize_parser.add_argument(
         "--read-all",
