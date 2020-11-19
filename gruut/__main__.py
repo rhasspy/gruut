@@ -434,7 +434,7 @@ def do_phonemize_lexicon(config, args):
         if os.isatty(sys.stdin.fileno()):
             print("Reading lexicon from stdin...")
 
-    lexicon = load_lexicon(lexicon_file)
+    lexicon = load_lexicon(lexicon_file, multi_word=args.multi_word)
     unknown_counts = Counter()
 
     for word, word_prons in lexicon.items():
@@ -669,6 +669,11 @@ def get_args() -> argparse.Namespace:
         choices=["lower", "upper", "ignore"],
         default="ignore",
         help="Case transformation to apply to words",
+    )
+    phonemize_lexicon_parser.add_argument(
+        "--multi-word",
+        action="store_true",
+        help="Split up multiple words before /phonemes/",
     )
 
     # ----------------

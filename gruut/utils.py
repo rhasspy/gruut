@@ -24,6 +24,7 @@ def load_lexicon(
     phoneme_separator: typing.Optional[str] = None,
     lexicon: typing.Optional[LEXICON_TYPE] = None,
     casing: typing.Optional[typing.Callable[[str], str]] = None,
+    multi_word: bool = False,
 ) -> LEXICON_TYPE:
     """Load a CMU-style lexicon."""
     if lexicon is None:
@@ -44,32 +45,50 @@ def load_lexicon(
         if not line:
             continue
 
-        word, phoneme_strs = word_regex.split(line, maxsplit=1)
+        if multi_word:
+            # Possibly multiple words and phonemes, separated by whitespace
+            word, phonemes_str = line.split("/", maxsplit=1)
+            words = [w.replace(",", "") for w in _WHITESPACE.split(word)]
+            assert (
+                "," not in phonemes_str
+            ), "Cannot handle multiple pronunciations for multi-words"
 
-        word_match = _WORD_WITH_NUMBER.match(word)
-        if word_match:
-            # Strip (n) from word(n)
-            word = word_match.group(1)
-
-        if casing:
-            # Apply case transformation
-            word = casing(word)
-
-        # Multiple pronunciations separated by commas
-        for phoneme_str in phoneme_strs.split(","):
             # Remove /separators/
-            phoneme_str = phoneme_str.strip().replace("/", "")
-            if not phoneme_str:
-                continue
+            phonemes_str = phonemes_str.replace("/", "")
+            word_phonemes_strs = [[p.strip()] for p in _WHITESPACE.split(phonemes_str)]
+        else:
+            # One word, one or more pronunciations
+            word, phonemes_str = word_regex.split(line, maxsplit=1)
+            words = [word]
 
-            phonemes = tuple(phoneme_regex.split(phoneme_str))
+            # Remove /separators/
+            phonemes_str = phonemes_str.replace("/", "")
 
-            word_prons = lexicon.get(word)
-            if word_prons:
-                if phonemes not in word_prons:
-                    word_prons.append(phonemes)
-            else:
-                lexicon[word] = [phonemes]
+            word_phonemes_strs = [[p.strip() for p in phonemes_str.split(",")]]
+
+        for word, phoneme_strs in zip(words, word_phonemes_strs):
+            word_match = _WORD_WITH_NUMBER.match(word)
+            if word_match:
+                # Strip (n) from word(n)
+                word = word_match.group(1)
+
+            if casing:
+                # Apply case transformation
+                word = casing(word)
+
+            # Multiple pronunciations separated by commas
+            for phoneme_str in phoneme_strs:
+                if not phoneme_str:
+                    continue
+
+                phonemes = tuple(phoneme_regex.split(phoneme_str))
+
+                word_prons = lexicon.get(word)
+                if word_prons:
+                    if phonemes not in word_prons:
+                        word_prons.append(phonemes)
+                else:
+                    lexicon[word] = [phonemes]
 
     return lexicon
 

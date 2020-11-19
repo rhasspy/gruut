@@ -46,6 +46,9 @@ class Language:
             pydash.get(self.config, "language.keep_accents", False)
         )
 
+        # Allowable tones in the language
+        self.tones: typing.List[str] = pydash.get(self.config, "language.tones", [])
+
         # Load language-specific "accents" (different than acute/grave)
         accents = self.config.get("accents", {})
         for accent_lang, accent_map in accents.items():
