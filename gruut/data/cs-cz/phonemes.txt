@@ -2,9 +2,9 @@
 
 # Short vowels
 a p[a]k æ ɑ
-ɛ z[e] e ə
-ɪ tad[y] i y ɪ̯
-u tom[u] ʊ ʌ ʊ̯
+ɛ z[e] ,e[^u̯] ə
+ɪ tad[y] ,i[^ː] y ɪ̯
+u tom[u] ʊ ʌ ʊ
 o ah[o]j ɔ ᴐ ɒ
 
 # Long vowels
@@ -15,9 +15,9 @@ uː p[ů]jdu ʊː ɐ
 oː žener[ó]zní ɔː
 
 # Dipthongs
-au̯ [au]gur aʊ̯
-eu̯ [eu]ro ɛʊ̯
-ou̯ form[ou] ɔʊ̯
+au̯ [au]gur aʊ̯ au̯
+eu̯ [eu]ro ɛʊ̯ ɛu̯
+ou̯ form[ou] ɔʊ̯ ɔu̯
 
 # Consonants
 r p[r]o ɹ ɾ rː r̩
