@@ -16,7 +16,7 @@ For each supported language, gruut includes a:
 gruut currently supports:
 
 * U.S. English (`en-us`)
-* U.K. English (`en-uk`)
+* U.K. English (`en-gb`)
 * Dutch (`nl`)
 * Czech (`cs-cz`)
 * German (`de-de`)

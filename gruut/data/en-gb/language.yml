@@ -2,7 +2,7 @@
 
 language:
   name: "U.K. English"
-  code: "en-uk"
+  code: "en-gb"
   phonemes: !env "${config_dir}/phonemes.txt"
 
 lexicons:
