@@ -1,6 +1,7 @@
 """Utility methods for gruut"""
 import gzip
 import itertools
+import logging
 import os
 import re
 import typing
@@ -17,6 +18,7 @@ LEXICON_TYPE = typing.Dict[
 # word(n) in lexicon
 _WORD_WITH_NUMBER = re.compile(r"^([^(]+)(\(\d+\))$")
 
+_LOGGER = logging.getLogger("gruut.utils")
 
 def load_lexicon(
     lexicon_file: typing.IO[str],
@@ -40,55 +42,61 @@ def load_lexicon(
     else:
         phoneme_regex = _WHITESPACE
 
-    for line in lexicon_file:
+    for line_index, line in enumerate(lexicon_file):
         line = line.strip()
         if not line:
             continue
 
-        if multi_word:
-            # Possibly multiple words and phonemes, separated by whitespace
-            word, phonemes_str = line.split("/", maxsplit=1)
-            words = [w.replace(",", "") for w in _WHITESPACE.split(word)]
-            assert (
-                "," not in phonemes_str
-            ), "Cannot handle multiple pronunciations for multi-words"
+        try:
+            if multi_word:
+                # Possibly multiple words and phonemes, separated by whitespace
+                word, phonemes_str = line.split("/", maxsplit=1)
+                words = [w.replace(",", "") for w in _WHITESPACE.split(word)]
+                assert (
+                    "," not in phonemes_str
+                ), "Cannot handle multiple pronunciations for multi-words"
 
-            # Remove /separators/
-            phonemes_str = phonemes_str.replace("/", "")
-            word_phonemes_strs = [[p.strip()] for p in _WHITESPACE.split(phonemes_str)]
-        else:
-            # One word, one or more pronunciations
-            word, phonemes_str = word_regex.split(line, maxsplit=1)
-            words = [word]
+                # Remove /separators/
+                phonemes_str = phonemes_str.replace("/", "")
+                word_phonemes_strs = [
+                    [p.strip()] for p in _WHITESPACE.split(phonemes_str)
+                ]
+            else:
+                # One word, one or more pronunciations
+                word, phonemes_str = word_regex.split(line, maxsplit=1)
+                words = [word]
 
-            # Remove /separators/
-            phonemes_str = phonemes_str.replace("/", "")
+                # Remove /separators/
+                phonemes_str = phonemes_str.replace("/", "")
 
-            word_phonemes_strs = [[p.strip() for p in phonemes_str.split(",")]]
+                word_phonemes_strs = [[p.strip() for p in phonemes_str.split(",")]]
 
-        for word, phoneme_strs in zip(words, word_phonemes_strs):
-            word_match = _WORD_WITH_NUMBER.match(word)
-            if word_match:
-                # Strip (n) from word(n)
-                word = word_match.group(1)
+            for word, phoneme_strs in zip(words, word_phonemes_strs):
+                word_match = _WORD_WITH_NUMBER.match(word)
+                if word_match:
+                    # Strip (n) from word(n)
+                    word = word_match.group(1)
 
-            if casing:
-                # Apply case transformation
-                word = casing(word)
+                if casing:
+                    # Apply case transformation
+                    word = casing(word)
 
-            # Multiple pronunciations separated by commas
-            for phoneme_str in phoneme_strs:
-                if not phoneme_str:
-                    continue
+                # Multiple pronunciations separated by commas
+                for phoneme_str in phoneme_strs:
+                    if not phoneme_str:
+                        continue
 
-                phonemes = tuple(phoneme_regex.split(phoneme_str))
+                    phonemes = tuple(phoneme_regex.split(phoneme_str))
 
-                word_prons = lexicon.get(word)
-                if word_prons:
-                    if phonemes not in word_prons:
-                        word_prons.append(phonemes)
-                else:
-                    lexicon[word] = [phonemes]
+                    word_prons = lexicon.get(word)
+                    if word_prons:
+                        if phonemes not in word_prons:
+                            word_prons.append(phonemes)
+                    else:
+                        lexicon[word] = [phonemes]
+        except Exception as e:
+            _LOGGER.exception("Error on line %s: %s", line_index + 1, line)
+            raise e
 
     return lexicon
 
