@@ -1,0 +1,57 @@
+# Normal vowels
+ɒ f[a]ther
+æ c[a]t a
+e b[e]d ɛ
+ɪ s[i]t
+ɔ l[aw] 
+ʊ p[u]t
+ʌ r[u]n ɐ
+
+# Elognated vowels
+iː s[ee] i
+ɑː n[o]t
+uː s[oo]n u
+ɔː n[or]th
+ɜː n[ur]se
+
+# Schwas
+ə [a]llow
+
+# Dipthongs
+eɪ r[ai]se e eɪ̯
+aɪ r[i]ce aɪ̯
+əʊ kn[ow]
+ɔɪ n[oi]se
+aʊ h[ou]se
+
+# Stops
+p [p]in
+b [b]ut
+t [t]on
+d [d]ot
+k [c]at
+ɡ [g]ive g
+
+# Affricatives
+t͡ʃ [ch]in tʃ
+d͡ʒ [g]in dʒ
+
+# Fricatives
+f [f]in
+v [v]im
+θ [th]in
+ð [th]is
+s [s]et
+z [z]ing
+ʃ [s]ure
+ʒ mea[sure]
+h [h]am
+
+# Other consonants
+l [l]ong l̩ ɫ ʟ̩ l̩
+m [m]ock m̩
+n [kn]ock n̩
+ŋ thi[ng]
+ɹ [wr]ong r ɾ
+w [w]asp
+j [y]acht
