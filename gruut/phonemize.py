@@ -155,7 +155,7 @@ class Phonemizer:
 
             if not word_prons and guess_with_word_chars:
                 # Try again with non-word characters removed
-                filtered_word = NON_WORD_CHARS.sub("", word)
+                filtered_word = Phonemizer.remove_nonword_chars(word)
                 word_prons = self.lexicon.get(filtered_word)
 
             if not word_prons and guess_word:
@@ -279,3 +279,8 @@ class Phonemizer:
                 new_word_pron.append(unicodedata.normalize("NFC", tone))
 
         return new_word_pron
+
+    @staticmethod
+    def remove_nonword_chars(word: str) -> str:
+        """Remove non-word characters from a string"""
+        return NON_WORD_CHARS.sub("", word)

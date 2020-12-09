@@ -520,6 +520,55 @@ def do_compare_phonemes(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_mark_heteronyms(config, args):
+    """
+    Mark words in text with multiple pronunciations (heteronyms)
+
+    Prints text with heteronyms marked.
+    """
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+
+    if args.text:
+        # Use arguments
+        texts = args.text
+    else:
+        # Use stdin
+        texts = sys.stdin
+
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading text from stdin...", file=sys.stderr)
+
+    for line in texts:
+        line = line.strip()
+        if not line:
+            continue
+
+        sentences = list(
+            gruut_lang.tokenizer.tokenize(
+                line,
+                number_converters=args.number_converters,
+                replace_currency=(not args.disable_currency),
+            )
+        )
+
+        # One output line per input line
+        clean_words = []
+
+        for sentence in sentences:
+            for word in sentence.clean_words:
+                if len(gruut_lang.phonemizer.lexicon.get(word, [])) > 1:
+                    clean_words.append(f"{args.start_mark}{word}{args.end_mark}")
+                else:
+                    clean_words.append(word)
+
+        print(gruut_lang.tokenizer.token_join.join(clean_words))
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -699,6 +748,34 @@ def get_args() -> argparse.Namespace:
         "--delimiter", default=",", help="Field delimiter"
     )
 
+    # ---------------
+    # mark-heteronyms
+    # ---------------
+    mark_heteronyms_parser = sub_parsers.add_parser(
+        "mark-heteronyms",
+        help="Mark words in text that have multiple pronunciations (heteronyms)",
+    )
+    mark_heteronyms_parser.set_defaults(func=do_mark_heteronyms)
+    mark_heteronyms_parser.add_argument(
+        "text", nargs="*", help="Text to tokenize (default: stdin)"
+    )
+    mark_heteronyms_parser.add_argument(
+        "--start-mark", default="[", help="Mark to add to the start of the word"
+    )
+    mark_heteronyms_parser.add_argument(
+        "--end-mark", default="]", help="Mark to add to the end of the word"
+    )
+    mark_heteronyms_parser.add_argument(
+        "--disable-currency",
+        action="store_true",
+        help="Disable automatic replacement of currency with words (e.g., $1 -> one dollar)",
+    )
+    mark_heteronyms_parser.add_argument(
+        "--number-converters",
+        action="store_true",
+        help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
+    )
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -710,6 +787,7 @@ def get_args() -> argparse.Namespace:
         optimize_sentences_parser,
         phonemize_lexicon_parser,
         compare_phonemes_parser,
+        mark_heteronyms_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
