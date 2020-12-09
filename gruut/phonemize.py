@@ -26,6 +26,8 @@ PRONUNCIATION_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
 
 WORD_WITH_INDEX = re.compile(r"^([^_]+)_(\d+)$")
 
+NON_WORD_CHARS = re.compile(r"\W")
+
 # -----------------------------------------------------------------------------
 
 
@@ -95,6 +97,7 @@ class Phonemizer:
         minor_breaks: bool = True,
         major_breaks: bool = True,
         separate_tones: typing.Optional[bool] = False,
+        guess_with_word_chars: bool = True,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
@@ -134,20 +137,6 @@ class Phonemizer:
                 between_words = False
                 continue
 
-            # if word == "?":
-            #     if self.question_mark and sentence_prons:
-            #         # Add rising intonation to previous word
-            #         prev_prons = sentence_prons[-1]
-            #         for prev_idx, prev_pron in enumerate(prev_prons):
-            #             prev_prons[prev_idx] = [IPA.INTONATION_RISING.value] + list(
-            #                 prev_pron
-            #             )
-
-            #     # Assume major break
-            #     sentence_prons.append([[IPA.BREAK_MAJOR.value]])
-            #     between_words = False
-            #     continue
-
             if word_breaks and between_words:
                 # Add IPA word break symbol between words
                 sentence_prons.append([[IPA.BREAK_WORD.value]])
@@ -163,6 +152,11 @@ class Phonemizer:
 
             word_prons = self.lexicon.get(word)
             word_guessed = False
+
+            if not word_prons and guess_with_word_chars:
+                # Try again with non-word characters removed
+                filtered_word = NON_WORD_CHARS.sub("", word)
+                word_prons = self.lexicon.get(filtered_word)
 
             if not word_prons and guess_word:
                 # Use supplied function

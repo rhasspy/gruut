@@ -20,6 +20,7 @@ _WORD_WITH_NUMBER = re.compile(r"^([^(]+)(\(\d+\))$")
 
 _LOGGER = logging.getLogger("gruut.utils")
 
+
 def load_lexicon(
     lexicon_file: typing.IO[str],
     word_separator: typing.Optional[str] = None,
