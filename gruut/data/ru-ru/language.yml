@@ -1,8 +1,8 @@
 ---
 
 language:
-  name: "Nederlands"
-  code: "nl"
+  name: "Русский"
+  code: "ru-ru"
   phonemes: !env "${config_dir}/phonemes.txt"
 
 lexicons:
