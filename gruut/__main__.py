@@ -288,6 +288,7 @@ def do_coverage(config, args):
     from . import Language
 
     gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
 
     # List of possible phonemes in the language
     phonemes = [p.text for p in gruut_lang.phonemes]

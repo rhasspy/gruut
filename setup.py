@@ -28,7 +28,11 @@ with open(version_path, "r") as version_file:
 
 module_dir = this_dir / "gruut"
 data_dir = module_dir / "data"
-data_files = [str(f.relative_to(module_dir)) for f in data_dir.rglob("*") if f.is_file()]
+data_files = [
+    str(f.relative_to(module_dir))
+    for f in data_dir.rglob("*")
+    if f.is_file() and f.name != "g2p.fst"
+]
 
 setuptools.setup(
     name="gruut",
