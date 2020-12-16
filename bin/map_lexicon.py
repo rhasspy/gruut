@@ -23,7 +23,7 @@ def main():
             phone_map[from_phone] = to_phone
 
     # Read lexicon from stdin, output to stdout
-    for line in sys.stdin:
+    for line_index, line in enumerate(sys.stdin):
         line = line.strip()
         if not line:
             continue
@@ -31,7 +31,22 @@ def main():
         word, *phones = _WHITESPACE.split(line)
         mapped_phones = []
         for phone in phones:
-            mapped_phone = phone_map[phone]
+            mapped_phone = phone_map.get(phone)
+            if not mapped_phone:
+                for c in phone:
+                    if c not in phone_map:
+                        print(
+                            "Multiple words found on line",
+                            line_index + 1,
+                            line,
+                            file=sys.stderr,
+                        )
+                        break
+
+            assert (
+                mapped_phone
+            ), f"Invalid phone on line {line_index + 1}: {phone} {line}"
+
             if mapped_phone != args.drop:
                 mapped_phones.append(mapped_phone)
 
