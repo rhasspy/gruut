@@ -17,6 +17,7 @@ import yaml
 
 import gruut_ipa
 
+from .toksen import Token
 from .utils import env_constructor, load_lexicon, maybe_gzip_open, pairwise
 
 # -----------------------------------------------------------------------------
@@ -67,9 +68,12 @@ def do_tokenize(config, args):
 
     Prints a line of JSON for each sentence.
     """
-    from .toksen import Tokenizer
+    from . import Language
 
-    tokenizer = Tokenizer(config)
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+
+    tokenizer = gruut_lang.tokenizer
 
     if args.text:
         # Use arguments
@@ -99,10 +103,17 @@ def do_tokenize(config, args):
             # One output line per sentence
             for sentence in sentences:
                 clean_words = sentence.clean_words
+                tokens = sentence.tokens
 
                 if args.exclude_non_words:
                     # Exclude punctuations, etc.
-                    clean_words = [w for w in clean_words if tokenizer.is_word(w)]
+                    clean_words = []
+                    tokens = []
+
+                    for token in sentence.tokens:
+                        if tokenizer.is_word(token.text):
+                            clean_words.append(token.text)
+                            tokens.append(token)
 
                 writer.write(
                     {
@@ -117,20 +128,30 @@ def do_tokenize(config, args):
             # One output line per input line
             raw_words = []
             clean_words = []
+            tokens = []
 
             for sentence in sentences:
                 raw_words.extend(sentence.raw_words)
                 clean_words.extend(sentence.clean_words)
+                tokens.extend(sentence.tokens)
 
             if args.exclude_non_words:
                 # Exclude punctuations, etc.
-                clean_words = [w for w in clean_words if tokenizer.is_word(w)]
+                all_tokens = tokens
+                clean_words = []
+                tokens = []
+
+                for token in all_tokens:
+                    if tokenizer.is_word(token.text):
+                        clean_words.append(token.text)
+                        tokens.append(token)
 
             writer.write(
                 {
                     "raw_text": line,
                     "raw_words": raw_words,
                     "clean_words": clean_words,
+                    "tokens": [dataclasses.asdict(t) for t in tokens],
                     "clean_text": " ".join(clean_words),
                     "sentences": [dataclasses.asdict(s) for s in sentences],
                 }
@@ -148,18 +169,39 @@ def do_phonemize(config, args):
 
     Prints a line of JSON for each input line.
     """
-    from .phonemize import Phonemizer
+    from . import Language, Phonemizer
 
-    phonemizer = Phonemizer(config)
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+
+    phonemizer = gruut_lang.phonemizer
+    process_pronunciation = None
+
+    if args.language == "fa":
+        # Genitive case
+        def fa_process_pronunciation(word_pron, token):
+            if token.pos == "Ne":
+                word_pron = list(word_pron)
+                word_pron.append("e̞")
+
+            return word_pron
+
+        process_pronunciation = fa_process_pronunciation
 
     def process_sentence(sentence_obj):
-        clean_words = sentence_obj["clean_words"]
+        token_dicts = sentence_obj.get("tokens")
+        if token_dicts:
+            tokens = [Token(**t) for t in token_dicts]
+        else:
+            clean_words = sentence_obj["clean_words"]
+            tokens = [Token(text=w) for w in clean_words]
 
         sentence_prons = phonemizer.phonemize(
-            clean_words,
+            tokens,
             word_indexes=args.word_indexes,
             word_breaks=args.word_breaks,
             separate_tones=args.separate_tones,
+            process_pronunciation=process_pronunciation,
         )
         sentence_obj["pronunciations"] = sentence_prons
 

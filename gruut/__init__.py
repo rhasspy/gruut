@@ -1,6 +1,8 @@
 """Language class for gruut"""
+import gzip
 import logging
 import os
+import shutil
 import typing
 from pathlib import Path
 
@@ -10,7 +12,7 @@ import yaml
 from gruut_ipa import Phonemes
 
 from .phonemize import Phonemizer
-from .toksen import Tokenizer
+from .toksen import TOKENIZE_FUNC, Token, Tokenizer
 from .utils import env_constructor
 
 # -----------------------------------------------------------------------------
@@ -33,7 +35,13 @@ class Language:
             self.language = language
 
         self.config = config
-        self.tokenizer = Tokenizer(config)
+
+        # Language-specific loading
+        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None
+        if language == "fa":
+            custom_tokenize = Language.make_fa_tokenize()
+
+        self.tokenizer = Tokenizer(config, custom_tokenize=custom_tokenize)
         self.phonemizer = Phonemizer(config)
         self.phonemes = Phonemes.from_language(self.language)
         self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
@@ -81,3 +89,39 @@ class Language:
             config = yaml.safe_load(config_file)
 
         return Language(config=config, language=language)
+
+    @staticmethod
+    def make_fa_tokenize() -> TOKENIZE_FUNC:
+        """Tokenize Persian/Farsi"""
+        import hazm
+
+        normalizer = hazm.Normalizer()
+
+        # Load part of speech tagger
+        model_path = _DATA_DIR / "fa" / "postagger.model"
+        if not model_path.is_file():
+            # Unzip
+            model_gzip_path = Path(str(model_path) + ".gz")
+            if model_gzip_path.is_file():
+                _LOGGER.debug("Unzipping %s", model_gzip_path)
+                with open(model_path, "wb") as out_file:
+                    with gzip.open(model_gzip_path, "rb") as in_file:
+                        shutil.copyfileobj(in_file, out_file)
+
+        _LOGGER.debug("Using hazm tokenizer (model=%s)", model_path)
+        tagger = hazm.POSTagger(model=str(model_path))
+
+        def do_tokenize(text: str) -> typing.List[typing.List[Token]]:
+            """Normalize, tokenize, and recognize part of speech"""
+            sentences_tokens = []
+            sentences = hazm.sent_tokenize(normalizer.normalize(text))
+            for sentence in sentences:
+                sentence_tokens = []
+                for word, pos in tagger.tag(hazm.word_tokenize(sentence)):
+                    sentence_tokens.append(Token(text=word, pos=pos))
+
+                sentences_tokens.append(sentence_tokens)
+
+            return sentences_tokens
+
+        return do_tokenize

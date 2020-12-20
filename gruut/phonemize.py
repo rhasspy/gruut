@@ -14,6 +14,7 @@ import pydash
 import phonetisaurus
 from gruut_ipa import IPA
 
+from .toksen import Token
 from .utils import LEXICON_TYPE, load_lexicon, maybe_gzip_open
 
 # -----------------------------------------------------------------------------
@@ -88,20 +89,23 @@ class Phonemizer:
 
     def phonemize(
         self,
-        words: typing.List[str],
+        tokens: typing.List[Token],
         word_indexes: bool = False,
         guess_word: typing.Optional[
-            typing.Callable[[str], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
+            typing.Callable[[Token], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
         ] = None,
         word_breaks: bool = False,
         minor_breaks: bool = True,
         major_breaks: bool = True,
         separate_tones: typing.Optional[bool] = False,
         guess_with_word_chars: bool = True,
+        process_pronunciation: typing.Optional[
+            typing.Callable[[PRONUNCIATION_TYPE, Token], PRONUNCIATION_TYPE]
+        ] = None,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
-        missing_words: typing.List[typing.Tuple[int, str]] = []
+        missing_words: typing.List[typing.Tuple[int, Token]] = []
         between_words = False
 
         if separate_tones is None:
@@ -112,7 +116,9 @@ class Phonemizer:
             # Add initial word break
             sentence_prons.append([[IPA.BREAK_WORD.value]])
 
-        for word in words:
+        for token in tokens:
+            word = token.text
+
             if word in self.minor_breaks:
                 if word_breaks and between_words:
                     # Add end of word break
@@ -161,7 +167,7 @@ class Phonemizer:
             if not word_prons and guess_word:
                 # Use supplied function
                 word_guessed = True
-                word_prons = guess_word(word)
+                word_prons = guess_word(token)
                 if word_prons is not None:
                     # Update lexicon
                     self.lexicon[word] = [
@@ -170,6 +176,10 @@ class Phonemizer:
                     ]
 
             if word_prons:
+                # Language-specific processing
+                if process_pronunciation:
+                    word_prons = [process_pronunciation(wp, token) for wp in word_prons]
+
                 # In lexicon
                 if index is None:
                     # All pronunciations
@@ -193,12 +203,12 @@ class Phonemizer:
             else:
                 if not word_guessed:
                     # Need to guess
-                    missing_words.append((len(sentence_prons), word))
+                    missing_words.append((len(sentence_prons), token))
 
                 # Add placeholder
                 sentence_prons.append([])
 
-        words_to_guess = set(w for _, w in missing_words)
+        words_to_guess = set(t.text for _, t in missing_words)
 
         if words_to_guess:
             _LOGGER.debug("Guessing pronunciations for %s", words_to_guess)
@@ -207,9 +217,15 @@ class Phonemizer:
                 self.lexicon[word] = [word_phonemes]
 
             # Fill in missing words
-            for word_idx, word in missing_words:
+            for word_idx, token in missing_words:
                 word_prons = self.lexicon.get(word)
                 if word_prons:
+                    # Language-specific processing
+                    if process_pronunciation:
+                        word_prons = [
+                            process_pronunciation(wp, token) for wp in word_prons
+                        ]
+
                     sentence_prons[word_idx] = [
                         Phonemizer.maybe_separate_tones(wp, separate_tones)
                         for wp in word_prons

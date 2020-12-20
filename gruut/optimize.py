@@ -161,7 +161,7 @@ def get_optimal_sentences(
         for sentence in clean_sentences:
             # Not currently using breaks
             sentence_prons = lang.phonemizer.phonemize(
-                sentence.clean_words,
+                sentence.tokens,
                 word_breaks=word_breaks,
                 minor_breaks=False,
                 major_breaks=False,

@@ -17,20 +17,34 @@ _NON_WORD = re.compile(r"^(\W|_)+$")
 
 
 @dataclass
+class Token:
+    """Single token"""
+
+    text: str
+    pos: typing.Optional[str] = None
+
+
+TOKENIZE_FUNC = typing.Callable[[str], typing.List[typing.List[Token]]]
+
+
+@dataclass
 class Sentence:
     """Tokenized and cleaned sentence"""
 
     raw_text: str = ""
     raw_words: typing.List[str] = field(default_factory=list)
     clean_words: typing.List[str] = field(default_factory=list)
+    tokens: typing.List[Token] = field(default_factory=list)
 
 
 class Tokenizer:
     """Splits text into sentences, tokenizes and cleans"""
 
-    def __init__(self, config, nlp=None):
+    def __init__(self, config, custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None):
         self.config = config
         self.language = pydash.get(self.config, "language.code")
+
+        self.custom_tokenize = custom_tokenize
 
         # Symbol to skip immediately after an abbreviation
         self.abbreviation_skip = pydash.get(self.config, "symbols.abbreviation_skip")
@@ -144,67 +158,76 @@ class Tokenizer:
         self, text: str, number_converters: bool = False, replace_currency: bool = True
     ) -> typing.Iterable[Sentence]:
         """Split text into sentences, tokenize, and clean"""
-        # Do pre-tokenization replacements
-        for pattern, replacement in self.replacements:
-            text = pattern.sub(replacement, text)
+        sentence_tokens: typing.List[typing.List[Token]] = []
+        raw_sentence_tokens: typing.List[typing.List[str]] = []
 
-        # Tokenize
-        raw_tokens = self.token_split_pattern.split(text)
+        if self.custom_tokenize:
+            # User-defined tokenization
+            sentence_tokens = self.custom_tokenize(text)
+            raw_sentence_tokens = [[t.text for t in s] for s in sentence_tokens]
+        else:
+            # Do pre-tokenization replacements
+            for pattern, replacement in self.replacements:
+                text = pattern.sub(replacement, text)
 
-        # Break raw tokens into sentences and sub-tokens according to
-        # punctuation.
-        # Performance is going to be bad, but this is a first pass.
-        raw_sentence_tokens: typing.List[typing.List[str]] = [[]]
-        sentence_tokens: typing.List[typing.List[str]] = [[]]
-        for token in raw_tokens:
-            raw_sentence_tokens[-1].append(token)
+            # Tokenize
+            raw_tokens = self.token_split_pattern.split(text)
 
-            # Word or word with punctuation or currency symbol
-            sub_tokens = [""]
-            for c in token:
-                if (c in self.punctuations) or (c in self.currency_names):
-                    sub_tokens.append(c)
-                    sub_tokens.append("")
-                else:
-                    sub_tokens[-1] += c
+            # Break raw tokens into sentences and sub-tokens according to
+            # punctuation.
+            # Performance is going to be bad, but this is a first pass.
+            raw_sentence_tokens.append([])
+            sentence_tokens.append([])
 
-            # Accumulate sub-tokens into sentence tokens
-            last_token_was_abbreviation = False
-            for sub_token in sub_tokens:
-                if not sub_token:
-                    continue
+            for token_text in raw_tokens:
+                raw_sentence_tokens[-1].append(token_text)
 
-                if last_token_was_abbreviation and (
-                    sub_token == self.abbreviation_skip
-                ):
-                    # Skip period after abbreviation
-                    continue
-
-                # Expand abbreviations
-                expanded_tokens = []
-                if self.abbreviations:
-                    check_token = sub_token
-                    if self.casing:
-                        check_token = self.casing(sub_token)
-
-                    # Expansions may be multiple words.
-                    expansion = self.abbreviations.get(check_token)
-                    if expansion:
-                        expanded_tokens.extend(expansion)
-                        last_token_was_abbreviation = True
+                # Word or word with punctuation or currency symbol
+                sub_tokens = [""]
+                for c in token_text:
+                    if (c in self.punctuations) or (c in self.currency_names):
+                        sub_tokens.append(c)
+                        sub_tokens.append("")
                     else:
-                        expanded_tokens.append(check_token)
-                else:
-                    expanded_tokens.append(sub_token)
+                        sub_tokens[-1] += c
 
-                # Append to current sentence
-                for ex_token in expanded_tokens:
-                    sentence_tokens[-1].append(ex_token)
+                # Accumulate sub-tokens into sentence tokens
+                last_token_was_abbreviation = False
+                for sub_token in sub_tokens:
+                    if not sub_token:
+                        continue
 
-                    if ex_token in self.major_breaks:
-                        # New sentence
-                        sentence_tokens.append([])
-                        raw_sentence_tokens.append([])
+                    if last_token_was_abbreviation and (
+                        sub_token == self.abbreviation_skip
+                    ):
+                        # Skip period after abbreviation
+                        continue
+
+                    # Expand abbreviations
+                    expanded_tokens = []
+                    if self.abbreviations:
+                        check_token = sub_token
+                        if self.casing:
+                            check_token = self.casing(sub_token)
+
+                        # Expansions may be multiple words.
+                        expansion = self.abbreviations.get(check_token)
+                        if expansion:
+                            expanded_tokens.extend(expansion)
+                            last_token_was_abbreviation = True
+                        else:
+                            expanded_tokens.append(check_token)
+                    else:
+                        expanded_tokens.append(sub_token)
+
+                    # Append to current sentence
+                    for ex_token in expanded_tokens:
+                        sentence_tokens[-1].append(Token(text=ex_token))
+
+                        if ex_token in self.major_breaks:
+                            # New sentence
+                            sentence_tokens.append([])
+                            raw_sentence_tokens.append([])
 
         # Process each sentence
         last_token_currency: typing.Optional[str] = None
@@ -213,26 +236,30 @@ class Tokenizer:
         for sentence_idx, sentence in enumerate(sentence_tokens):
             raw_words = []
             clean_words = []
+            clean_tokens = []
 
             # Process each token
             for token in sentence:
-                token = token.strip()
+                token.text = token.text.strip()
 
-                if not token:
+                if not token.text:
                     # Skip empty tokens
                     continue
 
-                raw_words.append(token)
+                raw_words.append(token.text)
 
-                if (token in self.currency_names) and replace_currency:
+                if (token.text in self.currency_names) and replace_currency:
                     # Token will influence next number
-                    last_token_currency = token
+                    last_token_currency = token.text
                     continue
 
-                if (token in self.minor_breaks) or (token in self.major_breaks):
+                if (token.text in self.minor_breaks) or (
+                    token.text in self.major_breaks
+                ):
                     # Keep breaks (pauses)
                     if not last_token_was_break:
-                        clean_words.append(token)
+                        clean_words.append(token.text)
+                        clean_tokens.append(token)
 
                         # Avoid multiple breaks
                         last_token_was_break = True
@@ -241,12 +268,7 @@ class Tokenizer:
 
                 last_token_was_break = False
 
-                # if self.question_mark and token == "?":
-                #     # Keep question marks
-                #     clean_words.append(token)
-                #     continue
-
-                if (token in self.punctuations) or (_NON_WORD.match(token)):
+                if (token.text in self.punctuations) or (_NON_WORD.match(token.text)):
                     # Skip non-words
                     continue
 
@@ -255,20 +277,20 @@ class Tokenizer:
                 # Try to process as a number first
                 number_match = None
                 if number_converters and self.number_converter_pattern:
-                    number_match = self.number_converter_pattern.match(token)
+                    number_match = self.number_converter_pattern.match(token.text)
                 elif self.number_pattern:
-                    number_match = self.number_pattern.match(token)
+                    number_match = self.number_pattern.match(token.text)
 
                 if number_match:
                     try:
-                        digit_str = token
+                        digit_str = token.text
                         num2words_kwargs = {"lang": self.num2words_lang}
 
                         if number_converters:
                             # Look for 123_converter pattern.
                             # Available num2words converters are:
                             # cardinal (default), ordinal, ordinal_num, year, currency
-                            digit_str, converter_str = token.split("_", maxsplit=1)
+                            digit_str, converter_str = token.text.split("_", maxsplit=1)
 
                             if converter_str:
                                 num2words_kwargs["to"] = converter_str
@@ -330,6 +352,7 @@ class Tokenizer:
                             num_tokens = [self.casing(t) for t in num_tokens]
 
                         clean_words.extend(num_tokens)
+                        clean_tokens.extend([Token(nt) for nt in num_tokens])
 
                         # Successfully processed as a number
                         process_as_word = False
@@ -342,9 +365,11 @@ class Tokenizer:
 
                     # Apply casing transformation
                     if self.casing:
-                        words = [self.casing(w) for w in words]
+                        for word in words:
+                            word.text = self.casing(word.text)
 
-                    clean_words.extend(words)
+                    clean_words.extend([w.text for w in words])
+                    clean_tokens.extend(words)
 
                 last_token_currency = None
 
@@ -356,7 +381,10 @@ class Tokenizer:
             # Don't yield empty sentences
             if raw_words or clean_words:
                 yield Sentence(
-                    raw_text=raw_text, raw_words=raw_words, clean_words=clean_words
+                    raw_text=raw_text,
+                    raw_words=raw_words,
+                    clean_words=clean_words,
+                    tokens=clean_tokens,
                 )
 
     # -------------------------------------------------------------------------

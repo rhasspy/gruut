@@ -4,3 +4,5 @@ __pycache__/
 /.venv/
 /download/
 g2p.fst
+
+/gruut/data/fa/postagger.model
