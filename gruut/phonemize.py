@@ -89,7 +89,7 @@ class Phonemizer:
 
     def phonemize(
         self,
-        tokens: typing.List[Token],
+        tokens: typing.List[typing.Union[str, Token]],
         word_indexes: bool = False,
         guess_word: typing.Optional[
             typing.Callable[[Token], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
@@ -116,7 +116,12 @@ class Phonemizer:
             # Add initial word break
             sentence_prons.append([[IPA.BREAK_WORD.value]])
 
-        for token in tokens:
+        for token_or_str in tokens:
+            if isinstance(token_or_str, Token):
+                token = token_or_str
+            else:
+                token = Token(text=token_or_str)
+
             word = token.text
 
             if word in self.minor_breaks:
