@@ -4,6 +4,7 @@ language:
   name: "Nederlands"
   code: "nl"
   phonemes: !env "${config_dir}/phonemes.txt"
+  keep_stress: true
 
 lexicons:
   - !env "${config_dir}/lexicon.txt.gz"

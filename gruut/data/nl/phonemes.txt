@@ -1,42 +1,44 @@
-# Nederlands Dutch (nl-nl)
+# dutch (nl)
 # phoneme example [homophone] [homophone]...
 
-# Sources:
-# https://nl.wiktionary.org/wiki/WikiWoordenboek:Standaardweergave_uitspraak_Nederlands
-# https://en.wikipedia.org/wiki/Dutch_phonology
+# sources:
+# https://nl.wiktionary.org/wiki/wikiwoordenboek:standaardweergave_uitspraak_nederlands
+# https://en.wikipedia.org/wiki/dutch_phonology
 
-# Normal vowels
+# normal vowels
 a h[aa]r
-ɑ k[a]n
+ɑ k[a]n ɑ̃
 e m[ee]r
-ɛ p[e]t
-i b[i]et ɪ
-o [oo]g
-ɔ [o]s ʌ ʊ
-y [uu]r
-ʏ [u]k
-ø [eu]ro
-u [oe]ver
+ɛ p[e]t æ
+i b[i]et i̯
+ɪ k[i]p ɪ̯ ɪː
+o [oo]g o̝
+ɔ [o]s ʌ ʊ̯
+y [uu]r y̯
+ʏ [u]k ʏ̯
+ø [eu]ro ɵ
+u [oe]ver u̯
 ə g[e]makkelijk
 
-# Elongated vowels
+# elongated vowels
 aː j[a]
 ɑː f[a]rm
 eː v[ee]r
 ɛː [oe]ver
-iː anal[y]se ɪ
-ɔː r[o]ze oː
+iː anal[y]se
+ɔː r[o]ze oː øː
 yː centrif[u]ge
 uː c[oo]l
 œː man[oeu]vre œ
 ʏː res[ea]rch
+oː b[oo]t
 
-# Dipthongs
+# dipthongs
 ɛi [ij]s
 ɑu [au]gurk
 œy [ui]l ʌʊ
 
-# Plosives (stops)
+# plosives (stops)
 p [p]as
 b [b]ij
 t [t]ien
@@ -46,7 +48,7 @@ c [tj]alk
 k [k]at
 ɡ [g]oal g
 
-# Fricatives
+# fricatives
 f [f]oto
 v [v]ier
 s [s]ok
@@ -57,12 +59,12 @@ h [h]eer ɦ
 ʃ [sj]aal
 ʒ [j]am
 
-# Other consonants
+# other consonants
 m [m]an
 n [n]ul ɲ
 ŋ to[ng]
 ɱ i[n]fuus
 l [l]ip ɫ
 ɹ [r]ol r
-j [j]as
-w [w]iel ʋ β
+j [j]as ʲ
+w [w]iel ʋ β w̞ β̞
