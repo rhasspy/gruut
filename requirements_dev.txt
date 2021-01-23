@@ -5,7 +5,7 @@ mkdocs>=1.1
 mkdocs-material==5.1.1
 mypy==0.770
 pyinstaller==3.6
-pylint==2.4.4
+pylint==2.5.3
 pytest==5.4.1
 pytest-cov==2.8.1
 yamllint==1.21.0
