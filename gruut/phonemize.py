@@ -89,7 +89,7 @@ class Phonemizer:
 
     def phonemize(
         self,
-        tokens: typing.List[typing.Union[str, Token]],
+        tokens: typing.Sequence[typing.Union[str, Token]],
         word_indexes: bool = False,
         guess_word: typing.Optional[
             typing.Callable[[Token], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
@@ -223,7 +223,7 @@ class Phonemizer:
 
             # Fill in missing words
             for word_idx, token in missing_words:
-                word_prons = self.lexicon.get(word)
+                word_prons = self.lexicon.get(token.text)
                 if word_prons:
                     # Language-specific processing
                     if process_pronunciation:
