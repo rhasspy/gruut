@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import babel
 import babel.numbers
 import pydash
+
 from num2words import num2words
 
 _LOGGER = logging.getLogger("gruut.toksen")

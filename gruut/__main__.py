@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import typing
 from collections import Counter
 from pathlib import Path
 
@@ -120,7 +121,7 @@ def do_tokenize(config, args):
                         "raw_text": sentence.raw_text,
                         "raw_words": sentence.raw_words,
                         "clean_words": clean_words,
-                        "clean_text": " ".join(clean_words),
+                        "clean_text": tokenizer.token_join.join(clean_words),
                         "sentences": [],
                     }
                 )
@@ -152,7 +153,7 @@ def do_tokenize(config, args):
                     "raw_words": raw_words,
                     "clean_words": clean_words,
                     "tokens": [dataclasses.asdict(t) for t in tokens],
-                    "clean_text": " ".join(clean_words),
+                    "clean_text": tokenizer.token_join.join(clean_words),
                     "sentences": [dataclasses.asdict(s) for s in sentences],
                 }
             )
@@ -177,6 +178,26 @@ def do_phonemize(config, args):
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
 
+    # Load phoneme maps
+    phoneme_maps: typing.Dict[str, typing.Dict[str, str]] = {}
+    if args.map:
+        for map_name in args.map:
+            map_path = _DATA_DIR / args.language / "maps" / (map_name + ".txt")
+            _LOGGER.debug("Loading phoneme map %s (%s)", map_name, map_path)
+            current_map = {}
+            with open(map_path, "r") as map_file:
+                for line in map_file:
+                    line = line.strip()
+                    # Skip blank lines and comments
+                    if not line or line.startswith("#"):
+                        continue
+
+                    gruut_phoneme, _, mapped_phoneme = line.split(maxsplit=2)
+                    current_map[gruut_phoneme] = mapped_phoneme
+
+            phoneme_maps[map_name] = current_map
+
+    # Handle language-specific cases
     if args.language == "fa":
         # Genitive case
         def fa_process_pronunciation(word_pron, token):
@@ -241,6 +262,15 @@ def do_phonemize(config, args):
             ).strip()
             + "]]"
         )
+
+        # Map phonemes
+        sentence_obj["mapped_phonemes"] = {}
+        for map_name, phoneme_map in phoneme_maps.items():
+            mapped_phonemes = [
+                [phoneme_map[p] for p in word_pron if p in phoneme_map]
+                for word_pron in first_pron
+            ]
+            sentence_obj["mapped_phonemes"][map_name] = mapped_phonemes
 
         # Print back out with extra info
         writer.write(sentence_obj)
@@ -612,6 +642,130 @@ def do_mark_heteronyms(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_check_wavs(config, args):
+    """
+    Reads CSV with | delimiter from stdin with id|text
+
+    Cleans text and compares WAV duration with text length.
+
+    Prints a line of JSON for each input line.
+    """
+    import wave
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+    tokenizer = gruut_lang.tokenizer
+
+    csv_file = sys.stdin
+    csv_dir = Path.cwd()
+
+    if args.csv:
+        args.csv = Path(args.csv)
+        csv_file = open(args.csv, "r")
+        csv_dir = args.csv.parent
+    else:
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading CSV (| delimited) from stdin...", file=sys.stderr)
+
+    reader = csv.reader(csv_file, delimiter="|")
+    for row in reader:
+        wav_id, text = row[0], row[1]
+        wav_path = csv_dir / f"{wav_id}.wav"
+        if not wav_path.is_file():
+            _LOGGER.warning("Missing WAV file: %s", wav_path)
+            continue
+
+        # Get sample rate/width for duration calculation
+        with open(wav_path, "rb") as wav_file:
+            with wave.open(wav_file) as wav_reader:
+                sample_rate = wav_reader.getframerate()
+                num_frames = wav_reader.getnframes()
+
+        # WAV duration in milliseconds
+        wav_duration = (num_frames / sample_rate) * 1000
+
+        # Clean text
+        clean_words = []
+        for sentence in tokenizer.tokenize(text):
+            clean_words.extend(sentence.clean_words)
+
+        clean_text = tokenizer.token_join.join(clean_words)
+        text_length = len(clean_text)
+
+        div_duration = wav_duration / args.denominator
+        length_ratio = wav_duration / text_length
+
+        _LOGGER.debug(
+            "%s: %s ms, %s char(s), %s, %s; %s",
+            id,
+            wav_duration,
+            text_length,
+            div_duration,
+            length_ratio,
+            text,
+        )
+
+        if div_duration < text_length:
+            print(id, "too short")
+
+        if length_ratio < args.ratio:
+            print(id, "bad duration/length ratio")
+
+
+# -----------------------------------------------------------------------------
+
+
+def do_mbrolize(config, args):
+    """
+    Reads JSONL from stdin with "mapped_phonemes" property.
+
+    Convert mapped phonemes to MBROLA format.
+
+    Combines all input lines into a single output file.
+    """
+    for line_index, line in enumerate(sys.stdin):
+        line = line.strip()
+        if not line:
+            continue
+
+        sentence_obj = json.loads(line)
+        clean_words = sentence_obj.get("clean_words", [])
+
+        all_mapped_phonemes = sentence_obj.get("mapped_phonemes")
+        if not all_mapped_phonemes:
+            _LOGGER.warning("No mapped phonemes for line %s", line_index + 1)
+            continue
+
+        if args.map:
+            # Use named map
+            mapped_phonemes = all_mapped_phonemes.get(args.map)
+            if not mapped_phonemes:
+                _LOGGER.warning(
+                    "No phonemes for map %s (line %s)", args.map, line_index + 1
+                )
+                continue
+        else:
+            # Use first map
+            mapped_phonemes = next(iter(all_mapped_phonemes.values()))
+
+        for word_index, word_pron in enumerate(mapped_phonemes):
+            word = ""
+            if word_index < len(clean_words):
+                word = clean_words[word_index]
+
+            if word:
+                print(";", word)
+
+            for phoneme in word_pron:
+                print(phoneme, 80)
+
+            print("")
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -687,6 +841,9 @@ def get_args() -> argparse.Namespace:
         "--read-all",
         action="store_true",
         help="Read all sentences and guess words before output",
+    )
+    phonemize_parser.add_argument(
+        "--map", action="append", help="Map phonemes according to a named map"
     )
 
     # ---------------
@@ -819,6 +976,38 @@ def get_args() -> argparse.Namespace:
         help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
     )
 
+    # ----------
+    # check-wavs
+    # ----------
+    check_wavs_parser = sub_parsers.add_parser(
+        "check-wavs", help="Read id|text CSV, check WAV duration vs. text length"
+    )
+    check_wavs_parser.add_argument("--csv", help="Path to CSV file (default: stdin)")
+    check_wavs_parser.add_argument(
+        "--denominator",
+        type=float,
+        default=30,
+        help="Denominator for length check (default: 30)",
+    )
+    check_wavs_parser.add_argument(
+        "--ratio",
+        type=float,
+        default=10,
+        help="Upper-bound of duration/length ration (default: 10)",
+    )
+    check_wavs_parser.set_defaults(func=do_check_wavs)
+
+    # --------
+    # mbrolize
+    # --------
+    mbrolize_parser = sub_parsers.add_parser(
+        "mbrolize", help="Convert phonemized/mapped output to MBROLA format"
+    )
+    mbrolize_parser.add_argument(
+        "--map", help="Name of phoneme map to use (default: first one)"
+    )
+    mbrolize_parser.set_defaults(func=do_mbrolize)
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -831,6 +1020,8 @@ def get_args() -> argparse.Namespace:
         phonemize_lexicon_parser,
         compare_phonemes_parser,
         mark_heteronyms_parser,
+        check_wavs_parser,
+        mbrolize_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
