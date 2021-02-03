@@ -270,10 +270,19 @@ def do_phonemize(config, args):
         # Map phonemes
         sentence_obj["mapped_phonemes"] = {}
         for map_name, phoneme_map in phoneme_maps.items():
-            mapped_phonemes = [
-                [phoneme_map[p] for p in word_pron if p in phoneme_map]
-                for word_pron in first_pron
-            ]
+            mapped_phonemes = []
+            for word_pron in first_pron:
+                mapped_word_phonemes = []
+
+                for phoneme in word_pron:
+                    # Exclude stress for now
+                    phoneme = gruut_ipa.IPA.without_stress(phoneme)
+                    mapped_phoneme = phoneme_map.get(phoneme)
+                    if mapped_phoneme:
+                        mapped_word_phonemes.append(mapped_phoneme)
+
+                mapped_phonemes.append(mapped_word_phonemes)
+
             sentence_obj["mapped_phonemes"][map_name] = mapped_phonemes
 
         # Print back out with extra info
@@ -728,6 +737,21 @@ def do_mbrolize(config, args):
 
     Combines all input lines into a single output file.
     """
+    durations: typing.Dict[str, int] = {}
+    durations_path = _DATA_DIR / args.language / "durations.txt"
+
+    if durations_path.is_file():
+        _LOGGER.debug("Loading phoneme duration map from %s", durations_path)
+        with open(durations_path, "r") as durations_file:
+            for line in durations_file:
+                line = line.strip()
+                if (not line) or line.startswith("#"):
+                    continue
+
+                phoneme, duration_str = line.split(maxsplit=1)
+                durations[phoneme] = int(duration_str)
+
+    # Read JSONL from phonemize
     for line_index, line in enumerate(sys.stdin):
         line = line.strip()
         if not line:
@@ -773,7 +797,7 @@ def do_mbrolize(config, args):
                 print(";", word)
 
             for phoneme in word_pron:
-                duration_ms = args.default_duration
+                duration_ms = durations.get(phoneme, args.default_duration)
 
                 # Convert minor/major breaks to silence phoneme (_)
                 if phoneme == gruut_ipa.IPA.BREAK_MINOR:
@@ -786,6 +810,86 @@ def do_mbrolize(config, args):
                 print(phoneme, duration_ms)
 
             print("")
+
+
+# -----------------------------------------------------------------------------
+
+
+def do_print_phoneme_ids(config, args):
+    """
+    Print phonemes for a language and associated integer ids.
+    """
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+
+    phonemes_list = gruut_lang.id_to_phonemes(
+        no_pad=args.no_pad, no_word_break=args.no_word_break
+    )
+
+    # <id> <phoneme>
+    for phoneme_idx, phoneme in enumerate(phonemes_list):
+        print(phoneme_idx, phoneme)
+
+
+# -----------------------------------------------------------------------------
+
+
+def do_phonemes2ids(config, args):
+    """
+    Converts phonemes from phonemize to integer ids.
+
+    Prints JSONL list for each line of input.
+    """
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+
+    phonemes_list = gruut_lang.id_to_phonemes(
+        no_pad=args.no_pad, no_word_break=args.no_word_break
+    )
+
+    phoneme_to_id = {p: i for i, p in enumerate(phonemes_list)}
+    _LOGGER.debug(phoneme_to_id)
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+
+        sentence_obj = json.loads(line)
+        pronunciation = sentence_obj.get("pronunciation", [])
+
+        phoneme_strs = []
+        phoneme_ids = []
+        for word_pron in pronunciation:
+            for phoneme in word_pron:
+                if not phoneme:
+                    continue
+
+                if gruut_ipa.IPA.is_stress(phoneme[0]):
+                    stress, phoneme = phoneme[0], phoneme[1:]
+                    stress_id = phoneme_to_id.get(stress)
+                    if stress_id is not None:
+                        phoneme_strs.append(stress)
+                        phoneme_ids.append(stress_id)
+                    else:
+                        _LOGGER.warning("No id for stress %s (%s)", stress, line)
+
+                phoneme_id = phoneme_to_id.get(phoneme)
+                if phoneme_id is None:
+                    _LOGGER.warning("No id for phoneme %s (%s)", phoneme, line)
+                    continue
+
+                phoneme_strs.append(phoneme)
+                phoneme_ids.append(phoneme_id)
+
+        # Output to console
+        _LOGGER.debug(phoneme_strs)
+        writer.write(phoneme_ids)
 
 
 # -----------------------------------------------------------------------------
@@ -1054,6 +1158,38 @@ def get_args() -> argparse.Namespace:
     )
     mbrolize_parser.set_defaults(func=do_mbrolize)
 
+    # -----------------
+    # print-phoneme-ids
+    # -----------------
+    print_phoneme_ids_parser = sub_parsers.add_parser(
+        "print-phoneme-ids", help="Print language phonemes and associated integer ids"
+    )
+    print_phoneme_ids_parser.add_argument(
+        "--no-pad", action="store_true", help="Don't include pad symbol (_)"
+    )
+    print_phoneme_ids_parser.add_argument(
+        "--no-word-break",
+        action="store_true",
+        help="Don't include word break symbol (#)",
+    )
+    print_phoneme_ids_parser.set_defaults(func=do_print_phoneme_ids)
+
+    # ------------
+    # phonemes2ids
+    # ------------
+    phonemes2ids_parser = sub_parsers.add_parser(
+        "phonemes2ids", help="Convert phonemized output to integer ids"
+    )
+    phonemes2ids_parser.add_argument(
+        "--no-pad", action="store_true", help="Don't include pad symbol (_)"
+    )
+    phonemes2ids_parser.add_argument(
+        "--no-word-break",
+        action="store_true",
+        help="Don't include word break symbol (#)",
+    )
+    phonemes2ids_parser.set_defaults(func=do_phonemes2ids)
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -1068,6 +1204,8 @@ def get_args() -> argparse.Namespace:
         mark_heteronyms_parser,
         check_wavs_parser,
         mbrolize_parser,
+        print_phoneme_ids_parser,
+        phonemes2ids_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"

@@ -9,7 +9,7 @@ from pathlib import Path
 import pydash
 import yaml
 
-from gruut_ipa import Phonemes
+from gruut_ipa import IPA, Phonemes
 
 from .phonemize import Phonemizer
 from .toksen import TOKENIZE_FUNC, Token, Tokenizer
@@ -68,6 +68,52 @@ class Language:
                 final_map[from_phoneme] = to_phonemes
 
             self.accents[accent_lang] = final_map
+
+    def id_to_phonemes(
+        self, pad="_", no_pad=False, no_word_break=False
+    ) -> typing.List[str]:
+        """Return map of integer ids to phonemes"""
+        # Pad symbol must always be first (index 0)
+        pad = "_"
+
+        # Acute/grave accents (' and ²)
+        accents = []
+        if self.keep_accents:
+            accents = [IPA.ACCENT_ACUTE.value, IPA.ACCENT_GRAVE.value]
+
+        # Primary/secondary stress (ˈ and ˌ)
+        # NOTE: Accute accent (0x0027) != primary stress (0x02C8)
+        stresses = []
+        if self.keep_stress:
+            stresses = [IPA.STRESS_PRIMARY.value, IPA.STRESS_SECONDARY.value]
+
+        # Tones
+        tones = self.tones
+
+        # Word break
+        word_break = [IPA.BREAK_WORD.value]
+        if no_word_break:
+            word_break = []
+
+        phonemes_list = [pad]
+        if no_pad:
+            phonemes_list = []
+
+        # Always include pad and break symbols.
+        # In the future, intontation/tones should also be added.
+        phonemes_list = (
+            phonemes_list
+            + [IPA.BREAK_MINOR.value, IPA.BREAK_MAJOR.value]
+            + word_break
+            + accents
+            + stresses
+            + tones
+            + sorted([p.text for p in self.phonemes])
+        )
+
+        return phonemes_list
+
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def load(language: str) -> typing.Optional["Language"]:
