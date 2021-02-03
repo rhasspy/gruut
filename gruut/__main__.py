@@ -195,6 +195,10 @@ def do_phonemize(config, args):
                     gruut_phoneme, _, mapped_phoneme = line.split(maxsplit=2)
                     current_map[gruut_phoneme] = mapped_phoneme
 
+                    # Automatically add mappings for breaks
+                    current_map[gruut_ipa.IPA.BREAK_MINOR] = gruut_ipa.IPA.BREAK_MINOR
+                    current_map[gruut_ipa.IPA.BREAK_MAJOR] = gruut_ipa.IPA.BREAK_MAJOR
+
             phoneme_maps[map_name] = current_map
 
     # Handle language-specific cases
@@ -730,6 +734,17 @@ def do_mbrolize(config, args):
             continue
 
         sentence_obj = json.loads(line)
+        raw_text = sentence_obj.get("raw_text", "")
+        if raw_text:
+            print(";", raw_text)
+
+        clean_text = sentence_obj.get("clean_text", "")
+        if clean_text:
+            print(";", clean_text)
+
+        if raw_text or clean_text:
+            print("")
+
         clean_words = sentence_obj.get("clean_words", [])
 
         all_mapped_phonemes = sentence_obj.get("mapped_phonemes")
@@ -758,7 +773,17 @@ def do_mbrolize(config, args):
                 print(";", word)
 
             for phoneme in word_pron:
-                print(phoneme, 80)
+                duration_ms = args.default_duration
+
+                # Convert minor/major breaks to silence phoneme (_)
+                if phoneme == gruut_ipa.IPA.BREAK_MINOR:
+                    phoneme = args.silence_phoneme
+                    duration_ms = args.minor_break_duration
+                elif phoneme == gruut_ipa.IPA.BREAK_MAJOR:
+                    phoneme = args.silence_phoneme
+                    duration_ms = args.major_break_duration
+
+                print(phoneme, duration_ms)
 
             print("")
 
@@ -1005,6 +1030,27 @@ def get_args() -> argparse.Namespace:
     )
     mbrolize_parser.add_argument(
         "--map", help="Name of phoneme map to use (default: first one)"
+    )
+    mbrolize_parser.add_argument(
+        "--default-duration",
+        type=int,
+        default=80,
+        help="Default duration of phonemes (default: 80ms)",
+    )
+    mbrolize_parser.add_argument(
+        "--minor-break-duration",
+        type=int,
+        default=150,
+        help="Duration of minor breaks (default: 150ms)",
+    )
+    mbrolize_parser.add_argument(
+        "--major-break-duration",
+        type=int,
+        default=300,
+        help="Duration of major breaks (default: 300ms)",
+    )
+    mbrolize_parser.add_argument(
+        "--silence-phoneme", default="_", help="Phoneme used for silence (default: _)"
     )
     mbrolize_parser.set_defaults(func=do_mbrolize)
 
