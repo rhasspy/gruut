@@ -1,21 +1,17 @@
 # Normal vowels
-ɑ f[a]ther aː
+ɑ f[a]ther aː ɑː
 æ c[a]t
 ɛ b[e]d ɜ ɜː
-i cit[y]
+i cit[y] iː
 ɪ s[i]t ɨ
 ɔ l[aw] ɔː ɒ
 ʊ p[u]t ʊ̯
 ʌ r[u]n
-
-# Elognated vowels
-iː s[ee]
-ɑː n[o]t
-uː s[oo]n u
+u s[oo]n uː
 
 # Schwas
 ə [a]llow
-ɝ corn[er] ɝː ɚ
+ɚ corn[er] ɝː ɝ
 
 # Dipthongs
 eɪ r[ai]se e eɪ̯
