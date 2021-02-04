@@ -895,6 +895,38 @@ def do_phonemes2ids(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_print_phoneme_counts(config, args):
+    """
+    Print counts of all phonemes from the lexicon.
+    """
+    from . import Language
+
+    gruut_lang = Language.load(args.language)
+    assert gruut_lang, f"Unsupported language: {args.language}"
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    phoneme_counts = Counter()
+
+    for phoneme in gruut_lang.phonemes:
+        phoneme_counts[phoneme.text] = 0
+
+    for word_prons in gruut_lang.phonemizer.lexicon.values():
+        for word_pron in word_prons:
+            for phoneme in word_pron:
+                if not phoneme:
+                    continue
+
+                if gruut_ipa.IPA.is_stress(phoneme[0]):
+                    phoneme = phoneme[1:]
+
+                phoneme_counts[phoneme] += 1
+
+    writer.write(phoneme_counts.most_common())
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -1190,6 +1222,14 @@ def get_args() -> argparse.Namespace:
     )
     phonemes2ids_parser.set_defaults(func=do_phonemes2ids)
 
+    # --------------------
+    # print-phoneme-counts
+    # --------------------
+    print_phoneme_counts_parser = sub_parsers.add_parser(
+        "print-phoneme-counts", help="Print counts of all phonemes from the lexicon"
+    )
+    print_phoneme_counts_parser.set_defaults(func=do_print_phoneme_counts)
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -1206,6 +1246,7 @@ def get_args() -> argparse.Namespace:
         mbrolize_parser,
         print_phoneme_ids_parser,
         phonemes2ids_parser,
+        print_phoneme_counts_parser,
     ]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
