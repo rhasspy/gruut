@@ -71,7 +71,7 @@ def do_tokenize(config, args):
     """
     from . import Language
 
-    gruut_lang = Language.load(args.language)
+    gruut_lang = Language.load(args.language, preload_lexicon=False)
     assert gruut_lang, f"Unsupported language: {args.language}"
 
     tokenizer = gruut_lang.tokenizer

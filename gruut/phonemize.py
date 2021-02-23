@@ -35,7 +35,12 @@ NON_WORD_CHARS = re.compile(r"\W")
 class Phonemizer:
     """Gets phonetic pronunciations for clean words"""
 
-    def __init__(self, config, lexicon: typing.Optional[LEXICON_TYPE] = None):
+    def __init__(
+        self,
+        config,
+        lexicon: typing.Optional[LEXICON_TYPE] = None,
+        preload_lexicon: bool = True,
+    ):
         self.config = config
 
         # Short pause symbols (commas, etc.)
@@ -67,23 +72,19 @@ class Phonemizer:
         self.g2p_lock = threading.RLock()
 
         self.lexicon: LEXICON_TYPE = {}
+        self.lexicon_loaded = False
+
         if lexicon:
             self.lexicon = lexicon
-        else:
+            self.lexicon_loaded = True
+        elif preload_lexicon:
             # Load lexicons
-            for lexicon_path in self.config.get("lexicons", []):
-                if os.path.isfile(lexicon_path):
-                    _LOGGER.debug("Loading lexicon from %s", lexicon_path)
-                    with maybe_gzip_open(lexicon_path, "r") as lexicon_file:
-                        load_lexicon(
-                            lexicon_file, lexicon=self.lexicon, casing=self.casing
-                        )
-                else:
-                    _LOGGER.warning("Skipping lexicon at %s", lexicon_path)
-
+            self.load_lexicon()
             _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
 
         self.g2p_lock = threading.RLock()
+
+    # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
 
@@ -104,6 +105,10 @@ class Phonemizer:
         ] = None,
     ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
         """Get all possible pronunciations for cleaned words"""
+        if not self.lexicon_loaded:
+            # Dynamically load lexicon(s)
+            self.load_lexicon()
+
         sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
         missing_words: typing.List[typing.Tuple[int, Token]] = []
         between_words = False
@@ -206,7 +211,7 @@ class Phonemizer:
                         ]
                     )
             else:
-                if not word_guessed and self.is_word(token):
+                if not word_guessed and self.is_word(token.text):
                     # Need to guess
                     missing_words.append((len(sentence_prons), token))
 
@@ -269,12 +274,29 @@ class Phonemizer:
 
     # -------------------------------------------------------------------------
 
+    # pylint: disable=no-self-use
     def is_word(self, word: str) -> bool:
         """
         Determines whether a word should have its pronunciation guessed.
         Meant to be overridden by the Language class.
         """
         return True
+
+    # -------------------------------------------------------------------------
+
+    def load_lexicon(self):
+        """Load lexicon(s) from config"""
+        # Load lexicons
+        for lexicon_path in self.config.get("lexicons", []):
+            if os.path.isfile(lexicon_path):
+                _LOGGER.debug("Loading lexicon from %s", lexicon_path)
+                with maybe_gzip_open(lexicon_path, "r") as lexicon_file:
+                    load_lexicon(lexicon_file, lexicon=self.lexicon, casing=self.casing)
+            else:
+                _LOGGER.warning("Skipping lexicon at %s", lexicon_path)
+
+        self.lexicon_loaded = True
+        _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
 
     # -------------------------------------------------------------------------
 

@@ -28,7 +28,12 @@ _DATA_DIR = _DIR / "data"
 class Language:
     """Configuation, tokenizer, and phonemizer for a language"""
 
-    def __init__(self, config, language: typing.Optional[str] = None):
+    def __init__(
+        self,
+        config,
+        language: typing.Optional[str] = None,
+        preload_lexicon: bool = True,
+    ):
         if language is None:
             self.language = pydash.get(config, "language.code")
         else:
@@ -42,8 +47,8 @@ class Language:
             custom_tokenize = Language.make_fa_tokenize()
 
         self.tokenizer = Tokenizer(config, custom_tokenize=custom_tokenize)
-        self.phonemizer = Phonemizer(config)
-        self.phonemizer.is_word = self.tokenizer.is_word
+        self.phonemizer = Phonemizer(config, preload_lexicon=preload_lexicon)
+        self.phonemizer.is_word = self.tokenizer.is_word  # type: ignore
 
         self.phonemes = Phonemes.from_language(self.language)
         self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
@@ -118,7 +123,9 @@ class Language:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def load(language: str) -> typing.Optional["Language"]:
+    def load(
+        language: str, preload_lexicon: bool = True
+    ) -> typing.Optional["Language"]:
         """Load language from code"""
 
         # Expand environment variables in string value
@@ -136,7 +143,9 @@ class Language:
         with open(config_path, "r") as config_file:
             config = yaml.safe_load(config_file)
 
-        return Language(config=config, language=language)
+        return Language(
+            config=config, language=language, preload_lexicon=preload_lexicon
+        )
 
     @staticmethod
     def make_fa_tokenize() -> TOKENIZE_FUNC:
