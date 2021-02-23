@@ -186,13 +186,37 @@ class Tokenizer:
 
                 # Word or word with punctuation or currency symbol
                 sub_tokens = [""]
-                for c in token_text:
-                    if (c in self.punctuations and not in_number) or (
-                        c in self.currency_names
-                    ):
-                        sub_tokens.append(c)
-                        sub_tokens.append("")
-                        in_number = None
+                for i, c in enumerate(token_text):
+                    if (c in self.punctuations) or (c in self.currency_names):
+                        if in_number:
+                            # Determine whether number is done
+                            finish_number = False
+
+                            if c in self.currency_names:
+                                # <NUMBER> <CURRENCY>
+                                finish_number = True
+                            else:
+                                # Peek forward to see if this is <NUMBER>.<NUMBER> or <NUMBER>.
+                                if i < (len(token_text) - 1):
+                                    next_c = token_text[i + 1]
+                                    if not str.isdigit(next_c):
+                                        # Next char is not a digit, so number stops here
+                                        finish_number = True
+                                else:
+                                    # End of string after next char, so number can't continue
+                                    finish_number = True
+
+                            if finish_number:
+                                sub_tokens.append("")
+                                in_number = None
+
+                        if in_number:
+                            # Continue adding to number
+                            sub_tokens[-1] += c
+                        else:
+                            # Start new sub-token
+                            sub_tokens.append(c)
+                            sub_tokens.append("")
                     else:
                         sub_tokens[-1] += c
                         if str.isdigit(c):
