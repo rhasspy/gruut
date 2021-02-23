@@ -570,8 +570,8 @@ def do_compare_phonemes(config, args):
     """Print comparison of two languages' phonemes"""
     from . import Language
 
-    gruut_lang1 = Language.load(args.language)
-    gruut_lang2 = Language.load(args.language2)
+    gruut_lang1 = Language.load(args.language, preload_lexicon=False)
+    gruut_lang2 = Language.load(args.language2, preload_lexicon=False)
 
     assert gruut_lang1, f"Unsupported language: {args.language}"
     assert gruut_lang2, f"Unsupported language: {args.language2}"
@@ -667,7 +667,7 @@ def do_check_wavs(config, args):
     import wave
     from . import Language
 
-    gruut_lang = Language.load(args.language)
+    gruut_lang = Language.load(args.language, preload_lexicon=False)
     assert gruut_lang, f"Unsupported language: {args.language}"
     tokenizer = gruut_lang.tokenizer
 
@@ -822,7 +822,7 @@ def do_print_phoneme_ids(config, args):
     """
     from . import Language
 
-    gruut_lang = Language.load(args.language)
+    gruut_lang = Language.load(args.language, preload_lexicon=False)
     assert gruut_lang, f"Unsupported language: {args.language}"
 
     phonemes_list = gruut_lang.id_to_phonemes(
@@ -845,7 +845,7 @@ def do_phonemes2ids(config, args):
     """
     from . import Language
 
-    gruut_lang = Language.load(args.language)
+    gruut_lang = Language.load(args.language, preload_lexicon=False)
     assert gruut_lang, f"Unsupported language: {args.language}"
 
     phonemes_list = gruut_lang.id_to_phonemes(
