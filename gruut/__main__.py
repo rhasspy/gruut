@@ -175,6 +175,7 @@ def do_phonemize(config, args):
     gruut_lang = Language.load(args.language)
     assert gruut_lang, f"Unsupported language: {args.language}"
 
+    tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
 
@@ -307,7 +308,7 @@ def do_phonemize(config, args):
             sentence_objs.append(sentence_obj)
 
             for word in sentence_obj["clean_words"]:
-                if word not in phonemizer.lexicon:
+                if (word not in phonemizer.lexicon) and tokenizer.is_word(word):
                     missing_words.add(word)
         else:
             # Process immediate

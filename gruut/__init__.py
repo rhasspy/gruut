@@ -43,6 +43,8 @@ class Language:
 
         self.tokenizer = Tokenizer(config, custom_tokenize=custom_tokenize)
         self.phonemizer = Phonemizer(config)
+        self.phonemizer.is_word = self.tokenizer.is_word
+
         self.phonemes = Phonemes.from_language(self.language)
         self.accents: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {}
 

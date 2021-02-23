@@ -206,7 +206,7 @@ class Phonemizer:
                         ]
                     )
             else:
-                if not word_guessed:
+                if not word_guessed and self.is_word(token):
                     # Need to guess
                     missing_words.append((len(sentence_prons), token))
 
@@ -266,6 +266,15 @@ class Phonemizer:
             words, model_path=self.g2p_model_path, **kwargs
         ):
             yield result
+
+    # -------------------------------------------------------------------------
+
+    def is_word(self, word: str) -> bool:
+        """
+        Determines whether a word should have its pronunciation guessed.
+        Meant to be overridden by the Language class.
+        """
+        return True
 
     # -------------------------------------------------------------------------
 
