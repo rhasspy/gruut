@@ -180,17 +180,26 @@ class Tokenizer:
             raw_sentence_tokens.append([])
             sentence_tokens.append([])
 
+            in_number = None
             for token_text in raw_tokens:
                 raw_sentence_tokens[-1].append(token_text)
 
                 # Word or word with punctuation or currency symbol
                 sub_tokens = [""]
                 for c in token_text:
-                    if (c in self.punctuations) or (c in self.currency_names):
+                    if (c in self.punctuations and not in_number) or (
+                        c in self.currency_names
+                    ):
                         sub_tokens.append(c)
                         sub_tokens.append("")
+                        in_number = None
                     else:
                         sub_tokens[-1] += c
+                        if str.isdigit(c):
+                            if in_number is None:
+                                in_number = True
+                        else:
+                            in_number = False
 
                 # Accumulate sub-tokens into sentence tokens
                 last_token_was_abbreviation = False
@@ -327,8 +336,12 @@ class Tokenizer:
 
                         if not num_has_frac:
                             # num2words uses the number as an index sometimes,
-                            # so it *has* to be an integer.
-                            num = int(num)
+                            # so it *has* to be an integer, unless we're doing
+                            # currency.
+                            if has_currency:
+                                num = float(num)
+                            else:
+                                num = int(num)
 
                         # Convert to words (e.g., 100 -> one hundred)
                         num_str = num2words(num, **num2words_kwargs)
