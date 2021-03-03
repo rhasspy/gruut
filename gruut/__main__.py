@@ -26,15 +26,12 @@ from .utils import env_constructor, load_lexicon, maybe_gzip_open, pairwise
 _LOGGER = logging.getLogger("gruut")
 
 _DIR = Path(__file__).parent
-_DATA_DIR = Path("data")
 
 # -----------------------------------------------------------------------------
 
 
 def main():
     """Main entry point"""
-    global _DATA_DIR
-
     # Expand environment variables in string value
     yaml.SafeLoader.add_constructor("!env", env_constructor)
 
@@ -47,23 +44,37 @@ def main():
 
     _LOGGER.debug(args)
 
-    if args.data_dir:
-        # Set from command-line option
-        _DATA_DIR = Path(args.data_dir)
+    # Set to ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut
+    maybe_config_home = os.environ.get("XDG_CONFIG_HOME")
+    if maybe_config_home:
+        config_dir = Path(maybe_config_home) / "gruut"
     else:
-        # Set from environment variable
-        maybe_data_dir = os.environ.get("GRUUT_DATA_DIR")
-        if maybe_data_dir:
-            _DATA_DIR = Path(maybe_data_dir)
+        config_dir = Path.home() / ".config" / "gruut"
 
-    _DATA_DIR = _DATA_DIR.absolute()
-    _LOGGER.debug("Data dir: %s", _DATA_DIR)
+    # Directories to search for language-specific data files
+    data_dirs = [
+        d
+        for d in [
+            args.data_dir,
+            os.environ.get("GRUUT_DATA_DIR"),
+            config_dir,
+            _DIR.parent / "data",
+        ]
+        if d
+    ]
 
-    lang_dir = _DATA_DIR / args.language
-    assert lang_dir.is_dir(), "Language '{args.language}' not found in {_DATA_DIR}"
+    maybe_lang_dir: typing.Optional[Path] = None
+
+    for maybe_data_dir in data_dirs:
+        maybe_lang_dir = maybe_data_dir / args.language
+        if maybe_lang_dir.is_dir():
+            break
+
+    assert maybe_lang_dir, "Language '{args.language}' not found in {data_dirs}"
+    setattr(args, "lang_dir", maybe_lang_dir)
 
     # Load configuration
-    config_path = lang_dir / "language.yml"
+    config_path = args.lang_dir / "language.yml"
     assert config_path.is_file(), f"Missing {config_path}"
 
     # Set environment variable for config loading
@@ -77,12 +88,16 @@ def main():
 # -----------------------------------------------------------------------------
 
 
-def try_load_language(language: str, **kwargs):
+def try_load_language(args, language: typing.Optional[str] = None, **kwargs):
     """Attempt to load a language by code (e.g. en-us)"""
     from . import Language
 
-    gruut_lang = Language.load(language=language, data_dir=_DATA_DIR, **kwargs)
-    assert gruut_lang, f"Language not found: {language} in {_DATA_DIR}"
+    if not language:
+        language = args.language
+
+    assert language
+    gruut_lang = Language.load(language=language, lang_dir=args.lang_dir, **kwargs)
+    assert gruut_lang, f"Language not found: {language} in {args.lang_dir}"
 
     return gruut_lang
 
@@ -96,7 +111,7 @@ def do_tokenize(config, args):
 
     Prints a line of JSON for each sentence.
     """
-    gruut_lang = try_load_language(args.language, preload_lexicon=False)
+    gruut_lang = try_load_language(args, preload_lexicon=False)
     tokenizer = gruut_lang.tokenizer
 
     if args.text:
@@ -195,7 +210,7 @@ def do_phonemize(config, args):
     """
     from . import Phonemizer
 
-    gruut_lang = try_load_language(args.language)
+    gruut_lang = try_load_language(args)
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
@@ -204,7 +219,7 @@ def do_phonemize(config, args):
     phoneme_maps: typing.Dict[str, typing.Dict[str, str]] = {}
     if args.map:
         for map_name in args.map:
-            map_path = _DATA_DIR / args.language / "maps" / (map_name + ".txt")
+            map_path = args.lang_dir / "maps" / (map_name + ".txt")
             _LOGGER.debug("Loading phoneme map %s (%s)", map_name, map_path)
             current_map = {}
             with open(map_path, "r") as map_file:
@@ -392,7 +407,7 @@ def do_phones_to_phonemes(config, args):
 
 def do_coverage(config, args):
     """Get phoneme coverage"""
-    gruut_lang = try_load_language(args.language)
+    gruut_lang = try_load_language(args)
 
     # List of possible phonemes in the language
     phonemes = [p.text for p in gruut_lang.phonemes]
@@ -469,7 +484,7 @@ def do_optimize_sentences(config, args):
     """Find phonetically rich sentences"""
     from .optimize import get_optimal_sentences
 
-    gruut_lang = try_load_language(args.language)
+    gruut_lang = try_load_language(args)
     lexicon = gruut_lang.phonemizer.lexicon
 
     if args.text:
@@ -585,8 +600,10 @@ def do_phonemize_lexicon(config, args):
 
 def do_compare_phonemes(config, args):
     """Print comparison of two languages' phonemes"""
-    gruut_lang1 = try_load_language(args.language, preload_lexicon=False)
-    gruut_lang2 = try_load_language(args.language2, preload_lexicon=False)
+    gruut_lang1 = try_load_language(args, preload_lexicon=False)
+    gruut_lang2 = try_load_language(
+        args, language=args.language2, preload_lexicon=False
+    )
 
     assert gruut_lang1, f"Unsupported language: {args.language}"
     assert gruut_lang2, f"Unsupported language: {args.language2}"
@@ -628,7 +645,7 @@ def do_mark_heteronyms(config, args):
 
     Prints text with heteronyms marked.
     """
-    gruut_lang = try_load_language(args.language)
+    gruut_lang = try_load_language(args)
 
     if args.text:
         # Use arguments
@@ -679,7 +696,7 @@ def do_check_wavs(config, args):
     """
     import wave
 
-    gruut_lang = try_load_language(args.language, preload_lexicon=False)
+    gruut_lang = try_load_language(args, preload_lexicon=False)
     tokenizer = gruut_lang.tokenizer
 
     csv_file = sys.stdin
@@ -750,7 +767,7 @@ def do_mbrolize(config, args):
     Combines all input lines into a single output file.
     """
     durations: typing.Dict[str, int] = {}
-    durations_path = _DATA_DIR / args.language / "durations.txt"
+    durations_path = args.lang_dir / "durations.txt"
 
     if durations_path.is_file():
         _LOGGER.debug("Loading phoneme duration map from %s", durations_path)
@@ -831,7 +848,7 @@ def do_print_phoneme_ids(config, args):
     """
     Print phonemes for a language and associated integer ids.
     """
-    gruut_lang = try_load_language(args.language, preload_lexicon=False)
+    gruut_lang = try_load_language(args, preload_lexicon=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -850,7 +867,7 @@ def do_phonemes2ids(config, args):
 
     Prints JSONL list for each line of input.
     """
-    gruut_lang = try_load_language(args.language, preload_lexicon=False)
+    gruut_lang = try_load_language(args, preload_lexicon=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -903,7 +920,7 @@ def do_print_phoneme_counts(config, args):
     """
     Print counts of all phonemes from the lexicon.
     """
-    gruut_lang = try_load_language(args.language)
+    gruut_lang = try_load_language(args)
     writer = jsonlines.Writer(sys.stdout, flush=True)
     phoneme_counts = Counter()
 

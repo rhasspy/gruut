@@ -1,8 +1,6 @@
 """Language class for gruut"""
-import gzip
 import logging
 import os
-import shutil
 import typing
 from pathlib import Path
 
@@ -119,7 +117,7 @@ class Language:
 
     @staticmethod
     def load(
-        data_dir: Path, language: str, preload_lexicon: bool = True
+        lang_dir: Path, language: str, preload_lexicon: bool = True
     ) -> typing.Optional["Language"]:
         """Load language from code"""
 
@@ -127,7 +125,7 @@ class Language:
         yaml.SafeLoader.add_constructor("!env", env_constructor)
 
         # Load configuration
-        config_path = data_dir / language / "language.yml"
+        config_path = lang_dir / "language.yml"
 
         if not config_path.is_file():
             _LOGGER.warning("Missing %s", config_path)
@@ -141,7 +139,7 @@ class Language:
         # Language-specific loading
         custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None
         if language == "fa":
-            custom_tokenize = Language.make_fa_tokenize(data_dir)
+            custom_tokenize = Language.make_fa_tokenize(lang_dir)
 
         return Language(
             config=config,
@@ -151,22 +149,14 @@ class Language:
         )
 
     @staticmethod
-    def make_fa_tokenize(data_dir: Path) -> TOKENIZE_FUNC:
+    def make_fa_tokenize(lang_dir: Path) -> TOKENIZE_FUNC:
         """Tokenize Persian/Farsi"""
         import hazm
 
         normalizer = hazm.Normalizer()
 
         # Load part of speech tagger
-        model_path = data_dir / "fa" / "postagger.model"
-        if not model_path.is_file():
-            # Unzip
-            model_gzip_path = Path(str(model_path) + ".gz")
-            if model_gzip_path.is_file():
-                _LOGGER.debug("Unzipping %s", model_gzip_path)
-                with open(model_path, "wb") as out_file:
-                    with gzip.open(model_gzip_path, "rb") as in_file:
-                        shutil.copyfileobj(in_file, out_file)
+        model_path = lang_dir / "postagger.model"
 
         _LOGGER.debug("Using hazm tokenizer (model=%s)", model_path)
         tagger = hazm.POSTagger(model=str(model_path))
