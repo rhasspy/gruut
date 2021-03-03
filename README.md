@@ -1,6 +1,18 @@
 # Gruut
 
-A tokenizer, text cleaner, and phonemizer for many human languages.
+A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for many human languages.
+
+```sh
+$ echo 'He said, "only $10??"' | \
+    gruut en-us tokenize | \
+    gruut en-us phonemize | \
+    jq -c .clean_words,.pronunciation
+
+["he","said",",","only","ten","dollars","?"]
+[["h","ˈi"],["s","ˈɛ","d"],["|"],["ˈoʊ","n","l","i"],["t","ˈɛ","n"],["d","ˈɑ","l","ɚ","z"],["‖"]]
+```
+
+---
 
 Useful for transforming raw text into phonetic pronunciations, similar to [phonemizer](https://github.com/bootphon/phonemizer). Unlike phonemizer, gruut looks up words in a pre-built lexicon (pronunciation dictionary) or guesses word pronunciations with a pre-trained grapheme-to-phoneme model. Phonemes for each language come from a [carefully chosen inventory](https://en.wikipedia.org/wiki/Template:Language_phonologies).
 
@@ -43,14 +55,14 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 ## Installation
 
 ```sh
-$ pip install gruut'
+$ pip install gruut
 ```
 
 For Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi/releases).
 
 ## Language Download
 
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.7.0) for `gruut` can be downloaded with:
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.7.0) for gruut can be downloaded with:
 
 ```sh
 $ python3 -m gruut <LANGUAGE> download
