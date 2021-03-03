@@ -7,7 +7,9 @@ import itertools
 import json
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import typing
 from collections import Counter
 from pathlib import Path
@@ -44,45 +46,51 @@ def main():
 
     _LOGGER.debug(args)
 
-    # Set to ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut
-    maybe_config_home = os.environ.get("XDG_CONFIG_HOME")
-    if maybe_config_home:
-        config_dir = Path(maybe_config_home) / "gruut"
+    if not args.data_dir:
+        # Set to ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut
+        maybe_config_home = os.environ.get("XDG_CONFIG_HOME")
+        if maybe_config_home:
+            args.data_dir = Path(maybe_config_home) / "gruut"
+        else:
+            args.data_dir = Path.home() / ".config" / "gruut"
+
+    if args.command == "download":
+        # Download language-specific files
+        do_download(args)
     else:
-        config_dir = Path.home() / ".config" / "gruut"
+        # Directories to search for language-specific data files
+        data_dirs = [args.data_dir]
 
-    # Directories to search for language-specific data files
-    data_dirs = [
-        d
-        for d in [
-            args.data_dir,
-            os.environ.get("GRUUT_DATA_DIR"),
-            config_dir,
-            _DIR.parent / "data",
-        ]
-        if d
-    ]
+        # All other commands
+        env_data_dir = os.environ.get("GRUUT_DATA_DIR")
+        if env_data_dir:
+            data_dirs.append(Path(env_data_dir))
 
-    maybe_lang_dir: typing.Optional[Path] = None
+        data_dirs.append(_DIR.parent / "data")
 
-    for maybe_data_dir in data_dirs:
-        maybe_lang_dir = maybe_data_dir / args.language
-        if maybe_lang_dir.is_dir():
-            break
+        # Search for language-specific data directory
+        maybe_lang_dir: typing.Optional[Path] = None
 
-    assert maybe_lang_dir, "Language '{args.language}' not found in {data_dirs}"
-    setattr(args, "lang_dir", maybe_lang_dir)
+        for data_dir in data_dirs:
+            maybe_lang_dir = data_dir / args.language
+            if maybe_lang_dir.is_dir():
+                config_path = maybe_lang_dir / "language.yml"
+                if config_path.is_file():
+                    break
 
-    # Load configuration
-    config_path = args.lang_dir / "language.yml"
-    assert config_path.is_file(), f"Missing {config_path}"
+        assert maybe_lang_dir, "Language '{args.language}' not found in {data_dirs}"
+        setattr(args, "lang_dir", maybe_lang_dir)
 
-    # Set environment variable for config loading
-    os.environ["config_dir"] = str(config_path.parent)
-    with open(config_path, "r") as config_file:
-        config = yaml.safe_load(config_file)
+        # Load configuration
+        config_path = args.lang_dir / "language.yml"
+        assert config_path.is_file(), f"Missing {config_path}"
 
-    args.func(config, args)
+        # Set environment variable for config loading
+        os.environ["config_dir"] = str(config_path.parent)
+        with open(config_path, "r") as config_file:
+            config = yaml.safe_load(config_file)
+
+        args.func(config, args)
 
 
 # -----------------------------------------------------------------------------
@@ -96,10 +104,38 @@ def try_load_language(args, language: typing.Optional[str] = None, **kwargs):
         language = args.language
 
     assert language
+
+    _LOGGER.debug("Loading %s from %s", language, args.lang_dir)
     gruut_lang = Language.load(language=language, lang_dir=args.lang_dir, **kwargs)
     assert gruut_lang, f"Language not found: {language} in {args.lang_dir}"
 
     return gruut_lang
+
+
+# -----------------------------------------------------------------------------
+
+
+def do_download(args):
+    """
+    Downloads and extracts pre-trained model to args.data_dir
+    """
+    from . import __version__
+    from .download import download_file
+
+    lang_dir = args.data_dir / args.language
+
+    _LOGGER.debug("Creating %s", lang_dir)
+    lang_dir.mkdir(parents=True, exist_ok=True)
+
+    url = args.url_format.format(lang=args.language, version=__version__)
+    with tempfile.NamedTemporaryFile(mode="wb+", suffix=".tar.gz") as lang_file:
+        _LOGGER.debug("Downloading %s to %s", url, lang_file.name)
+        download_file(url, lang_file.name, f"{args.language}.tar.gz")
+
+        _LOGGER.debug("Extracting %s to %s", lang_file.name, lang_dir)
+        shutil.unpack_archive(lang_file.name, lang_dir)
+
+    _LOGGER.info("Successfully downloaded %s to %s", args.language, lang_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -955,6 +991,18 @@ def get_args() -> argparse.Namespace:
     sub_parsers.dest = "command"
 
     # --------
+    # download
+    # --------
+    download_parser = sub_parsers.add_parser(
+        "download", help="Download and extract pre-trained model"
+    )
+    download_parser.add_argument(
+        "--url-format",
+        default="https://github.com/rhasspy/gruut/releases/download/v{version}/{lang}.tar.gz",
+        help="Format string for download URL (gets {version} and {lang}, default: Github)",
+    )
+
+    # --------
     # tokenize
     # --------
     tokenize_parser = sub_parsers.add_parser(
@@ -1251,6 +1299,7 @@ def get_args() -> argparse.Namespace:
     # Shared arguments
     # ----------------
     for sub_parser in [
+        download_parser,
         tokenize_parser,
         phonemize_parser,
         phones2phonemes_parser,
