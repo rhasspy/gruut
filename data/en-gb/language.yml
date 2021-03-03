@@ -5,8 +5,7 @@ language:
   code: "en-gb"
   phonemes: !env "${config_dir}/phonemes.txt"
 
-lexicons:
-  - !env "${config_dir}/lexicon.txt"
+lexicon: !env "${config_dir}/lexicon.db"
 
 g2p:
   model: !env "${config_dir}/g2p.fst"

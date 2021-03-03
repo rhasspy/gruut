@@ -10,10 +10,10 @@ from pathlib import Path
 # Excludes 0xA0
 _WHITESPACE = re.compile(r"[ \t]+")
 
+PRONUNCIATION_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
+
 # word -> [[p1, p2], [p1, p2, p3]]
-LEXICON_TYPE = typing.Dict[
-    str, typing.List[typing.Union[typing.List[str], typing.Tuple[str, ...]]]
-]
+LEXICON_TYPE = typing.Dict[str, typing.List[PRONUNCIATION_TYPE]]
 
 # word(n) in lexicon
 _WORD_WITH_NUMBER = re.compile(r"^([^(]+)(\(\d+\))$")

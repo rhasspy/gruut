@@ -1,7 +1,7 @@
 """Class for getting phonetic pronunciations for cleaned text"""
 import logging
-import os
 import re
+import sqlite3
 import typing
 import unicodedata
 from pathlib import Path
@@ -12,15 +12,11 @@ import phonetisaurus
 from gruut_ipa import IPA
 
 from .toksen import Token
-from .utils import LEXICON_TYPE, load_lexicon, maybe_gzip_open
+from .utils import LEXICON_TYPE, PRONUNCIATION_TYPE, load_lexicon, maybe_gzip_open
 
 # -----------------------------------------------------------------------------
 
 _LOGGER = logging.getLogger("gruut.phonemize")
-
-# List of phonemes for each word
-PRONUNCIATION_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
-
 
 WORD_WITH_INDEX = re.compile(r"^([^_]+)_(\d+)$")
 
@@ -69,6 +65,7 @@ class Phonemizer:
 
         self.lexicon: LEXICON_TYPE = {}
         self.lexicon_loaded = False
+        self.lexicon_conn: typing.Optional[sqlite3.Connection] = None
 
         if lexicon:
             self.lexicon = lexicon
@@ -157,13 +154,13 @@ class Phonemizer:
                     word = index_match.group(1)
                     index = int(index_match.group(2))
 
-            word_prons = self.lexicon.get(word)
+            word_prons = self.lookup_word(word)
             word_guessed = False
 
             if not word_prons and guess_with_word_chars:
                 # Try again with non-word characters removed
                 filtered_word = Phonemizer.remove_nonword_chars(word)
-                word_prons = self.lexicon.get(filtered_word)
+                word_prons = self.lookup_word(filtered_word)
 
             if not word_prons and guess_word:
                 # Use supplied function
@@ -219,7 +216,7 @@ class Phonemizer:
 
             # Fill in missing words
             for word_idx, token in missing_words:
-                word_prons = self.lexicon.get(token.text)
+                word_prons = self.lookup_word(token.text)
                 if word_prons:
                     # Language-specific processing
                     if process_pronunciation:
@@ -266,18 +263,55 @@ class Phonemizer:
     # -------------------------------------------------------------------------
 
     def load_lexicon(self):
-        """Load lexicon(s) from config"""
-        # Load lexicons
-        for lexicon_path in self.config.get("lexicons", []):
-            if os.path.isfile(lexicon_path):
-                _LOGGER.debug("Loading lexicon from %s", lexicon_path)
-                with maybe_gzip_open(lexicon_path, "r") as lexicon_file:
-                    load_lexicon(lexicon_file, lexicon=self.lexicon, casing=self.casing)
-            else:
-                _LOGGER.warning("Skipping lexicon at %s", lexicon_path)
+        """Load lexicon from config"""
+        maybe_lexicon_path = self.config.get("lexicon")
+        if maybe_lexicon_path:
+            lexicon_path = Path(maybe_lexicon_path)
+            _LOGGER.debug("Loading lexicon from %s", lexicon_path)
+
+            if lexicon_path.is_file():
+                if lexicon_path.suffix == ".db":
+                    # Sqlite3 database
+                    self.lexicon_conn = sqlite3.connect(lexicon_path)
+                    _LOGGER.debug("Using sqlite3 database: %s", lexicon_path)
+                else:
+                    # Text file
+                    with maybe_gzip_open(lexicon_path, "r") as lexicon_file:
+                        load_lexicon(
+                            lexicon_file, lexicon=self.lexicon, casing=self.casing
+                        )
+
+                    _LOGGER.debug(
+                        "Loaded pronunciations for %s word(s)", len(self.lexicon)
+                    )
 
         self.lexicon_loaded = True
-        _LOGGER.debug("Loaded pronunciations for %s word(s)", len(self.lexicon))
+
+    # -------------------------------------------------------------------------
+
+    def lookup_word(
+        self, word: str
+    ) -> typing.Optional[typing.List[PRONUNCIATION_TYPE]]:
+        """Look up word in lexicon first, database second"""
+        word_prons = self.lexicon.get(word)
+        if not word_prons and self.lexicon_conn:
+            # Look up in database
+            cursor = self.lexicon_conn.execute(
+                "SELECT phonemes FROM word_phonemes WHERE word = ?", (word,)
+            )
+            for row in cursor:
+                word_pron = row[0].split()
+                if word_pron:
+                    if not word_prons:
+                        word_prons = []
+
+                    word_prons.append(word_pron)
+
+            if word_prons:
+                # Update lexicon
+                self.lexicon[word] = word_prons
+
+        return word_prons
 
     # -------------------------------------------------------------------------
 
