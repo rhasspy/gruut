@@ -32,7 +32,7 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 
 * Python 3.7 or higher
 * Linux
-    * Test on Debian Buster
+    * Tested on Debian Buster
 * [Babel](https://pypi.org/project/Babel/) and [num2words](https://pypi.org/project/num2words/)
     * Currency/number handling
 * gruut-ipa
@@ -43,14 +43,30 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 ## Installation
 
 ```sh
-$ pip install 'https://github.com/rhasspy/gruut/releases/download/v0.4.0/gruut-0.4.0.tar.gz'
+$ pip install gruut'
 ```
 
-for Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi/releases).
+For Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi/releases).
+
+## Language Download
+
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.7.0) for `gruut` can be downloaded with:
+
+```sh
+$ python3 -m gruut <LANGUAGE> download
+```
+
+By default, models are stored in `$HOME/.config/gruut`. This can be overridden by passing a `--data-dir` argument to all `gruut` commands.
+
+To download the U.S. English models, for example, run:
+
+```sh
+$ python3 -m gruut en-us download
+```
 
 ## Usage
 
-The `gruut` module can be executed with `python3 -m gruut <COMMAND> <ARGS>`
+The `gruut` module can be executed with `python3 -m gruut <LANGUAGE> <COMMAND> <ARGS>`
 
 The commands are line-oriented, consuming/producing either text or [JSONL](https://jsonlines.org/).
 They can be composed to produce a pipeline for cleaning text.
