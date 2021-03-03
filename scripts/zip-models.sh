@@ -22,7 +22,7 @@ find "${data_dir}" -mindepth 1 -maxdepth 1 -type d | \
 
         rm -f "${lang_file}"
         pushd "${lang_dir}" > /dev/null
-        tar -czf "${lang_file}" *
+        tar -czf "${lang_file}" --exclude=lexicon.txt --exclude=g2p.corpus *
         popd > /dev/null
 
         echo "${lang_file}"

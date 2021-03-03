@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: check clean reformat dist venv
+.PHONY: check clean reformat dist venv test
 
 all: dist
 
@@ -15,3 +15,7 @@ venv:
 
 dist:
 	python3 setup.py sdist
+	scripts/zip-models.sh
+
+test:
+	scripts/run-tests.sh
