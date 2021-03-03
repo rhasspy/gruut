@@ -1,10 +1,14 @@
 __pycache__/
 .mypy_cache/
+.ipynb_checkpoints/
 *.egg-info/
 /.venv/
 /download/
+/dist/
+/etc/
 
 /data/**/g2p.fst
 /data/**/g2p.corpus
 /data/**/lexicon.txt
+/data/**/lexicon.db
 /data/fa/postagger.model
