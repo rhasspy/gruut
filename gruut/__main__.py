@@ -26,13 +26,15 @@ from .utils import env_constructor, load_lexicon, maybe_gzip_open, pairwise
 _LOGGER = logging.getLogger("gruut")
 
 _DIR = Path(__file__).parent
-_DATA_DIR = _DIR / "data"
+_DATA_DIR = Path("data")
 
 # -----------------------------------------------------------------------------
 
 
 def main():
     """Main entry point"""
+    global _DATA_DIR
+
     # Expand environment variables in string value
     yaml.SafeLoader.add_constructor("!env", env_constructor)
 
@@ -45,8 +47,20 @@ def main():
 
     _LOGGER.debug(args)
 
+    if args.data_dir:
+        # Set from command-line option
+        _DATA_DIR = Path(args.data_dir)
+    else:
+        # Set from environment variable
+        maybe_data_dir = os.environ.get("GRUUT_DATA_DIR")
+        if maybe_data_dir:
+            _DATA_DIR = Path(maybe_data_dir)
+
+    _DATA_DIR = _DATA_DIR.absolute()
+    _LOGGER.debug("Data dir: %s", _DATA_DIR)
+
     lang_dir = _DATA_DIR / args.language
-    assert lang_dir.is_dir(), "Unsupported language"
+    assert lang_dir.is_dir(), "Language '{args.language}' not found in {_DATA_DIR}"
 
     # Load configuration
     config_path = lang_dir / "language.yml"
@@ -63,17 +77,26 @@ def main():
 # -----------------------------------------------------------------------------
 
 
+def try_load_language(language: str, **kwargs):
+    """Attempt to load a language by code (e.g. en-us)"""
+    from . import Language
+
+    gruut_lang = Language.load(language=language, data_dir=_DATA_DIR, **kwargs)
+    assert gruut_lang, f"Language not found: {language} in {_DATA_DIR}"
+
+    return gruut_lang
+
+
+# -----------------------------------------------------------------------------
+
+
 def do_tokenize(config, args):
     """
     Split lines from stdin into sentences, tokenize and clean.
 
     Prints a line of JSON for each sentence.
     """
-    from . import Language
-
-    gruut_lang = Language.load(args.language, preload_lexicon=False)
-    assert gruut_lang, f"Unsupported language: {args.language}"
-
+    gruut_lang = try_load_language(args.language, preload_lexicon=False)
     tokenizer = gruut_lang.tokenizer
 
     if args.text:
@@ -170,11 +193,9 @@ def do_phonemize(config, args):
 
     Prints a line of JSON for each input line.
     """
-    from . import Language, Phonemizer
+    from . import Phonemizer
 
-    gruut_lang = Language.load(args.language)
-    assert gruut_lang, f"Unsupported language: {args.language}"
-
+    gruut_lang = try_load_language(args.language)
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
@@ -371,10 +392,7 @@ def do_phones_to_phonemes(config, args):
 
 def do_coverage(config, args):
     """Get phoneme coverage"""
-    from . import Language
-
-    gruut_lang = Language.load(args.language)
-    assert gruut_lang, f"Unsupported language: {args.language}"
+    gruut_lang = try_load_language(args.language)
 
     # List of possible phonemes in the language
     phonemes = [p.text for p in gruut_lang.phonemes]
@@ -449,10 +467,9 @@ def do_coverage(config, args):
 
 def do_optimize_sentences(config, args):
     """Find phonetically rich sentences"""
-    from . import Language
     from .optimize import get_optimal_sentences
 
-    gruut_lang = Language.load(args.language)
+    gruut_lang = try_load_language(args.language)
     lexicon = gruut_lang.phonemizer.lexicon
 
     if args.text:
@@ -568,10 +585,8 @@ def do_phonemize_lexicon(config, args):
 
 def do_compare_phonemes(config, args):
     """Print comparison of two languages' phonemes"""
-    from . import Language
-
-    gruut_lang1 = Language.load(args.language, preload_lexicon=False)
-    gruut_lang2 = Language.load(args.language2, preload_lexicon=False)
+    gruut_lang1 = try_load_language(args.language, preload_lexicon=False)
+    gruut_lang2 = try_load_language(args.language2, preload_lexicon=False)
 
     assert gruut_lang1, f"Unsupported language: {args.language}"
     assert gruut_lang2, f"Unsupported language: {args.language2}"
@@ -613,9 +628,7 @@ def do_mark_heteronyms(config, args):
 
     Prints text with heteronyms marked.
     """
-    from . import Language
-
-    gruut_lang = Language.load(args.language)
+    gruut_lang = try_load_language(args.language)
 
     if args.text:
         # Use arguments
@@ -665,10 +678,8 @@ def do_check_wavs(config, args):
     Prints a line of JSON for each input line.
     """
     import wave
-    from . import Language
 
-    gruut_lang = Language.load(args.language, preload_lexicon=False)
-    assert gruut_lang, f"Unsupported language: {args.language}"
+    gruut_lang = try_load_language(args.language, preload_lexicon=False)
     tokenizer = gruut_lang.tokenizer
 
     csv_file = sys.stdin
@@ -820,11 +831,7 @@ def do_print_phoneme_ids(config, args):
     """
     Print phonemes for a language and associated integer ids.
     """
-    from . import Language
-
-    gruut_lang = Language.load(args.language, preload_lexicon=False)
-    assert gruut_lang, f"Unsupported language: {args.language}"
-
+    gruut_lang = try_load_language(args.language, preload_lexicon=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -843,11 +850,7 @@ def do_phonemes2ids(config, args):
 
     Prints JSONL list for each line of input.
     """
-    from . import Language
-
-    gruut_lang = Language.load(args.language, preload_lexicon=False)
-    assert gruut_lang, f"Unsupported language: {args.language}"
-
+    gruut_lang = try_load_language(args.language, preload_lexicon=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -900,11 +903,7 @@ def do_print_phoneme_counts(config, args):
     """
     Print counts of all phonemes from the lexicon.
     """
-    from . import Language
-
-    gruut_lang = Language.load(args.language)
-    assert gruut_lang, f"Unsupported language: {args.language}"
-
+    gruut_lang = try_load_language(args.language)
     writer = jsonlines.Writer(sys.stdout, flush=True)
     phoneme_counts = Counter()
 
@@ -1249,6 +1248,9 @@ def get_args() -> argparse.Namespace:
         phonemes2ids_parser,
         print_phoneme_counts_parser,
     ]:
+        sub_parser.add_argument(
+            "--data-dir", help="Directory with language-specific data files"
+        )
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
         )

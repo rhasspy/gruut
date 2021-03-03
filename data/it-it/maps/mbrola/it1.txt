@@ -1,0 +1,35 @@
+# Vowels
+ɛ ad[e]sso E
+ɔ c[o]lla O1
+a senz[a] A
+e p[e]rò E
+i cos[ì] I
+o un[o] O
+u t[u]tte U
+
+# Consonants
+ɲ o[gn]uno gn
+ʎ consi[gli]o gl
+ʃ u[s]cita sh
+b [b]ella B
+d [d]ue D
+d͡ʒ [g]ente gh
+d͡z [z]ona dz
+f [f]orte F
+ɡ [g]rave G
+j d[i]eci J
+k [q]uesto K
+l so[l]tanto L
+m al[m]eno M
+n a[n]cora N
+ɱ i[n]fame M
+ŋ a[n]che ng
+p [p]erò P
+r pe[r]ò R
+s [s]ia S
+t quan[t]o T
+t͡ʃ per[ci]ò ch
+t͡s for[z]a ts
+v a[v]anti V
+w q[u]attro W
+z pae[s]e Z

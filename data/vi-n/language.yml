@@ -1,0 +1,121 @@
+---
+
+language:
+  name: "Tiếng Việt"
+  code: "vi-n"
+  phonemes: !env "${config_dir}/phonemes.txt"
+  tones:
+    - "˧˧"
+    - "˧˨"
+    - "˨˦"
+    - "˨ˀ˩ʔ"
+    - "˧˩˨"
+    - "˧ˀ˥"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  babel_locale: "vi_VN"
+  token_split: "\\s+"
+  token_join: " "
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "&": " and "
+    "\\B'": "\""
+    "'\\B": "\""
+  punctuations:
+    - "\""
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"
+
+numbers:
+  currency: USD
+
+abbreviations:
+  capt: "captain"
+  co: "company"
+  col: "colonel"
+  dr: "doctor"
+  drs: "doctors"
+  esq: "esquire"
+  ft: "fort"
+  gen: "general"
+  hon: "honorable"
+  jr: "junior"
+  ltd: "limited"
+  lt: "lieutenant"
+  maj: "major"
+  mr: "mister"
+  mrs: "misess"
+  rev: "reverend"
+  sgt: "sergeant"
+  st: "saint"
+
+accents:
+  nl:
+    "æ": "ɛ"
+    "ɪ": "eː"
+    "ʊ": "ø"
+    "ʌ": "œː"
+    "ɝ": "ɹ"
+    "eɪ":
+      - "ɑː"
+      - "i"
+    "aɪ": "ɛi"
+    "oʊ": "o"
+    "ɔɪ":
+      - "o"
+      - "i"
+    "aʊ": "ɑu"
+    "t͡ʃ": "ʃ"
+    "d͡ʒ": "ʒ"
+    "θ": "s"
+    "ð": "z"
+  fr-fr:
+    "aɪ":
+      - "a"
+      - "i"
+    "aʊ":
+      - "a"
+      - "ø"
+    "oʊ":
+      - "o"
+      - "ø"
+    "eɪ": "e"
+    "d͡ʒ": "ʒ"
+    "h": ""
+    "iː": "i"
+    "t͡ʃ": "ʃ"
+    "uː": "u"
+    "æ": "a"
+    "θ": "s"
+    "ð": "z"
+    "ɑ": "a"
+    "ɑː": "a"
+    "ɔɪ":
+      - "ɔ"
+      - "i"
+    "ɝ": "ʁ"
+    "ɹ": "ʁ"
+    "ɪ": "i"
+    "ʊ": "ø"
+    "ʌ": "œ"
+

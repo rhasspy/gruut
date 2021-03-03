@@ -1,0 +1,62 @@
+# https://en.wikipedia.org/wiki/Portuguese_phonology
+
+# Vowels
+a f[a]lo
+i v[i]nte ɨ
+ĩ f[im]
+u j[u]s ʊ
+ũ [u]m
+e al[e]x
+ẽ [e]mprego
+o am[o]r
+õ b[o]ns
+ɛ b[e]lo
+ɐ f[a]lo
+ɐ̃ c[a]ma
+ɔ pi[o]r
+
+# Consonants
+p [p]ai
+b [b]arco
+t [t]enho
+d [d]oce
+k [c]om
+ɡ [g]rande g
+f [f]alo
+v [v]erde
+s [c]éu
+z ca[s]a
+ʃ [ch]apéu
+ʒ [j]óia
+m [m]ar
+n [n]ada
+ɲ vi[nh]o
+l [l]anche
+ʎ taba[lh]o
+ɾ ca[r]o
+ʁ [r]ua
+ɹ agi[r]
+w ág[u]a
+j aqu[i]
+
+# Dipthongs
+aj p[ai]
+ɐj pl[ai]na
+ej r[ei]
+ɛj gel[ei]a
+oj d[oi]s
+ɔj d[ói]
+uj f[ui]
+ɐw s[au]dade
+ew s[eu]
+ɛw c[éu]
+iw v[iu]
+ow [ou]ro
+
+# Nasalated dipthongs
+ɐ̃j̃ m[ãe]
+ẽj̃ b[em]
+õj̃ p[õe]
+ũj̃ m[ui]to uj̃
+ɐ̃w̃ fal[am]
+õw̃ b[om]

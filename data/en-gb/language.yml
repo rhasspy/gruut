@@ -1,0 +1,64 @@
+---
+
+language:
+  name: "U.K. English"
+  code: "en-gb"
+  phonemes: !env "${config_dir}/phonemes.txt"
+
+lexicons:
+  - !env "${config_dir}/lexicon.txt"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  token_split: "\\s+"
+  token_join: " "
+  abbreviation_skip: "."
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "&": " and "
+    "\\B'": "\""
+    "'\\B": "\""
+    "’": "'"
+  punctuations:
+    - "\""
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "!"
+
+numbers:
+  currency: USD
+
+abbreviations:
+  capt: "captain"
+  co: "company"
+  col: "colonel"
+  dr: "doctor"
+  drs: "doctors"
+  esq: "esquire"
+  ft: "fort"
+  gen: "general"
+  hon: "honorable"
+  jr: "junior"
+  ltd: "limited"
+  lt: "lieutenant"
+  maj: "major"
+  mr: "mister"
+  mrs: "misess"
+  rev: "reverend"
+  sgt: "sergeant"
+  st: "saint"

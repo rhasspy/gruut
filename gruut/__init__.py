@@ -20,7 +20,6 @@ from .utils import env_constructor
 _LOGGER = logging.getLogger("gruut")
 
 _DIR = Path(__file__).parent
-_DATA_DIR = _DIR / "data"
 
 # -----------------------------------------------------------------------------
 
@@ -33,6 +32,7 @@ class Language:
         config,
         language: typing.Optional[str] = None,
         preload_lexicon: bool = True,
+        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None,
     ):
         if language is None:
             self.language = pydash.get(config, "language.code")
@@ -40,11 +40,6 @@ class Language:
             self.language = language
 
         self.config = config
-
-        # Language-specific loading
-        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None
-        if language == "fa":
-            custom_tokenize = Language.make_fa_tokenize()
 
         self.tokenizer = Tokenizer(config, custom_tokenize=custom_tokenize)
         self.phonemizer = Phonemizer(config, preload_lexicon=preload_lexicon)
@@ -124,7 +119,7 @@ class Language:
 
     @staticmethod
     def load(
-        language: str, preload_lexicon: bool = True
+        data_dir: Path, language: str, preload_lexicon: bool = True
     ) -> typing.Optional["Language"]:
         """Load language from code"""
 
@@ -132,7 +127,7 @@ class Language:
         yaml.SafeLoader.add_constructor("!env", env_constructor)
 
         # Load configuration
-        config_path = _DATA_DIR / language / "language.yml"
+        config_path = data_dir / language / "language.yml"
 
         if not config_path.is_file():
             _LOGGER.warning("Missing %s", config_path)
@@ -143,19 +138,27 @@ class Language:
         with open(config_path, "r") as config_file:
             config = yaml.safe_load(config_file)
 
+        # Language-specific loading
+        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None
+        if language == "fa":
+            custom_tokenize = Language.make_fa_tokenize(data_dir)
+
         return Language(
-            config=config, language=language, preload_lexicon=preload_lexicon
+            config=config,
+            language=language,
+            preload_lexicon=preload_lexicon,
+            custom_tokenize=custom_tokenize,
         )
 
     @staticmethod
-    def make_fa_tokenize() -> TOKENIZE_FUNC:
+    def make_fa_tokenize(data_dir: Path) -> TOKENIZE_FUNC:
         """Tokenize Persian/Farsi"""
         import hazm
 
         normalizer = hazm.Normalizer()
 
         # Load part of speech tagger
-        model_path = _DATA_DIR / "fa" / "postagger.model"
+        model_path = data_dir / "fa" / "postagger.model"
         if not model_path.is_file():
             # Unzip
             model_gzip_path = Path(str(model_path) + ".gz")
