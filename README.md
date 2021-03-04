@@ -170,7 +170,7 @@ $ echo 'The quick brown fox jumps over the lazy dog.' \
     | python3 -m gruut en-us phonemize \
     | python3 -m gruut en-us coverage \
     | jq -c .coverage
-{"single":0.6190476190476191,"pair":0.021386430678466076}
+{"single":0.625,"pair":0.42028985507246375}
 ```
 
 With [multiple sentences](https://www.cs.columbia.edu/~hgs/audio/harvard.html):
@@ -192,5 +192,5 @@ EOF
     | python3 -m gruut en-us phonemize \
     | python3 -m gruut en-us coverage \
     | jq -c .coverage
-{"single":0.8809523809523809,"pair":0.1364306784660767}
+{"single":0.9,"pair":0.8214285714285714}
 ```

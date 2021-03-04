@@ -14,9 +14,8 @@ from dataclasses_json import DataClassJsonMixin
 from gruut_ipa import IPA
 
 from . import Language
-from .phonemize import PRONUNCIATION_TYPE
 from .toksen import Sentence
-from .utils import LEXICON_TYPE, pairwise
+from .utils import LEXICON_TYPE, WordPronunciation, pairwise
 
 _LOGGER = logging.getLogger("gruut.optimize")
 
@@ -33,7 +32,7 @@ class PronouncedSentence(DataClassJsonMixin):
     """Tokenized sentence with pronunciation"""
 
     sentence: Sentence
-    pronunciations: typing.List[typing.List[PRONUNCIATION_TYPE]]
+    pronunciations: typing.List[typing.List[WordPronunciation]]
 
 
 @dataclass
@@ -63,6 +62,7 @@ def get_optimal_sentences(
     max_length: typing.Optional[int] = None,
     cache_file_path: typing.Optional[typing.Union[str, Path]] = None,
     keep_stress: bool = False,
+    guess_pos: bool = True,
 ) -> OptimalSentences:
     """Find minimal set of sentences with diphone example coverage"""
     phonemes = set(p.text for p in lang.phonemes)
@@ -79,7 +79,7 @@ def get_optimal_sentences(
     all_pairs = set()
     for word_prons in lexicon.values():
         for word_pron in word_prons:
-            all_pairs.update(pairwise(remove_stress(word_pron, keep_stress)))
+            all_pairs.update(pairwise(remove_stress(word_pron, keep_stress).phonemes))
 
     sentences: typing.List[PronouncedSentence] = []
 
@@ -107,7 +107,7 @@ def get_optimal_sentences(
             if not line:
                 continue
 
-            for sentence in lang.tokenizer.tokenize(line):
+            for sentence in lang.tokenizer.tokenize(line, guess_pos=guess_pos):
                 num_sentences += 1
 
                 # Don't consider non-words in length calculation
@@ -132,6 +132,8 @@ def get_optimal_sentences(
                     if word not in lexicon:
                         missing_words.add(word)
 
+            _LOGGER.debug(line)
+
         # Report stats
         if num_too_short > 0:
             _LOGGER.warning(
@@ -154,8 +156,10 @@ def get_optimal_sentences(
             _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
 
             # Add words to lexicon
-            for word, word_pron in lang.phonemizer.predict(missing_words, nbest=1):
-                lexicon[word] = [remove_stress(word_pron, keep_stress)]
+            for word, word_phonemes in lang.phonemizer.predict(missing_words, nbest=1):
+                lexicon[word] = [
+                    remove_stress(WordPronunciation(word_phonemes), keep_stress)
+                ]
 
         # Phonemize missing sentences
         for sentence in clean_sentences:
@@ -257,10 +261,10 @@ def get_optimal_sentences(
                 clean_phonemes.append(_SILENCE_PHONE)
 
             # Add example words indexes for pair
-            for word_phonemes in sentence_pron:
-                word_phonemes = remove_stress(word_phonemes, keep_stress)
-                clean_phonemes.extend(word_phonemes)
-                sentence_phonemes.update(word_phonemes)
+            for word_pron in sentence_pron:
+                word_pron = remove_stress(word_pron, keep_stress)
+                clean_phonemes.extend(word_pron.phonemes)
+                sentence_phonemes.update(word_pron.phonemes)
 
             if silence_phone:
                 # End of sentence
@@ -472,15 +476,12 @@ REGEX_STRESS = re.compile(f"[{IPA.STRESS_PRIMARY}{IPA.STRESS_SECONDARY}]")
 
 
 def remove_stress(
-    word_pron: typing.Union[typing.Tuple[str, ...], typing.List[str]],
-    keep_stress: bool = False,
-) -> typing.Union[typing.Tuple[str, ...], typing.List[str]]:
+    word_pron: WordPronunciation, keep_stress: bool = False
+) -> WordPronunciation:
     """Optionally remove stress from a word pronunciation"""
     if keep_stress:
         return word_pron
 
-    word_pron = list(word_pron)
-    for i, p in enumerate(word_pron):
-        word_pron[i] = REGEX_STRESS.sub("", p)
+    word_pron.phonemes = [REGEX_STRESS.sub("", p) for p in word_pron.phonemes]
 
     return word_pron

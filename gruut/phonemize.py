@@ -3,7 +3,6 @@ import logging
 import re
 import sqlite3
 import typing
-import unicodedata
 from pathlib import Path
 
 import pydash
@@ -12,7 +11,7 @@ import phonetisaurus
 from gruut_ipa import IPA
 
 from .toksen import Token
-from .utils import LEXICON_TYPE, PRONUNCIATION_TYPE, load_lexicon, maybe_gzip_open
+from .utils import LEXICON_TYPE, WordPronunciation, load_lexicon, maybe_gzip_open
 
 # -----------------------------------------------------------------------------
 
@@ -32,7 +31,7 @@ class Phonemizer:
         self,
         config,
         lexicon: typing.Optional[LEXICON_TYPE] = None,
-        preload_lexicon: bool = True,
+        preload_lexicon: bool = False,
     ):
         self.config = config
 
@@ -68,11 +67,12 @@ class Phonemizer:
         self.lexicon_conn: typing.Optional[sqlite3.Connection] = None
 
         if lexicon:
+            # Use supplied object
             self.lexicon = lexicon
             self.lexicon_loaded = True
         elif preload_lexicon:
-            # Load lexicons
-            self.load_lexicon()
+            # Load lexicon from file or database
+            self.load_lexicon(preload=preload_lexicon)
 
     # -------------------------------------------------------------------------
 
@@ -81,33 +81,29 @@ class Phonemizer:
         tokens: typing.Sequence[typing.Union[str, Token]],
         word_indexes: bool = False,
         guess_word: typing.Optional[
-            typing.Callable[[Token], typing.Optional[typing.List[PRONUNCIATION_TYPE]]]
+            typing.Callable[[Token], typing.Optional[typing.List[WordPronunciation]]]
         ] = None,
         word_breaks: bool = False,
         minor_breaks: bool = True,
         major_breaks: bool = True,
-        separate_tones: typing.Optional[bool] = False,
         guess_with_word_chars: bool = True,
+        use_pos: bool = True,
         process_pronunciation: typing.Optional[
-            typing.Callable[[PRONUNCIATION_TYPE, Token], PRONUNCIATION_TYPE]
+            typing.Callable[[WordPronunciation, Token], WordPronunciation]
         ] = None,
-    ) -> typing.List[typing.List[PRONUNCIATION_TYPE]]:
+    ) -> typing.List[typing.List[WordPronunciation]]:
         """Get all possible pronunciations for cleaned words"""
         if not self.lexicon_loaded:
             # Dynamically load lexicon(s)
             self.load_lexicon()
 
-        sentence_prons: typing.List[typing.List[PRONUNCIATION_TYPE]] = []
+        sentence_prons: typing.List[typing.List[WordPronunciation]] = []
         missing_words: typing.List[typing.Tuple[int, Token]] = []
         between_words = False
 
-        if separate_tones is None:
-            # Separate only if language has tones
-            separate_tones = self.has_tones
-
         if word_breaks:
             # Add initial word break
-            sentence_prons.append([[IPA.BREAK_WORD.value]])
+            sentence_prons.append([WordPronunciation([IPA.BREAK_WORD.value])])
 
         for token_or_str in tokens:
             if isinstance(token_or_str, Token):
@@ -120,11 +116,11 @@ class Phonemizer:
             if word in self.minor_breaks:
                 if word_breaks and between_words:
                     # Add end of word break
-                    sentence_prons.append([[IPA.BREAK_WORD.value]])
+                    sentence_prons.append([WordPronunciation([IPA.BREAK_WORD.value])])
 
                 # Minor break (short pause)
                 if minor_breaks:
-                    sentence_prons.append([[IPA.BREAK_MINOR.value]])
+                    sentence_prons.append([WordPronunciation([IPA.BREAK_MINOR.value])])
 
                 between_words = True
                 continue
@@ -132,18 +128,18 @@ class Phonemizer:
             if word in self.major_breaks:
                 if word_breaks and between_words:
                     # Add end of word break
-                    sentence_prons.append([[IPA.BREAK_WORD.value]])
+                    sentence_prons.append([WordPronunciation([IPA.BREAK_WORD.value])])
 
                 # Major break (sentence boundary)
                 if major_breaks:
-                    sentence_prons.append([[IPA.BREAK_MAJOR.value]])
+                    sentence_prons.append([WordPronunciation([IPA.BREAK_MAJOR.value])])
 
                 between_words = False
                 continue
 
             if word_breaks and between_words:
                 # Add IPA word break symbol between words
-                sentence_prons.append([[IPA.BREAK_WORD.value]])
+                sentence_prons.append([WordPronunciation([IPA.BREAK_WORD.value])])
 
             # Actual word
             between_words = True
@@ -168,10 +164,7 @@ class Phonemizer:
                 word_prons = guess_word(token)
                 if word_prons is not None:
                     # Update lexicon
-                    self.lexicon[word] = [
-                        Phonemizer.maybe_separate_tones(wp, separate_tones)
-                        for wp in word_prons
-                    ]
+                    self.lexicon[word] = word_prons
 
             if word_prons:
                 # Language-specific processing
@@ -180,24 +173,22 @@ class Phonemizer:
 
                 # In lexicon
                 if index is None:
+                    if use_pos and token.pos:
+                        word_prons = sorted(
+                            word_prons,
+                            key=lambda wp: 1
+                            # pylint: disable=cell-var-from-loop
+                            if (wp.valid_pos and (token.pos in wp.valid_pos)) else 0,
+                            reverse=True,
+                        )
+
                     # All pronunciations
-                    sentence_prons.append(
-                        [
-                            Phonemizer.maybe_separate_tones(wp, separate_tones)
-                            for wp in word_prons
-                        ]
-                    )
+                    sentence_prons.append(word_prons)
                 else:
                     # Specific pronunciation.
                     # Clamp 1-based index.
                     pron_index = max(0, index - 1) % len(word_prons)
-                    sentence_prons.append(
-                        [
-                            Phonemizer.maybe_separate_tones(
-                                word_prons[pron_index], separate_tones
-                            )
-                        ]
-                    )
+                    sentence_prons.append([word_prons[pron_index]])
             else:
                 if not word_guessed and self.is_word(token.text):
                     # Need to guess
@@ -212,7 +203,7 @@ class Phonemizer:
             _LOGGER.debug("Guessing pronunciations for %s", words_to_guess)
             for word, word_phonemes in self.predict(words=words_to_guess):
                 # Add to lexicon
-                self.lexicon[word] = [word_phonemes]
+                self.lexicon[word] = [WordPronunciation(word_phonemes)]
 
             # Fill in missing words
             for word_idx, token in missing_words:
@@ -224,14 +215,11 @@ class Phonemizer:
                             process_pronunciation(wp, token) for wp in word_prons
                         ]
 
-                    sentence_prons[word_idx] = [
-                        Phonemizer.maybe_separate_tones(wp, separate_tones)
-                        for wp in word_prons
-                    ]
+                    sentence_prons[word_idx] = word_prons
 
         if between_words and word_breaks:
             # Add final word break
-            sentence_prons.append([[IPA.BREAK_WORD.value]])
+            sentence_prons.append([WordPronunciation([IPA.BREAK_WORD.value])])
 
         return sentence_prons
 
@@ -262,7 +250,7 @@ class Phonemizer:
 
     # -------------------------------------------------------------------------
 
-    def load_lexicon(self):
+    def load_lexicon(self, preload: bool = False):
         """Load lexicon from config"""
         maybe_lexicon_path = self.config.get("lexicon")
         if maybe_lexicon_path:
@@ -273,7 +261,41 @@ class Phonemizer:
                 if lexicon_path.suffix == ".db":
                     # Sqlite3 database
                     self.lexicon_conn = sqlite3.connect(lexicon_path)
-                    _LOGGER.debug("Using sqlite3 database: %s", lexicon_path)
+                    if preload:
+                        # Load entire database
+                        _LOGGER.debug("Pre-loading lexicon from database")
+                        num_pronunciations = 0
+                        cursor = self.lexicon_conn.execute(
+                            "SELECT word, phonemes, pos FROM word_phonemes ORDER by pron_order"
+                        )
+                        for row in cursor:
+                            word, phonemes, pos_list = (
+                                row[0],
+                                row[1].split(),
+                                row[2].split(),
+                            )
+                            word_prons = self.lexicon.get(word)
+                            if not word_prons:
+                                word_prons = []
+                                self.lexicon[word] = word_prons
+
+                            valid_pos: typing.Optional[typing.Set[str]] = None
+                            if pos_list:
+                                valid_pos = set(pos_list)
+
+                            word_prons.append(
+                                WordPronunciation(
+                                    phonemes=phonemes, valid_pos=valid_pos
+                                )
+                            )
+                            num_pronunciations += 1
+
+                        _LOGGER.debug(
+                            "Loaded %s pronuncation(s) for %s word(s)",
+                            num_pronunciations,
+                            len(self.lexicon),
+                        )
+                        self.lexicon_loaded = True
                 else:
                     # Text file
                     with maybe_gzip_open(lexicon_path, "r") as lexicon_file:
@@ -289,23 +311,29 @@ class Phonemizer:
 
     # -------------------------------------------------------------------------
 
-    def lookup_word(
-        self, word: str
-    ) -> typing.Optional[typing.List[PRONUNCIATION_TYPE]]:
+    def lookup_word(self, word: str) -> typing.Optional[typing.List[WordPronunciation]]:
         """Look up word in lexicon first, database second"""
         word_prons = self.lexicon.get(word)
         if not word_prons and self.lexicon_conn:
             # Look up in database
             cursor = self.lexicon_conn.execute(
-                "SELECT phonemes FROM word_phonemes WHERE word = ?", (word,)
+                "SELECT phonemes, pos FROM word_phonemes WHERE word = ? ORDER by pron_order",
+                (word,),
             )
             for row in cursor:
-                word_pron = row[0].split()
-                if word_pron:
+                phonemes = row[0].split()
+                if phonemes:
                     if not word_prons:
                         word_prons = []
 
-                    word_prons.append(word_pron)
+                    pos_list = row[1].split()
+                    valid_pos: typing.Optional[typing.Set[str]] = None
+                    if pos_list:
+                        valid_pos = set(pos_list)
+
+                    word_prons.append(
+                        WordPronunciation(phonemes=phonemes, valid_pos=valid_pos)
+                    )
 
             if word_prons:
                 # Update lexicon
@@ -314,38 +342,6 @@ class Phonemizer:
         return word_prons
 
     # -------------------------------------------------------------------------
-
-    @staticmethod
-    def maybe_separate_tones(
-        word_pron: PRONUNCIATION_TYPE, separate_tones: bool = False
-    ) -> PRONUNCIATION_TYPE:
-        """If separate_tones is True, tones will be separated out as additional strings"""
-        if not separate_tones:
-            return word_pron
-
-        new_word_pron = []
-        for phoneme_str in word_pron:
-            new_phoneme_str = ""
-            tone = ""
-
-            in_tone = False
-            codepoints = unicodedata.normalize("NFD", phoneme_str)
-            for c in codepoints:
-                if in_tone and (c in {IPA.TONE_GLOTTALIZED, IPA.TONE_SHORT}):
-                    # Interpret as part of tone
-                    tone += c
-                elif IPA.is_tone(c):
-                    tone += c
-                    in_tone = True
-                else:
-                    # Add to phoneme
-                    new_phoneme_str += c
-
-            new_word_pron.append(unicodedata.normalize("NFC", new_phoneme_str))
-            if tone:
-                new_word_pron.append(unicodedata.normalize("NFC", tone))
-
-        return new_word_pron
 
     @staticmethod
     def remove_nonword_chars(word: str) -> str:

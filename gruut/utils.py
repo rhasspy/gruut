@@ -5,15 +5,23 @@ import logging
 import os
 import re
 import typing
+from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass
+class WordPronunciation:
+    """Single pronunciation for a word"""
+
+    phonemes: typing.Union[typing.List[str], typing.Tuple[str, ...]]
+    valid_pos: typing.Optional[typing.Set[str]] = None
+
 
 # Excludes 0xA0
 _WHITESPACE = re.compile(r"[ \t]+")
 
-PRONUNCIATION_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
-
 # word -> [[p1, p2], [p1, p2, p3]]
-LEXICON_TYPE = typing.Dict[str, typing.List[PRONUNCIATION_TYPE]]
+LEXICON_TYPE = typing.Dict[str, typing.List[WordPronunciation]]
 
 # word(n) in lexicon
 _WORD_WITH_NUMBER = re.compile(r"^([^(]+)(\(\d+\))$")
@@ -88,13 +96,13 @@ def load_lexicon(
                         continue
 
                     phonemes = tuple(phoneme_regex.split(phoneme_str))
+                    word_pron = WordPronunciation(phonemes=phonemes)
 
                     word_prons = lexicon.get(word)
                     if word_prons:
-                        if phonemes not in word_prons:
-                            word_prons.append(phonemes)
+                        word_prons.append(word_pron)
                     else:
-                        lexicon[word] = [phonemes]
+                        lexicon[word] = [word_pron]
         except Exception as e:
             _LOGGER.exception("Error on line %s: %s", line_index + 1, line)
             raise e

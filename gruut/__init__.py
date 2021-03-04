@@ -1,6 +1,7 @@
 """Language class for gruut"""
 import logging
 import os
+import shutil
 import typing
 from pathlib import Path
 
@@ -10,7 +11,7 @@ import yaml
 from gruut_ipa import IPA, Phonemes
 
 from .phonemize import Phonemizer
-from .toksen import TOKENIZE_FUNC, Token, Tokenizer
+from .toksen import PostTokenizeFunc, Token, TokenizeFunc, Tokenizer
 from .utils import env_constructor
 
 # -----------------------------------------------------------------------------
@@ -31,8 +32,9 @@ class Language:
         self,
         config,
         language: typing.Optional[str] = None,
-        preload_lexicon: bool = True,
-        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None,
+        preload_lexicon: bool = False,
+        custom_tokenize: typing.Optional[TokenizeFunc] = None,
+        custom_post_tokenize: typing.Optional[PostTokenizeFunc] = None,
     ):
         if language is None:
             self.language = pydash.get(config, "language.code")
@@ -41,7 +43,12 @@ class Language:
 
         self.config = config
 
-        self.tokenizer = Tokenizer(config, custom_tokenize=custom_tokenize)
+        self.tokenizer = Tokenizer(
+            config,
+            custom_tokenize=custom_tokenize,
+            custom_post_tokenize=custom_post_tokenize,
+        )
+
         self.phonemizer = Phonemizer(config, preload_lexicon=preload_lexicon)
         self.phonemizer.is_word = self.tokenizer.is_word  # type: ignore
 
@@ -119,7 +126,10 @@ class Language:
 
     @staticmethod
     def load(
-        lang_dir: Path, language: str, preload_lexicon: bool = True
+        lang_dir: Path,
+        language: str,
+        preload_lexicon: bool = True,
+        custom_tokenizers: bool = True,
     ) -> typing.Optional["Language"]:
         """Load language from code"""
 
@@ -139,19 +149,66 @@ class Language:
             config = yaml.safe_load(config_file)
 
         # Language-specific loading
-        custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None
-        if language == "fa":
-            custom_tokenize = Language.make_fa_tokenize(lang_dir)
+        custom_tokenize: typing.Optional[TokenizeFunc] = None
+        custom_post_tokenize: typing.Optional[PostTokenizeFunc] = None
+
+        if custom_tokenizers:
+            if language == "fa":
+                # Use hazm for text normalization and POS tagging.
+                custom_tokenize = Language.make_fa_tokenize(lang_dir)
+            elif language in ("en-us", "en-gb") and shutil.which("java"):
+                # Use the Stanford POS tagger.
+                # Requires java, so don't bother if it's not available.
+                custom_post_tokenize = Language.make_en_post_tokenize(lang_dir)
 
         return Language(
             config=config,
             language=language,
             preload_lexicon=preload_lexicon,
             custom_tokenize=custom_tokenize,
+            custom_post_tokenize=custom_post_tokenize,
         )
 
     @staticmethod
-    def make_fa_tokenize(lang_dir: Path) -> TOKENIZE_FUNC:
+    def make_en_post_tokenize(lang_dir: Path) -> typing.Optional[PostTokenizeFunc]:
+        """Tokenization post-processing for English"""
+        from nltk.tag import stanford
+
+        # Load part of speech tagger
+        pos_dir = lang_dir / "pos"
+        model_path = pos_dir / "english-caseless-left3words-distsim.tagger"
+        jar_path = pos_dir / "stanford-postagger.jar"
+
+        if not (model_path.is_file() or jar_path.is_file()):
+            _LOGGER.warning(
+                "Missing one or more files (tagger=%s, jar=%s)", model_path, jar_path
+            )
+            return None
+
+        _LOGGER.debug("Using Stanford POS tagger (model=%s)", model_path)
+        tagger = stanford.StanfordPOSTagger(
+            model_filename=str(model_path), path_to_jar=str(jar_path)
+        )
+
+        def do_post_tokenize(
+            sentence_tokens: typing.List[Token], **kwargs
+        ) -> typing.List[Token]:
+            """Tag part of speech for sentence tokens"""
+            guess_pos = kwargs.get("guess_pos", True)
+            if not guess_pos:
+                # Don't run tagger is POS isn't needed
+                return sentence_tokens
+
+            words = [t.text for t in sentence_tokens]
+            for i, (_word, pos) in enumerate(tagger.tag(words)):
+                sentence_tokens[i].pos = pos
+
+            return sentence_tokens
+
+        return do_post_tokenize
+
+    @staticmethod
+    def make_fa_tokenize(lang_dir: Path) -> typing.Optional[TokenizeFunc]:
         """Tokenize Persian/Farsi"""
         import hazm
 
@@ -160,10 +217,14 @@ class Language:
         # Load part of speech tagger
         model_path = lang_dir / "postagger.model"
 
+        if not model_path.is_file():
+            _LOGGER.warning("Missing model: %s", model_path)
+            return None
+
         _LOGGER.debug("Using hazm tokenizer (model=%s)", model_path)
         tagger = hazm.POSTagger(model=str(model_path))
 
-        def do_tokenize(text: str) -> typing.List[typing.List[Token]]:
+        def do_tokenize(text: str, **kwargs) -> typing.List[typing.List[Token]]:
             """Normalize, tokenize, and recognize part of speech"""
             sentences_tokens = []
             sentences = hazm.sent_tokenize(normalizer.normalize(text))

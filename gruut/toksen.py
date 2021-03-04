@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import babel
 import babel.numbers
 import pydash
+from typing_extensions import Protocol
 
 from num2words import num2words
 
@@ -22,10 +23,23 @@ class Token:
     """Single token"""
 
     text: str
-    pos: typing.Optional[str] = None
+    pos: typing.Optional[str] = None  # part of speech
 
 
-TOKENIZE_FUNC = typing.Callable[[str], typing.List[typing.List[Token]]]
+class TokenizeFunc(Protocol):
+    """Signaure for custom_tokenize functions"""
+
+    def __call__(self, text: str, **kwargs) -> typing.List[typing.List[Token]]:
+        pass
+
+
+class PostTokenizeFunc(Protocol):
+    """Signaure for custom_post_tokenize functions"""
+
+    def __call__(
+        self, sentence_tokens: typing.List[Token], **kwargs
+    ) -> typing.List[Token]:
+        pass
 
 
 @dataclass
@@ -38,14 +52,23 @@ class Sentence:
     tokens: typing.List[Token] = field(default_factory=list)
 
 
+# -----------------------------------------------------------------------------
+
+
 class Tokenizer:
     """Splits text into sentences, tokenizes and cleans"""
 
-    def __init__(self, config, custom_tokenize: typing.Optional[TOKENIZE_FUNC] = None):
+    def __init__(
+        self,
+        config,
+        custom_tokenize: typing.Optional[TokenizeFunc] = None,
+        custom_post_tokenize: typing.Optional[PostTokenizeFunc] = None,
+    ):
         self.config = config
         self.language = pydash.get(self.config, "language.code")
 
         self.custom_tokenize = custom_tokenize
+        self.custom_post_tokenize = custom_post_tokenize
 
         # Symbol to skip immediately after an abbreviation
         self.abbreviation_skip = pydash.get(self.config, "symbols.abbreviation_skip")
@@ -156,7 +179,11 @@ class Tokenizer:
     # -------------------------------------------------------------------------
 
     def tokenize(
-        self, text: str, number_converters: bool = False, replace_currency: bool = True
+        self,
+        text: str,
+        number_converters: bool = False,
+        replace_currency: bool = True,
+        guess_pos: bool = True,
     ) -> typing.Iterable[Sentence]:
         """Split text into sentences, tokenize, and clean"""
         sentence_tokens: typing.List[typing.List[Token]] = []
@@ -164,7 +191,7 @@ class Tokenizer:
 
         if self.custom_tokenize:
             # User-defined tokenization
-            sentence_tokens = self.custom_tokenize(text)
+            sentence_tokens = self.custom_tokenize(text, guess_pos=guess_pos)
             raw_sentence_tokens = [[t.text for t in s] for s in sentence_tokens]
         else:
             # Do pre-tokenization replacements
@@ -418,6 +445,13 @@ class Tokenizer:
 
             # Don't yield empty sentences
             if raw_words or clean_words:
+
+                # Do post-processing
+                if self.custom_post_tokenize:
+                    clean_tokens = self.custom_post_tokenize(
+                        clean_tokens, guess_pos=guess_pos
+                    )
+
                 yield Sentence(
                     raw_text=raw_text,
                     raw_words=raw_words,

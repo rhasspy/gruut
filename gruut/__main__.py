@@ -21,7 +21,13 @@ import yaml
 import gruut_ipa
 
 from .toksen import Token
-from .utils import env_constructor, load_lexicon, maybe_gzip_open, pairwise
+from .utils import (
+    WordPronunciation,
+    env_constructor,
+    load_lexicon,
+    maybe_gzip_open,
+    pairwise,
+)
 
 # -----------------------------------------------------------------------------
 
@@ -147,7 +153,7 @@ def do_tokenize(config, args):
 
     Prints a line of JSON for each sentence.
     """
-    gruut_lang = try_load_language(args, preload_lexicon=False)
+    gruut_lang = try_load_language(args, custom_tokenizers=(not args.no_pos))
     tokenizer = gruut_lang.tokenizer
 
     if args.text:
@@ -171,6 +177,7 @@ def do_tokenize(config, args):
                 line,
                 number_converters=args.number_converters,
                 replace_currency=(not args.disable_currency),
+                guess_pos=(not args.no_pos),
             )
         )
 
@@ -244,9 +251,7 @@ def do_phonemize(config, args):
 
     Prints a line of JSON for each input line.
     """
-    from . import Phonemizer
-
-    gruut_lang = try_load_language(args)
+    gruut_lang = try_load_language(args, custom_tokenizers=False)
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
@@ -298,16 +303,18 @@ def do_phonemize(config, args):
             tokens,
             word_indexes=args.word_indexes,
             word_breaks=args.word_breaks,
-            separate_tones=args.separate_tones,
             process_pronunciation=process_pronunciation,
+            use_pos=(not args.no_pos),
         )
-        sentence_obj["pronunciations"] = sentence_prons
+        sentence_obj["pronunciations"] = [
+            wp.phonemes for word_prons in sentence_prons for wp in word_prons
+        ]
 
         # Pick first pronunciation for each word
         first_pron = []
         for word_prons in sentence_prons:
             if word_prons:
-                first_pron.append(word_prons[0])
+                first_pron.append(word_prons[0].phonemes)
 
         sentence_obj["pronunciation"] = first_pron
 
@@ -391,9 +398,7 @@ def do_phonemize(config, args):
         if missing_words:
             _LOGGER.debug("Guessing pronunciations for %s word(s)", len(missing_words))
             for word, word_pron in phonemizer.predict(missing_words, nbest=1):
-                phonemizer.lexicon[word] = [
-                    Phonemizer.maybe_separate_tones(word_pron, args.separate_tones)
-                ]
+                phonemizer.lexicon[word] = [WordPronunciation(word_pron)]
 
         # Process delayed sentences
         for sentence_obj in sentence_objs:
@@ -443,7 +448,7 @@ def do_phones_to_phonemes(config, args):
 
 def do_coverage(config, args):
     """Get phoneme coverage"""
-    gruut_lang = try_load_language(args)
+    gruut_lang = try_load_language(args, preload_lexicon=True)
 
     # List of possible phonemes in the language
     phonemes = [p.text for p in gruut_lang.phonemes]
@@ -457,7 +462,7 @@ def do_coverage(config, args):
     all_pairs = set()
     for word_prons in gruut_lang.phonemizer.lexicon.values():
         for word_pron in word_prons:
-            for p1, p2 in pairwise(word_pron):
+            for p1, p2 in pairwise(word_pron.phonemes):
                 p1 = gruut_ipa.IPA.without_stress(p1)
                 p2 = gruut_ipa.IPA.without_stress(p2)
                 all_pairs.update((p1, p2))
@@ -520,7 +525,7 @@ def do_optimize_sentences(config, args):
     """Find phonetically rich sentences"""
     from .optimize import get_optimal_sentences
 
-    gruut_lang = try_load_language(args)
+    gruut_lang = try_load_language(args, preload_lexicon=True)
     lexicon = gruut_lang.phonemizer.lexicon
 
     if args.text:
@@ -545,6 +550,7 @@ def do_optimize_sentences(config, args):
         min_length=args.min_length,
         max_length=args.max_length,
         cache_file_path=args.cache_file,
+        guess_pos=(not args.no_pos),
     )
 
     # Print results
@@ -557,7 +563,11 @@ def do_optimize_sentences(config, args):
             "sentences": [
                 {
                     "sentence": dataclasses.asdict(pron_sentence.sentence),
-                    "pronunciations": pron_sentence.pronunciations,
+                    "pronunciations": [
+                        wp.phonemes
+                        for word_prons in pron_sentence.pronunciations
+                        for wp in word_prons
+                    ],
                 }
                 for pron_sentence in optimal_sentences.sentences
             ],
@@ -636,9 +646,9 @@ def do_phonemize_lexicon(config, args):
 
 def do_compare_phonemes(config, args):
     """Print comparison of two languages' phonemes"""
-    gruut_lang1 = try_load_language(args, preload_lexicon=False)
+    gruut_lang1 = try_load_language(args, custom_tokenizers=False)
     gruut_lang2 = try_load_language(
-        args, language=args.language2, preload_lexicon=False
+        args, language=args.language2, custom_tokenizers=False
     )
 
     assert gruut_lang1, f"Unsupported language: {args.language}"
@@ -732,7 +742,7 @@ def do_check_wavs(config, args):
     """
     import wave
 
-    gruut_lang = try_load_language(args, preload_lexicon=False)
+    gruut_lang = try_load_language(args, custom_tokenizers=False)
     tokenizer = gruut_lang.tokenizer
 
     csv_file = sys.stdin
@@ -884,7 +894,7 @@ def do_print_phoneme_ids(config, args):
     """
     Print phonemes for a language and associated integer ids.
     """
-    gruut_lang = try_load_language(args, preload_lexicon=False)
+    gruut_lang = try_load_language(args, custom_tokenizers=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -903,7 +913,7 @@ def do_phonemes2ids(config, args):
 
     Prints JSONL list for each line of input.
     """
-    gruut_lang = try_load_language(args, preload_lexicon=False)
+    gruut_lang = try_load_language(args, custom_tokenizers=False)
     phonemes_list = gruut_lang.id_to_phonemes(
         no_pad=args.no_pad, no_word_break=args.no_word_break
     )
@@ -1031,6 +1041,9 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Output one line for every sentence",
     )
+    tokenize_parser.add_argument(
+        "--no-pos", action="store_true", help="Don't guess parts of speech for words"
+    )
     tokenize_parser.set_defaults(func=do_tokenize)
 
     # ---------
@@ -1061,15 +1074,17 @@ def get_args() -> argparse.Namespace:
         help="Add the IPA word break symbol (#) between each word",
     )
     phonemize_parser.add_argument(
-        "--separate-tones", action="store_true", help="Separate out tones"
-    )
-    phonemize_parser.add_argument(
         "--read-all",
         action="store_true",
         help="Read all sentences and guess words before output",
     )
     phonemize_parser.add_argument(
         "--map", action="append", help="Map phonemes according to a named map"
+    )
+    phonemize_parser.add_argument(
+        "--no-pos",
+        action="store_true",
+        help="Don't use part of speech to resolve pronunciations",
     )
 
     # ---------------
@@ -1133,6 +1148,9 @@ def get_args() -> argparse.Namespace:
     )
     optimize_sentences_parser.add_argument(
         "--cache-file", help="File used to cache sentences and pronunciations"
+    )
+    optimize_sentences_parser.add_argument(
+        "--no-pos", action="store_true", help="Don't guess parts of speech for words"
     )
     optimize_sentences_parser.set_defaults(func=do_optimize_sentences)
 

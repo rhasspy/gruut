@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import sys
 
@@ -95,9 +96,29 @@ ARPABET = {
     "Z": "z",
 }
 
+UD_POS = {
+    "det": "DT",
+    "verb": "VB",
+    "verb@past": "VBD",
+    "prep": "PRP",
+    "noun": "NN",
+    "num": "CD",
+    "adj": "ADJ",
+    "adv": "ADV",
+    "pron": "PRON",
+    "intj": "INTJ",
+    "conj": "_",
+    "adj@attr": "ADJ",
+    "adj@pred": "ADJ",
+}
+
 
 def main():
     """Main entry point"""
+    parser = argparse.ArgumentParser(prog="convert_cmudict.py")
+    parser.add_argument("--pos", action="store_true", help="Include part of speech")
+    args = parser.parse_args()
+
     if os.isatty(sys.stdin.fileno()):
         print("Reading dictionary from stdin...", file=sys.stderr)
 
@@ -115,8 +136,15 @@ def main():
         word, *phonemes = line.split()
 
         # Remove index
-        word, *index = word.split("(", maxsplit=1)
+        word, *maybe_index = word.split("(", maxsplit=1)
         assert word, f"Blank word at line {line_index + 1}"
+        pos = "_"
+
+        if maybe_index:
+            # Strip off final ')'
+            index = "".join(maybe_index)[:-1]
+            if not str.isdigit(index):
+                pos = UD_POS.get(index, index)
 
         word = word.lower()
 
@@ -151,7 +179,12 @@ def main():
 
             ipa_phonemes.append(stress + ipa_phoneme)
 
-        print(word, *ipa_phonemes)
+        if args.pos:
+            # With part of speech
+            print(word, pos, *ipa_phonemes)
+        else:
+            # Without part of speech
+            print(word, *ipa_phonemes)
 
 
 # -----------------------------------------------------------------------------
