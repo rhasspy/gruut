@@ -12,3 +12,4 @@ __pycache__/
 /data/**/lexicon.txt
 /data/**/lexicon.db
 /data/fa/postagger.model
+/data/**/model.mkl
