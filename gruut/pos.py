@@ -11,7 +11,6 @@ import string
 import typing
 from pathlib import Path
 
-import conllu
 import sklearn_crfsuite
 from sklearn_crfsuite import metrics
 
@@ -111,6 +110,12 @@ def train_model(
     max_iterations: int = 100,
 ) -> sklearn_crfsuite.CRF:
     """Train a new model from CONLLU data"""
+    try:
+        import conllu
+    except ImportError as e:
+        _LOGGER.fatal("conllu package is required for training")
+        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        raise e
 
     _LOGGER.debug("Loading train file (%s)", train_path)
     with open(train_path, "r") as train_file:
@@ -164,6 +169,13 @@ def test_model(
     out_file: typing.Optional[typing.TextIO] = None,
 ):
     """Print an accuracy report for a model to a file"""
+    try:
+        import conllu
+    except ImportError as e:
+        _LOGGER.fatal("conllu package is required for testing")
+        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        raise e
+
     _LOGGER.debug("Loading test file (%s)", test_path)
     with open(test_path, "r") as test_file:
         test_sents = conllu.parse(test_file.read())

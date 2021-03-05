@@ -27,6 +27,12 @@ with open(version_path, "r") as version_file:
 # -----------------------------------------------------------------------------
 
 module_dir = this_dir / "gruut"
+data_dir = module_dir / "data"
+data_files = [
+    str(f.relative_to(module_dir))
+    for f in data_dir.rglob("*")
+    if f.is_file() and (f.name not in {"g2p.corpus", "lexicon.txt"})
+]
 
 setuptools.setup(
     name="gruut",
@@ -36,7 +42,7 @@ setuptools.setup(
     author_email="mike@rhasspy.org",
     url="https://github.com/rhasspy/gruut",
     packages=setuptools.find_packages(),
-    package_data={"gruut": ["py.typed"]},
+    package_data={"gruut": data_files + ["py.typed"]},
     install_requires=requirements,
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},
     classifiers=[

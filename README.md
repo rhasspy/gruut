@@ -1,16 +1,20 @@
 # Gruut
 
-A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for many human languages.
+A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages.
 
 ```sh
-$ echo 'He said, "only $10??"' | \
+$ echo 'He wound it around the wound, saying "I read it was $10 to read."' | \
     gruut en-us tokenize | \
     gruut en-us phonemize | \
     jq -c .clean_words,.pronunciation
 
-["he","said",",","only","ten","dollars","?"]
-[["h","ˈi"],["s","ˈɛ","d"],["|"],["ˈoʊ","n","l","i"],["t","ˈɛ","n"],["d","ˈɑ","l","ɚ","z"],["‖"]]
+["he","wound","it","around","the","wound",",","saying","i","read","it","was","ten","dollars","to","read","."]
+[["h","ˈi"],["w","ˈaʊ","n","d"],["ˈɪ","t"],["ɚ","ˈaʊ","n","d"],["ð","ˈi"],["w","ˈu","n","d"],["|"],["s","ˈeɪ","ɪ","ŋ"],["ˈaɪ"],["ɹ","ˈɛ","d"],["ˈɪ","t"],["w","ˈɑ","z"],["t","ˈɛ","n"],["d","ˈɑ","l","ɚ","z"],["t","ˈu"],["ɹ","ˈi","d"],["‖"]]
 ```
+
+Includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations (e.g., "read" pronounced like "red" or "reed").
+
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.8.0) are also available for the [supported languages](#support-languages).
 
 ---
 
@@ -62,19 +66,15 @@ For Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](
 
 ## Language Download
 
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.7.0) for gruut can be downloaded with:
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.8.0) for gruut can be downloaded with:
 
 ```sh
 $ python3 -m gruut <LANGUAGE> download
 ```
 
+A U.S. English model is included in the distribution.
+
 By default, models are stored in `$HOME/.config/gruut`. This can be overridden by passing a `--data-dir` argument to all `gruut` commands.
-
-To download the U.S. English models, for example, run:
-
-```sh
-$ python3 -m gruut en-us download
-```
 
 ## Usage
 

@@ -72,7 +72,11 @@ def main():
         if env_data_dir:
             data_dirs.append(Path(env_data_dir))
 
+        # Data directory *next to* gruut
         data_dirs.append(_DIR.parent / "data")
+
+        # Data directory *inside* gruut
+        data_dirs.append(_DIR / "data")
 
         # Search for language-specific data directory
         maybe_lang_dir: typing.Optional[Path] = None
