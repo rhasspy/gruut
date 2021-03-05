@@ -128,7 +128,7 @@ class Language:
     def load(
         lang_dir: Path,
         language: str,
-        preload_lexicon: bool = True,
+        preload_lexicon: bool = False,
         custom_tokenizers: bool = True,
     ) -> typing.Optional["Language"]:
         """Load language from code"""
@@ -172,23 +172,33 @@ class Language:
     @staticmethod
     def make_en_post_tokenize(lang_dir: Path) -> typing.Optional[PostTokenizeFunc]:
         """Tokenization post-processing for English"""
-        from nltk.tag import stanford
+        from .pos import load_model, predict
 
         # Load part of speech tagger
         pos_dir = lang_dir / "pos"
-        model_path = pos_dir / "english-caseless-left3words-distsim.tagger"
-        jar_path = pos_dir / "stanford-postagger.jar"
+        model_path = pos_dir / "model.pkl"
 
-        if not (model_path.is_file() or jar_path.is_file()):
-            _LOGGER.warning(
-                "Missing one or more files (tagger=%s, jar=%s)", model_path, jar_path
-            )
+        if not (model_path.is_file()):
+            _LOGGER.warning("Missing POS model: %s", model_path)
             return None
 
-        _LOGGER.debug("Using Stanford POS tagger (model=%s)", model_path)
-        tagger = stanford.StanfordPOSTagger(
-            model_filename=str(model_path), path_to_jar=str(jar_path)
-        )
+        _LOGGER.debug("Loading POS model from %s", model_path)
+        pos_model = load_model(model_path)
+
+        pos_map = {
+            "NNS": "NN",
+            "NNP": "NN",
+            "NNPS": "NN",
+            "PRP$": "PRP",
+            "RBR": "RB",
+            "RBS": "RB",
+            "VBG": "VB",
+            "VBN": "VBD",
+            "VBP": "VB",
+            "VBZ": "VB",
+            "JJR": "JJ",
+            "JJS": "JJ",
+        }
 
         def do_post_tokenize(
             sentence_tokens: typing.List[Token], **kwargs
@@ -200,8 +210,15 @@ class Language:
                 return sentence_tokens
 
             words = [t.text for t in sentence_tokens]
-            for i, (_word, pos) in enumerate(tagger.tag(words)):
-                sentence_tokens[i].pos = pos
+            sents = [words]
+
+            sents_pos = predict(pos_model, sents)
+            assert sents_pos, "No POS predictions"
+            words_pos = sents_pos[0]
+            assert len(words_pos) == len(words), f"Length mismatch for words/pos"
+
+            for i, pos in enumerate(words_pos):
+                sentence_tokens[i].pos = pos_map.get(pos, pos)
 
             return sentence_tokens
 
@@ -210,7 +227,12 @@ class Language:
     @staticmethod
     def make_fa_tokenize(lang_dir: Path) -> typing.Optional[TokenizeFunc]:
         """Tokenize Persian/Farsi"""
-        import hazm
+        try:
+            import hazm
+        except ImportError:
+            _LOGGER.warning("hazm is highly recommended for language 'fa'")
+            _LOGGER.warning("pip install 'hazm>=0.7.0'")
+            return None
 
         normalizer = hazm.Normalizer()
 

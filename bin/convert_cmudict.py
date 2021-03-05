@@ -100,16 +100,16 @@ UD_POS = {
     "det": "DT",
     "verb": "VB",
     "verb@past": "VBD",
-    "prep": "PRP",
+    "prep": "IN",
     "noun": "NN",
     "num": "CD",
-    "adj": "ADJ",
-    "adv": "ADV",
-    "pron": "PRON",
-    "intj": "INTJ",
+    "adj": "JJ",
+    "adv": "RB",
+    "pron": "PRP",
+    "intj": "_",
     "conj": "_",
-    "adj@attr": "ADJ",
-    "adj@pred": "ADJ",
+    "adj@attr": "JJ",
+    "adj@pred": "JJ",
 }
 
 
