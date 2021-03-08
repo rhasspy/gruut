@@ -20,6 +20,7 @@ import yaml
 
 import gruut_ipa
 
+from . import Language
 from .toksen import Token
 from .utils import (
     WordPronunciation,
@@ -65,21 +66,7 @@ def main():
         do_download(args)
     else:
         # Directories to search for language-specific data files
-        data_dirs = [args.data_dir]
-
-        # All other commands
-        env_data_dir = os.environ.get("GRUUT_DATA_DIR")
-        if env_data_dir:
-            data_dirs.append(Path(env_data_dir))
-
-        # Data directory *next to* gruut
-        data_dirs.append(_DIR.parent / "data")
-
-        # Data directory *inside* gruut
-        data_dirs.append(_DIR / "data")
-
-        # Search for language-specific data directory
-        maybe_lang_dir: typing.Optional[Path] = None
+        data_dirs = Language.get_data_dirs([args.data_dir])
 
         for data_dir in data_dirs:
             maybe_lang_dir = data_dir / args.language
@@ -108,8 +95,6 @@ def main():
 
 def try_load_language(args, language: typing.Optional[str] = None, **kwargs):
     """Attempt to load a language by code (e.g. en-us)"""
-    from . import Language
-
     if not language:
         language = args.language
 

@@ -126,12 +126,23 @@ class Language:
 
     @staticmethod
     def load(
-        lang_dir: Path,
         language: str,
+        lang_dir: typing.Optional[Path] = None,
         preload_lexicon: bool = False,
         custom_tokenizers: bool = True,
     ) -> typing.Optional["Language"]:
         """Load language from code"""
+
+        if not lang_dir:
+            data_dirs = Language.get_data_dirs()
+            for data_dir in data_dirs:
+                lang_dir = data_dir / language
+                if lang_dir and lang_dir.is_dir():
+                    config_path = lang_dir / "language.yml"
+                    if config_path.is_file():
+                        break
+
+            assert lang_dir, "Language '{language}' not found in {data_dirs}"
 
         # Expand environment variables in string value
         yaml.SafeLoader.add_constructor("!env", env_constructor)
@@ -168,6 +179,33 @@ class Language:
             custom_tokenize=custom_tokenize,
             custom_post_tokenize=custom_post_tokenize,
         )
+
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def get_data_dirs(
+        first_data_dirs: typing.Optional[typing.List[typing.Union[str, Path]]] = None
+    ):
+        """Get language data directories to search in order"""
+        if first_data_dirs:
+            data_dirs = [Path(p) for p in first_data_dirs]
+        else:
+            data_dirs = []
+
+        # All other commands
+        env_data_dir = os.environ.get("GRUUT_DATA_DIR")
+        if env_data_dir:
+            data_dirs.append(Path(env_data_dir))
+
+        # Data directory *next to* gruut
+        data_dirs.append(_DIR.parent / "data")
+
+        # Data directory *inside* gruut
+        data_dirs.append(_DIR / "data")
+
+        return data_dirs
+
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def make_en_post_tokenize(lang_dir: Path) -> typing.Optional[PostTokenizeFunc]:
