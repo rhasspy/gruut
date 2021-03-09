@@ -240,6 +240,8 @@ def do_phonemize(config, args):
 
     Prints a line of JSON for each input line.
     """
+    from .phonemize import UnknownWordsError
+
     gruut_lang = try_load_language(args, custom_tokenizers=False)
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
@@ -288,74 +290,84 @@ def do_phonemize(config, args):
             clean_words = sentence_obj["clean_words"]
             tokens = [Token(text=w) for w in clean_words]
 
-        sentence_prons = phonemizer.phonemize(
-            tokens,
-            word_indexes=args.word_indexes,
-            word_breaks=args.word_breaks,
-            process_pronunciation=process_pronunciation,
-            use_pos=(not args.no_pos),
-        )
-        sentence_obj["pronunciations"] = [
-            wp.phonemes for word_prons in sentence_prons for wp in word_prons
-        ]
+        fail_on_unknown_words = args.fail_on_unknown_words or args.skip_on_unknown_words
 
-        # Pick first pronunciation for each word
-        first_pron = []
-        for word_prons in sentence_prons:
-            if word_prons:
-                first_pron.append(word_prons[0].phonemes)
+        try:
+            sentence_prons = phonemizer.phonemize(
+                tokens,
+                word_indexes=args.word_indexes,
+                word_breaks=args.word_breaks,
+                process_pronunciation=process_pronunciation,
+                use_pos=(not args.no_pos),
+                fail_on_unknown_words=fail_on_unknown_words,
+            )
+            sentence_obj["pronunciations"] = [
+                wp.phonemes for word_prons in sentence_prons for wp in word_prons
+            ]
 
-        sentence_obj["pronunciation"] = first_pron
+            # Pick first pronunciation for each word
+            first_pron = []
+            for word_prons in sentence_prons:
+                if word_prons:
+                    first_pron.append(word_prons[0].phonemes)
 
-        # Create string of first pronunciation
-        sentence_obj["pronunciation_text"] = args.word_separator.join(
-            args.phoneme_separator.join(word_pron) for word_pron in first_pron
-        )
+            sentence_obj["pronunciation"] = first_pron
 
-        # Get Sampa pronunciation
-        sentence_obj["sampa"] = [
-            [gruut_ipa.ipa_to_sampa(phoneme) for phoneme in word_pron]
-            for word_pron in first_pron
-        ]
+            # Create string of first pronunciation
+            sentence_obj["pronunciation_text"] = args.word_separator.join(
+                args.phoneme_separator.join(word_pron) for word_pron in first_pron
+            )
 
-        sentence_obj["sampa_text"] = " ".join(
-            "".join(word_pron) for word_pron in sentence_obj["sampa"]
-        ).strip()
+            # Get Sampa pronunciation
+            sentence_obj["sampa"] = [
+                [gruut_ipa.ipa_to_sampa(phoneme) for phoneme in word_pron]
+                for word_pron in first_pron
+            ]
 
-        # Get eSpeak pronunciation
-        sentence_obj["espeak"] = [
-            [gruut_ipa.ipa_to_espeak(phoneme) for phoneme in word_pron]
-            for word_pron in first_pron
-        ]
-
-        sentence_obj["espeak_text"] = (
-            "[["
-            + " ".join(
-                "".join(word_pron) for word_pron in sentence_obj["espeak"]
+            sentence_obj["sampa_text"] = " ".join(
+                "".join(word_pron) for word_pron in sentence_obj["sampa"]
             ).strip()
-            + "]]"
-        )
 
-        # Map phonemes
-        sentence_obj["mapped_phonemes"] = {}
-        for map_name, phoneme_map in phoneme_maps.items():
-            mapped_phonemes = []
-            for word_pron in first_pron:
-                mapped_word_phonemes = []
+            # Get eSpeak pronunciation
+            sentence_obj["espeak"] = [
+                [gruut_ipa.ipa_to_espeak(phoneme) for phoneme in word_pron]
+                for word_pron in first_pron
+            ]
 
-                for phoneme in word_pron:
-                    # Exclude stress for now
-                    phoneme = gruut_ipa.IPA.without_stress(phoneme)
-                    mapped_phoneme = phoneme_map.get(phoneme)
-                    if mapped_phoneme:
-                        mapped_word_phonemes.append(mapped_phoneme)
+            sentence_obj["espeak_text"] = (
+                "[["
+                + " ".join(
+                    "".join(word_pron) for word_pron in sentence_obj["espeak"]
+                ).strip()
+                + "]]"
+            )
 
-                mapped_phonemes.append(mapped_word_phonemes)
+            # Map phonemes
+            sentence_obj["mapped_phonemes"] = {}
+            for map_name, phoneme_map in phoneme_maps.items():
+                mapped_phonemes = []
+                for word_pron in first_pron:
+                    mapped_word_phonemes = []
 
-            sentence_obj["mapped_phonemes"][map_name] = mapped_phonemes
+                    for phoneme in word_pron:
+                        # Exclude stress for now
+                        phoneme = gruut_ipa.IPA.without_stress(phoneme)
+                        mapped_phoneme = phoneme_map.get(phoneme)
+                        if mapped_phoneme:
+                            mapped_word_phonemes.append(mapped_phoneme)
 
-        # Print back out with extra info
-        writer.write(sentence_obj)
+                    mapped_phonemes.append(mapped_word_phonemes)
+
+                sentence_obj["mapped_phonemes"][map_name] = mapped_phonemes
+
+            # Print back out with extra info
+            writer.write(sentence_obj)
+        except UnknownWordsError as e:
+            if not args.skip_on_unknown_words:
+                # Fail instead of skipping
+                raise e
+
+    # -------------------------------------------------------------------------
 
     if os.isatty(sys.stdin.fileno()):
         print("Reading tokenize JSONL from stdin...", file=sys.stderr)
@@ -1074,6 +1086,16 @@ def get_args() -> argparse.Namespace:
         "--no-pos",
         action="store_true",
         help="Don't use part of speech to resolve pronunciations",
+    )
+    phonemize_parser.add_argument(
+        "--fail-on-unknown-words",
+        action="store_true",
+        help="Raise an error if there are words whose pronunciations can't be guessed",
+    )
+    phonemize_parser.add_argument(
+        "--skip-on-unknown-words",
+        action="store_true",
+        help="Skip sentences with words whose pronunciations can't be guessed",
     )
 
     # ---------------

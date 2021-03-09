@@ -91,6 +91,7 @@ class Phonemizer:
         process_pronunciation: typing.Optional[
             typing.Callable[[WordPronunciation, Token], WordPronunciation]
         ] = None,
+        fail_on_unknown_words: bool = False,
     ) -> typing.List[typing.List[WordPronunciation]]:
         """Get all possible pronunciations for cleaned words"""
         if not self.lexicon_loaded:
@@ -201,9 +202,18 @@ class Phonemizer:
 
         if words_to_guess:
             _LOGGER.debug("Guessing pronunciations for %s", words_to_guess)
+            guessed_words: typing.Set[str] = set()
+
             for word, word_phonemes in self.predict(words=words_to_guess):
                 # Add to lexicon
                 self.lexicon[word] = [WordPronunciation(word_phonemes)]
+                guessed_words.add(word)
+
+            if fail_on_unknown_words:
+                # Verify that all missing words were guessed
+                failed_words = words_to_guess - guessed_words
+                if failed_words:
+                    raise UnknownWordsError(failed_words)
 
             # Fill in missing words
             for word_idx, token in missing_words:
@@ -347,3 +357,15 @@ class Phonemizer:
     def remove_nonword_chars(word: str) -> str:
         """Remove non-word characters from a string"""
         return NON_WORD_CHARS.sub("", word)
+
+
+# -----------------------------------------------------------------------------
+
+
+class UnknownWordsError(Exception):
+    """Raised when word pronunciations cannot be guessed"""
+
+    def __init__(self, words: typing.Iterable[str]):
+        self.words = list(words)
+        self.message = "Unknown words: {}".format(", ".join(self.words))
+        super().__init__(self.message)
