@@ -16,8 +16,6 @@ else
     gruut="${this_dir}/gruut"
 fi
 
-"${gruut}" "${lang}" tokenize < <(cut -d'|' -f2- "${csv}") | \
-    "${gruut}" "${lang}" phonemize --read-all --word-breaks | \
-    "${gruut}" "${lang}" phonemes2ids | \
-    jq -r '@sh' | \
-    paste -d'|' <(cut -d'|' -f1 "${csv}") -
+"${gruut}" "${lang}" tokenize --csv < | \
+    "${gruut}" "${lang}" phonemize --read-all --word-breaks --skip-on-unknown-words | \
+    "${gruut}" "${lang}" phonemes2ids --csv
