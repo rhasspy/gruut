@@ -161,6 +161,12 @@ def do_tokenize(config, args):
         if not line:
             continue
 
+        utt_id = ""
+
+        if args.csv:
+            # Input format is id|text
+            utt_id, line = line.split(args.csv_delimiter, maxsplit=1)
+
         sentences = list(
             tokenizer.tokenize(
                 line,
@@ -172,7 +178,11 @@ def do_tokenize(config, args):
 
         if args.split_sentences:
             # One output line per sentence
-            for sentence in sentences:
+            for sentence_idx, sentence in enumerate(sentences):
+                sentence_id = str(sentence_idx)
+                if utt_id:
+                    sentence_id = f"{utt_id}_{sentence_id}"
+
                 clean_words = sentence.clean_words
                 tokens = sentence.tokens
 
@@ -188,6 +198,7 @@ def do_tokenize(config, args):
 
                 writer.write(
                     {
+                        "id": sentence_id,
                         "raw_text": sentence.raw_text,
                         "raw_words": sentence.raw_words,
                         "clean_words": clean_words,
@@ -219,6 +230,7 @@ def do_tokenize(config, args):
 
             writer.write(
                 {
+                    "id": utt_id,
                     "raw_text": line,
                     "raw_words": raw_words,
                     "clean_words": clean_words,
@@ -319,28 +331,29 @@ def do_phonemize(config, args):
             )
 
             # Get Sampa pronunciation
-            sentence_obj["sampa"] = [
-                [gruut_ipa.ipa_to_sampa(phoneme) for phoneme in word_pron]
-                for word_pron in first_pron
-            ]
+            if args.other_phonemes:
+                sentence_obj["sampa"] = [
+                    [gruut_ipa.ipa_to_sampa(phoneme) for phoneme in word_pron]
+                    for word_pron in first_pron
+                ]
 
-            sentence_obj["sampa_text"] = " ".join(
-                "".join(word_pron) for word_pron in sentence_obj["sampa"]
-            ).strip()
-
-            # Get eSpeak pronunciation
-            sentence_obj["espeak"] = [
-                [gruut_ipa.ipa_to_espeak(phoneme) for phoneme in word_pron]
-                for word_pron in first_pron
-            ]
-
-            sentence_obj["espeak_text"] = (
-                "[["
-                + " ".join(
-                    "".join(word_pron) for word_pron in sentence_obj["espeak"]
+                sentence_obj["sampa_text"] = " ".join(
+                    "".join(word_pron) for word_pron in sentence_obj["sampa"]
                 ).strip()
-                + "]]"
-            )
+
+                # Get eSpeak pronunciation
+                sentence_obj["espeak"] = [
+                    [gruut_ipa.ipa_to_espeak(phoneme) for phoneme in word_pron]
+                    for word_pron in first_pron
+                ]
+
+                sentence_obj["espeak_text"] = (
+                    "[["
+                    + " ".join(
+                        "".join(word_pron) for word_pron in sentence_obj["espeak"]
+                    ).strip()
+                    + "]]"
+                )
 
             # Map phonemes
             sentence_obj["mapped_phonemes"] = {}
@@ -363,7 +376,13 @@ def do_phonemize(config, args):
             # Print back out with extra info
             writer.write(sentence_obj)
         except UnknownWordsError as e:
-            if not args.skip_on_unknown_words:
+            if args.skip_on_unknown_words:
+                _LOGGER.warning(
+                    "Skipping utterance %s due to unknown words: %s",
+                    sentence_obj.get("id", ""),
+                    sentence_obj.get("raw_text", ""),
+                )
+            else:
                 # Fail instead of skipping
                 raise e
 
@@ -957,7 +976,16 @@ def do_phonemes2ids(config, args):
 
         # Output to console
         _LOGGER.debug(phoneme_strs)
-        writer.write(phoneme_ids)
+
+        utt_id = sentence_obj.get("id", "")
+
+        if args.csv:
+            # CSV output
+            phoneme_ids_str = " ".join(str(p) for p in phoneme_ids)
+            print(utt_id, phoneme_ids_str, sep=args.csv_delimiter, flush=True)
+        else:
+            # JSONL output
+            writer.write({"id": utt_id, "phonemes": phoneme_ids})
 
 
 # -----------------------------------------------------------------------------
@@ -1045,6 +1073,14 @@ def get_args() -> argparse.Namespace:
     tokenize_parser.add_argument(
         "--no-pos", action="store_true", help="Don't guess parts of speech for words"
     )
+    tokenize_parser.add_argument(
+        "--csv", action="store_true", help="Input format is id|text"
+    )
+    tokenize_parser.add_argument(
+        "--csv-delimiter",
+        default="|",
+        help="Delimiter between id and text (default: |, requires --csv)",
+    )
     tokenize_parser.set_defaults(func=do_tokenize)
 
     # ---------
@@ -1096,6 +1132,11 @@ def get_args() -> argparse.Namespace:
         "--skip-on-unknown-words",
         action="store_true",
         help="Skip sentences with words whose pronunciations can't be guessed",
+    )
+    phonemize_parser.add_argument(
+        "--other-phonemes",
+        action="store_true",
+        help="Include eSpeak and SAMPA pronunciations",
     )
 
     # ---------------
@@ -1313,6 +1354,14 @@ def get_args() -> argparse.Namespace:
         "--no-word-break",
         action="store_true",
         help="Don't include word break symbol (#)",
+    )
+    phonemes2ids_parser.add_argument(
+        "--csv", action="store_true", help="Output format is id|p1 p2 p3..."
+    )
+    phonemes2ids_parser.add_argument(
+        "--csv-delimiter",
+        default="|",
+        help="Delimiter between id and text (default: |, requires --csv)",
     )
     phonemes2ids_parser.set_defaults(func=do_phonemes2ids)
 
