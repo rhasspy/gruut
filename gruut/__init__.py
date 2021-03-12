@@ -127,16 +127,21 @@ class Language:
     @staticmethod
     def load(
         language: str,
-        lang_dir: typing.Optional[Path] = None,
+        lang_dir: typing.Optional[typing.Union[str, Path]] = None,
+        data_dirs: typing.Optional[typing.List[typing.Union[str, Path]]] = None,
         preload_lexicon: bool = False,
         custom_tokenizers: bool = True,
     ) -> typing.Optional["Language"]:
         """Load language from code"""
 
         if not lang_dir:
-            data_dirs = Language.get_data_dirs()
+            if not data_dirs:
+                data_dirs = Language.get_data_dirs()
+
+            assert data_dirs is not None
+
             for data_dir in data_dirs:
-                lang_dir = data_dir / language
+                lang_dir = Path(data_dir) / language
                 if lang_dir and lang_dir.is_dir():
                     config_path = lang_dir / "language.yml"
                     if config_path.is_file():
@@ -148,6 +153,9 @@ class Language:
         yaml.SafeLoader.add_constructor("!env", env_constructor)
 
         # Load configuration
+        lang_dir = Path(lang_dir)
+        assert isinstance(lang_dir, Path)
+
         config_path = lang_dir / "language.yml"
 
         if not config_path.is_file():
