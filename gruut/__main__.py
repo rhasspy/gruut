@@ -254,7 +254,7 @@ def do_phonemize(config, args):
     """
     from .phonemize import UnknownWordsError
 
-    gruut_lang = try_load_language(args, custom_tokenizers=False)
+    gruut_lang = try_load_language(args, custom_tokenizers=False, preload_lexicon=True)
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
@@ -948,7 +948,11 @@ def do_phonemes2ids(config, args):
             continue
 
         sentence_obj = json.loads(line)
-        pronunciation = sentence_obj.get("pronunciation", [])
+        pronunciation = sentence_obj.get(args.pronunciation_key, [])
+
+        if args.single_pronunciation:
+            # Wrap as a single "word"
+            pronunciation = [pronunciation]
 
         phoneme_strs = []
         phoneme_ids = []
@@ -957,7 +961,7 @@ def do_phonemes2ids(config, args):
                 if not phoneme:
                     continue
 
-                if gruut_ipa.IPA.is_stress(phoneme[0]):
+                while phoneme and gruut_ipa.IPA.is_stress(phoneme[0]):
                     stress, phoneme = phoneme[0], phoneme[1:]
                     stress_id = phoneme_to_id.get(stress)
                     if stress_id is not None:
@@ -1362,6 +1366,16 @@ def get_args() -> argparse.Namespace:
         "--csv-delimiter",
         default="|",
         help="Delimiter between id and text (default: |, requires --csv)",
+    )
+    phonemes2ids_parser.add_argument(
+        "--pronunciation-key",
+        default="pronunciation",
+        help="JSON key/property name for IPA phonemes (default: pronunciation)",
+    )
+    phonemes2ids_parser.add_argument(
+        "--single-pronunciation",
+        action="store_true",
+        help="IPA phonemes are in one list instead of being separated by words",
     )
     phonemes2ids_parser.set_defaults(func=do_phonemes2ids)
 
