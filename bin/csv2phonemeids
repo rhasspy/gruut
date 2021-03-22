@@ -9,6 +9,8 @@ if [[ -z "${csv}" ]]; then
     exit 1
 fi
 
+shift 2
+
 if [[ -n "$(which gruut)" ]]; then
     gruut='gruut'
 else
@@ -16,6 +18,6 @@ else
     gruut="${this_dir}/gruut"
 fi
 
-"${gruut}" "${lang}" tokenize --csv < "${csv}" | \
+"${gruut}" "${lang}" tokenize --csv "$@" < "${csv}" | \
     "${gruut}" "${lang}" phonemize --read-all --word-breaks --skip-on-unknown-words | \
     "${gruut}" "${lang}" phonemes2ids --csv
