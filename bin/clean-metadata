@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+lang="$1"
+csv="$2"
+
+if [[ -z "${csv}" ]]; then
+    echo 'Usage: clean-metadata <LANG> <CSV>' >&2
+    exit 1
+fi
+
+if [[ -n "$(which gruut)" ]]; then
+    gruut='gruut'
+else
+    this_dir="$( cd "$( dirname "$0" )" && pwd )"
+    gruut="${this_dir}/gruut"
+fi
+
+"${gruut}" "${lang}" tokenize \
+           --csv --exclude-non-words \
+           < "${csv}" \
+    | jq -r '(.id + "|" + .clean_text)'
