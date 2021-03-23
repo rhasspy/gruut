@@ -254,7 +254,9 @@ def do_phonemize(config, args):
     """
     from .phonemize import UnknownWordsError
 
-    gruut_lang = try_load_language(args, custom_tokenizers=False, preload_lexicon=True)
+    gruut_lang = try_load_language(
+        args, custom_tokenizers=False, preload_lexicon=args.read_all
+    )
     tokenizer = gruut_lang.tokenizer
     phonemizer = gruut_lang.phonemizer
     process_pronunciation = None
