@@ -963,7 +963,10 @@ def do_phonemes2ids(config, args):
                 if not phoneme:
                     continue
 
-                while phoneme and gruut_ipa.IPA.is_stress(phoneme[0]):
+                while phoneme and (
+                    gruut_ipa.IPA.is_stress(phoneme[0])
+                    or gruut_ipa.IPA.is_accent(phoneme[0])
+                ):
                     stress, phoneme = phoneme[0], phoneme[1:]
                     stress_id = phoneme_to_id.get(stress)
                     if stress_id is not None:
@@ -1014,10 +1017,14 @@ def do_print_phoneme_counts(config, args):
                 if not phoneme:
                     continue
 
-                if gruut_ipa.IPA.is_stress(phoneme[0]):
+                while phoneme and (
+                    gruut_ipa.IPA.is_stress(phoneme[0])
+                    or gruut_ipa.IPA.is_accent(phoneme[0])
+                ):
                     phoneme = phoneme[1:]
 
-                phoneme_counts[phoneme] += 1
+                if phoneme:
+                    phoneme_counts[phoneme] += 1
 
     writer.write(phoneme_counts.most_common())
 
