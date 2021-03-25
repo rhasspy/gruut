@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -e
+
+lang="$1"
+jsonl="$2"
+
+if [[ -z "${jsonl}" ]]; then
+    echo 'Usage: align2phonemeids <LANG> <JSONL>' >&2
+    exit 1
+fi
+
+shift 2
+
+if [[ -n "$(which gruut)" ]]; then
+    gruut='gruut'
+else
+    this_dir="$( cd "$( dirname "$0" )" && pwd )"
+    gruut="${this_dir}/gruut"
+fi
+
+"${gruut}" "${lang}" phonemes2ids \
+           --pronunciation-key 'ipa' \
+           --single-pronunciation \
+           --csv \
+           < "${jsonl}"
