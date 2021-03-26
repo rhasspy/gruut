@@ -16,11 +16,11 @@ from .utils import env_constructor
 
 # -----------------------------------------------------------------------------
 
-__version__ = "0.7.0"
-
 _LOGGER = logging.getLogger("gruut")
 
 _DIR = Path(__file__).parent
+
+__version__ = (_DIR / "VERSION").read_text().strip()
 
 # -----------------------------------------------------------------------------
 

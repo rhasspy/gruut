@@ -117,12 +117,16 @@ def do_download(args):
     from . import __version__
     from .download import download_file
 
+    # x.y.z -> x.y.0
+    version_parts = __version__.split(".")
+    version = ".".join(version_parts[:-1] + ["0"])
+
     lang_dir = args.data_dir / args.language
 
     _LOGGER.debug("Creating %s", lang_dir)
     lang_dir.mkdir(parents=True, exist_ok=True)
 
-    url = args.url_format.format(lang=args.language, version=__version__)
+    url = args.url_format.format(lang=args.language, version=version)
     with tempfile.NamedTemporaryFile(mode="wb+", suffix=".tar.gz") as lang_file:
         _LOGGER.debug("Downloading %s to %s", url, lang_file.name)
         download_file(url, lang_file.name, f"{args.language}.tar.gz")
