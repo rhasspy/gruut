@@ -14,7 +14,7 @@ $ echo 'He wound it around the wound, saying "I read it was $10 to read."' | \
 
 Includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations (e.g., "read" pronounced like "red" or "reed").
 
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.8.0) are also available for the [supported languages](#support-languages).
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.9.0) are also available for the [supported languages](#support-languages).
 
 ---
 
@@ -32,6 +32,7 @@ For each supported language, gruut includes a:
 gruut currently supports:
 
 * U.S. English (`en-us`)
+   * Supports part-of-speech aware pronunciations
 * U.K. English (`en-gb`)
 * Dutch (`nl`)
 * Czech (`cs-cz`)
@@ -40,6 +41,9 @@ gruut currently supports:
 * Italian (`it-it`)
 * Spanish (`es-es`)
 * Russian (`ru-ru`)
+* Swedish (`sv-se`)
+* Greek (`el-gr`)
+* Persian (`fa`)
 * Vietnamese (`vi-n`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
