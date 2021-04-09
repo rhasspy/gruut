@@ -331,7 +331,7 @@ class Phonemizer:
                 (word,),
             )
             for row in cursor:
-                phonemes = row[0].split()
+                phonemes = row[-1].split()
                 if phonemes:
                     if not word_prons:
                         word_prons = []
