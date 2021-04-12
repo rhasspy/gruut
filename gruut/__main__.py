@@ -638,7 +638,7 @@ def do_phonemize_lexicon(config, args):
             word = casing(word)
 
         for word_pron in word_prons:
-            word_pron_str = "".join(word_pron)
+            word_pron_str = "".join(word_pron.phonemes)
             pron_phonemes = phonemes.split(
                 word_pron_str, keep_stress=keep_stress, keep_accents=keep_accents
             )
@@ -1036,6 +1036,107 @@ def do_print_phoneme_counts(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_reorder_lexicon(config, args):
+    """
+    Loads phoneme alignments from a JSONL file and re-orders entries in the
+    lexicon according to pronunciation frequencies.
+    """
+    gruut_lang = try_load_language(args, preload_lexicon=True)
+
+    # Get list of heteronyms (words with the same spelling but different
+    # pronunciations) from the lexicon.
+    heteronyms: typing.Dict[str, typing.Dict[str, int]] = {}
+    heteronym_prons = {}
+    for word, word_prons in gruut_lang.phonemizer.lexicon.items():
+        if len(word_prons) < 2:
+            continue
+
+        word_pron_strs = ["".join(wp.phonemes) for wp in word_prons]
+        if len(set(word_pron_strs)) > 1:
+            _LOGGER.debug("%s - %s %s", word, len(word_pron_strs), word_pron_strs)
+
+            pron_counts = Counter()
+            for wp_str in word_pron_strs:
+                pron_counts[wp_str] = 0
+
+            heteronyms[word] = pron_counts
+            heteronym_prons[word] = word_pron_strs
+
+    # Read phoneme alignments from stdin
+    _LOGGER.debug("Reading phoneme alignments")
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading JSONL phoneme alignments from stdin...", file=sys.stderr)
+
+    # {
+    #   "prons": {
+    #     "word": "<WORD>",
+    #     "phones": [
+    #       "<PHONE>",
+    #       "<PHONE>",
+    #       ...
+    #     ]
+    #   }
+    # }
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            # Skip empty lines
+            continue
+
+        utt_obj = json.loads(line)
+
+        for utt_word in utt_obj.get("prons", []):
+            word = utt_word.get("word", "")
+            if word in heteronyms:
+                pron_str = "".join(utt_word.get("phones", [])).strip()
+                if not pron_str:
+                    # Skip empty pronunciations
+                    continue
+
+                if not gruut_lang.keep_stress:
+                    # Remove stress if lexicon doesn't have it
+                    pron_str = gruut_ipa.IPA.without_stress(pron_str)
+
+                heteronyms[word][pron_str] += 1
+
+    # Write ordered lexicon
+    _LOGGER.debug("Writing ordered lexicon")
+    for word, word_prons in gruut_lang.phonemizer.lexicon.items():
+        word_pron_strs = set()
+
+        if word in heteronyms:
+            # Re-order according to observed counts
+            pron_counts = [
+                pron_count[0] for pron_count in heteronyms[word].most_common()
+            ]
+            word_prons = sorted(
+                word_prons, key=lambda wp: pron_counts.index("".join(wp.phonemes))
+            )
+
+        for word_pron in word_prons:
+            word_pron_str = " ".join(word_pron.phonemes)
+            if word_pron_str in word_pron_strs:
+                # Avoid duplicate pronunciations
+                continue
+
+            if args.pos:
+                # Part of speech
+                pos = (
+                    ",".join(word_pron.valid_pos)
+                    if word_pron.valid_pos
+                    else args.no_pos
+                )
+                print(word, pos, word_pron_str)
+            else:
+                # No part of speech
+                print(word, word_pron_str)
+
+            word_pron_strs.add(word_pron_str)
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -1400,6 +1501,23 @@ def get_args() -> argparse.Namespace:
     )
     print_phoneme_counts_parser.set_defaults(func=do_print_phoneme_counts)
 
+    # ---------------
+    # reorder-lexicon
+    # ---------------
+    reorder_lexicon_parser = sub_parsers.add_parser(
+        "reorder-lexicon",
+        help="Reorder words in a lexicon based on pronunciation frequency",
+    )
+    reorder_lexicon_parser.add_argument(
+        "--pos", action="store_true", help="Write part of speech"
+    )
+    reorder_lexicon_parser.add_argument(
+        "--no-pos",
+        default="_",
+        help="Value to write when no part of speech is present (default: _)",
+    )
+    reorder_lexicon_parser.set_defaults(func=do_reorder_lexicon)
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -1418,6 +1536,7 @@ def get_args() -> argparse.Namespace:
         print_phoneme_ids_parser,
         phonemes2ids_parser,
         print_phoneme_counts_parser,
+        reorder_lexicon_parser,
     ]:
         sub_parser.add_argument(
             "--data-dir", help="Directory with language-specific data files"
