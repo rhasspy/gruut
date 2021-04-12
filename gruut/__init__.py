@@ -205,6 +205,13 @@ class Language:
         if env_data_dir:
             data_dirs.append(Path(env_data_dir))
 
+        # ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut
+        maybe_config_home = os.environ.get("XDG_CONFIG_HOME")
+        if maybe_config_home:
+            data_dirs.append(Path(maybe_config_home) / "gruut")
+        else:
+            data_dirs.append(Path.home() / ".config" / "gruut")
+
         # Data directory *next to* gruut
         data_dirs.append(_DIR.parent / "data")
 
