@@ -79,9 +79,54 @@ def sent2features(sent):
     return [word2features(sent, i) for i in range(len(sent))]
 
 
-def sent2labels(sent):
+def sent2labels(sent, label="xpos"):
     """Get target labels for all words in a sentence"""
-    return [token["xpos"] for token in sent]
+    return [token[label] for token in sent]
+
+
+def join_words(sents, join_chars: typing.Set[str]):
+    """
+    Join tokens when the following conditions are met:
+
+    * The previous token ends with one of the "join chars"
+    * The current token starts with one of the "join chars"
+
+    The forms of joined tokens are concatenated. All other properties (upos,
+    xpos, etc.) are copied from the final token in the join.
+
+    This allows for training of a French model where something like:
+    * Qu' (PRON)
+    * est (AUX)
+    * -ce (PRON)
+
+    can be combined into "Qu'est-ce" (PRON).
+    """
+    for sent in sents:
+        joined_tokens = []
+        for t_idx, token in enumerate(sent):
+            if t_idx == 0:
+                # Skip first token
+                joined_tokens.append(token)
+                continue
+
+            last_token = joined_tokens[-1]
+            last_form = last_token["form"]
+            current_form = token["form"]
+
+            # Check if last word ends or current word starts with one of the join chars
+            if (last_form and (last_form[-1] in join_chars)) or (
+                current_form and (current_form[0] in join_chars)
+            ):
+                # Join with last token
+                last_token["form"] += token["form"]
+                for t_key, t_value in token.items():
+                    if t_key != "form":
+                        last_token[t_key] = t_value
+                continue
+
+            joined_tokens.append(token)
+
+        yield joined_tokens
 
 
 # -----------------------------------------------------------------------------
@@ -108,6 +153,8 @@ def train_model(
     train_path: typing.Union[str, Path],
     model_path: typing.Optional[typing.Union[str, Path]],
     max_iterations: int = 100,
+    label: str = "xpos",
+    join_chars: str = "",
 ) -> sklearn_crfsuite.CRF:
     """Train a new model from CONLLU data"""
     try:
@@ -121,9 +168,12 @@ def train_model(
     with open(train_path, "r") as train_file:
         train_sents = conllu.parse(train_file.read())
 
+    if join_chars:
+        train_sents = list(join_words(train_sents, set(join_chars)))
+
     _LOGGER.debug("Getting features for %s train sentence(s)", len(train_sents))
     x_train = [sent2features(s) for s in train_sents]
-    y_train = [sent2labels(s) for s in train_sents]
+    y_train = [sent2labels(s, label=label) for s in train_sents]
 
     _LOGGER.debug("Training model for %s max iteration(s)", max_iterations)
     crf = sklearn_crfsuite.CRF(
@@ -154,10 +204,18 @@ def do_train(
     train_path: typing.Union[str, Path],
     model_path: typing.Union[str, Path],
     max_iterations: int = 100,
+    label: str = "xpos",
+    join_chars: str = "",
     **kwargs,
 ):
     """CLI method for train_model"""
-    train_model(train_path, model_path, max_iterations=max_iterations)
+    train_model(
+        train_path,
+        model_path,
+        max_iterations=max_iterations,
+        label=label,
+        join_chars=join_chars,
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -167,6 +225,8 @@ def test_model(
     model: sklearn_crfsuite.CRF,
     test_path: typing.Union[str, Path],
     out_file: typing.Optional[typing.TextIO] = None,
+    label: str = "xpos",
+    join_chars: str = "",
 ):
     """Print an accuracy report for a model to a file"""
     try:
@@ -180,9 +240,12 @@ def test_model(
     with open(test_path, "r") as test_file:
         test_sents = conllu.parse(test_file.read())
 
+    if join_chars:
+        test_sents = list(join_words(test_sents, set(join_chars)))
+
     _LOGGER.debug("Getting features for %s test sentence(s)", len(test_sents))
     x_test = [sent2features(s) for s in test_sents]
-    y_test = [sent2labels(s) for s in test_sents]
+    y_test = [sent2labels(s, label=label) for s in test_sents]
 
     labels = list(model.classes_)
 
@@ -212,13 +275,17 @@ def test_model(
 
 
 def do_test(
-    model_path: typing.Union[str, Path], test_path: typing.Union[str, Path], **kwargs
+    model_path: typing.Union[str, Path],
+    test_path: typing.Union[str, Path],
+    label: str = "xpos",
+    join_chars: str = "",
+    **kwargs,
 ):
     """CLI method for test_model"""
     _LOGGER.debug("Loading model from %s", model_path)
     model = load_model(model_path)
 
-    test_model(model, test_path)
+    test_model(model, test_path, label=label, join_chars=join_chars)
 
 
 # -----------------------------------------------------------------------------
@@ -246,6 +313,35 @@ def do_predict(model_path: typing.Union[str, Path], texts: typing.List[str], **k
 
 # -----------------------------------------------------------------------------
 
+
+def do_features(
+    train_path: typing.Union[str, Path],
+    label: str = "xpos",
+    join_chars: str = "",
+    **kwargs,
+):
+    """Print features for CONLLU file"""
+    try:
+        import conllu
+    except ImportError as e:
+        _LOGGER.fatal("conllu package is required for testing")
+        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        raise e
+
+    _LOGGER.debug("Loading train file (%s)", train_path)
+    with open(train_path, "r") as train_file:
+        train_sents = conllu.parse(train_file.read())
+
+    if join_chars:
+        train_sents = list(join_words(train_sents, set(join_chars)))
+
+    _LOGGER.debug("Getting features for %s sentence(s)", len(train_sents))
+    for sent in train_sents:
+        print(sent2features(sent), sent2labels(sent, label=label))
+
+
+# -----------------------------------------------------------------------------
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="gruut.pos")
 
@@ -268,6 +364,14 @@ if __name__ == "__main__":
         default=100,
         help="Maximum number of iterations to train for",
     )
+    train_parser.add_argument(
+        "--label", default="xpos", help="CONLLU field for label target (default: xpos)"
+    )
+    train_parser.add_argument(
+        "--join-chars",
+        default="",
+        help="Characters at end of a word that causes a join with next word (final label is used)",
+    )
     train_parser.set_defaults(func=do_train)
 
     # ----
@@ -276,6 +380,14 @@ if __name__ == "__main__":
     test_parser = sub_parsers.add_parser("test", help="Test an existing POS model")
     test_parser.add_argument("model_path", help="Path to read model pickle")
     test_parser.add_argument("test_path", help="CONLLU file with testing data")
+    test_parser.add_argument(
+        "--label", default="xpos", help="CONLLU field for label target (default: xpos)"
+    )
+    test_parser.add_argument(
+        "--join-chars",
+        default="",
+        help="Characters at end of a word that causes a join with next word (final label is used)",
+    )
     test_parser.set_defaults(func=do_test)
 
     # -------
@@ -288,10 +400,27 @@ if __name__ == "__main__":
     predict_parser.add_argument("texts", action="append", help="Sentences")
     predict_parser.set_defaults(func=do_predict)
 
+    # -------
+    # Features
+    # -------
+    features_parser = sub_parsers.add_parser(
+        "features", help="Print features for CONLLU file"
+    )
+    features_parser.add_argument("train_path", help="Path to CONLLU file")
+    features_parser.add_argument(
+        "--label", default="xpos", help="CONLLU field for label target (default: xpos)"
+    )
+    features_parser.add_argument(
+        "--join-chars",
+        default="",
+        help="Characters at end of a word that causes a join with next word (final label is used)",
+    )
+    features_parser.set_defaults(func=do_features)
+
     # ----------------
     # Shared arguments
     # ----------------
-    for sub_parser in [train_parser, test_parser, predict_parser]:
+    for sub_parser in [train_parser, test_parser, predict_parser, features_parser]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
         )
@@ -306,83 +435,3 @@ if __name__ == "__main__":
     _LOGGER.debug(args)
 
     args.func(**vars(args))
-
-    # with open("model.pkl", "rb") as f:
-    #     crf = pickle.load(f)
-
-    # test = crf.predict_single(
-    #     sent2features(["he", "wound", "the", "winding", "wind", "around", "the", "wound"])
-    # )
-
-    # print(test)
-
-    # print(list((w["form"], w["xpos"]) for w in test_sents[3]))
-
-    # x_train = [sent2features(s) for s in train_sents]
-    # x_test = [sent2features(s) for s in test_sents]
-
-    # y_train = [sent2labels(s) for s in train_sents]
-    # y_test = [sent2labels(s) for s in test_sents]
-
-    # # x_train, x_test, y_train, y_test = train_test_split(x, y)
-
-    # print("Train:", len(x_train), "Test:", len(x_test))
-
-    # crf = sklearn_crfsuite.CRF(
-    #     algorithm="lbfgs",
-    #     c1=0.25,
-    #     c2=0.3,
-    #     max_iterations=100,
-    #     all_possible_transitions=True,
-    # )
-    # crf.fit(x_train, y_train)
-
-    # with open("model.pkl", "wb") as f:
-    #     pickle.dump(crf, f)
-
-    # print("Done")
-
-    # labels = list(crf.classes_)
-    # labels.remove("X")
-
-    # y_pred = crf.predict(x_train)
-    # print(
-    #     "F1 score on the train set = {}".format(
-    #         metrics.flat_f1_score(y_train, y_pred, average="weighted", labels=labels)
-    #     )
-    # )
-    # print(
-    #     "Accuracy on the train set = {}".format(
-    #         metrics.flat_accuracy_score(y_train, y_pred)
-    #     )
-    # )
-
-    # sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
-    # print(
-    #     "Train set classification report: {}".format(
-    #         metrics.flat_classification_report(
-    #             y_train, y_pred, labels=sorted_labels, digits=3
-    #         )
-    #     )
-    # )
-
-    # y_pred = crf.predict(x_test)
-    # print(
-    #     "F1 score on the test set = {}".format(
-    #         metrics.flat_f1_score(y_test, y_pred, average="weighted", labels=labels)
-    #     )
-    # )
-    # print(
-    #     "Accuracy on the test set = {}".format(
-    #         metrics.flat_accuracy_score(y_test, y_pred)
-    #     )
-    # )
-
-    # sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
-    # print(
-    #     "Test set classification report: {}".format(
-    #         metrics.flat_classification_report(
-    #             y_test, y_pred, labels=sorted_labels, digits=3
-    #         )
-    #     )
-    # )
