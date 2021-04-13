@@ -264,6 +264,9 @@ def fr_liason(
             elif (token1.pos == "ADJ") and (token2.pos in {"NOUN", "PROPN"}):
                 # Adjective -> noun
                 liason = True
+            elif token1.pos in {"AUX", "VERB"}:
+                # Verb -> vowel
+                liason = True
 
         if liason:
             # Apply liason
