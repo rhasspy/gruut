@@ -1,6 +1,7 @@
 """Language class for gruut"""
 import logging
 import os
+import shutil
 import typing
 from pathlib import Path
 
@@ -174,12 +175,10 @@ class Language:
             if language == "fa":
                 # Use hazm for text normalization and POS tagging.
                 custom_tokenize = Language.make_fa_tokenize(lang_dir)
-            elif language in ("en-us", "en-gb"):
-                # Use crfsuite model for POS tagging.
+            elif language in ("en-us", "en-gb") and shutil.which("java"):
+                # Use the Stanford POS tagger.
+                # Requires java, so don't bother if it's not available.
                 custom_post_tokenize = Language.make_en_post_tokenize(lang_dir)
-            elif language == "fr-fr":
-                # Use crfsuite model for POS tagging.
-                custom_post_tokenize = Language.make_fr_post_tokenize(lang_dir)
 
         return Language(
             config=config,
@@ -260,7 +259,7 @@ class Language:
             """Tag part of speech for sentence tokens"""
             guess_pos = kwargs.get("guess_pos", True)
             if not guess_pos:
-                # Don't run tagger if POS isn't needed
+                # Don't run tagger is POS isn't needed
                 return sentence_tokens
 
             words = [t.text for t in sentence_tokens]
@@ -314,43 +313,3 @@ class Language:
             return sentences_tokens
 
         return do_tokenize
-
-    @staticmethod
-    def make_fr_post_tokenize(lang_dir: Path) -> typing.Optional[PostTokenizeFunc]:
-        """Tokenization post-processing for French"""
-        from .pos import load_model, predict
-
-        # Load part of speech tagger
-        pos_dir = lang_dir / "pos"
-        model_path = pos_dir / "model.pkl"
-
-        if not (model_path.is_file()):
-            _LOGGER.warning("Missing POS model: %s", model_path)
-            return None
-
-        _LOGGER.debug("Loading POS model from %s", model_path)
-        pos_model = load_model(model_path)
-
-        def do_post_tokenize(
-            sentence_tokens: typing.List[Token], **kwargs
-        ) -> typing.List[Token]:
-            """Tag part of speech for sentence tokens"""
-            guess_pos = kwargs.get("guess_pos", True)
-            if not guess_pos:
-                # Don't run tagger if POS isn't needed
-                return sentence_tokens
-
-            words = [t.text for t in sentence_tokens]
-            sents = [words]
-
-            sents_pos = predict(pos_model, sents)
-            assert sents_pos, "No POS predictions"
-            words_pos = sents_pos[0]
-            assert len(words_pos) == len(words), f"Length mismatch for words/pos"
-
-            for i, pos in enumerate(words_pos):
-                sentence_tokens[i].pos = pos
-
-            return sentence_tokens
-
-        return do_post_tokenize
