@@ -288,11 +288,17 @@ def do_phonemize(config, args):
 
             phoneme_maps[map_name] = current_map
 
-    # Handle language-specific cases for word pronunciations
+    # Handle language-specific cases
     if args.language == "fa":
-        from .utils import fa_word_pronunciation
+        # Genitive case
+        def fa_process_pronunciation(word_pron, token):
+            if token.pos == "Ne":
+                word_pron = list(word_pron)
+                word_pron.append("e̞")
 
-        process_pronunciation = fa_word_pronunciation
+            return word_pron
+
+        process_pronunciation = fa_process_pronunciation
 
     def process_sentence(sentence_obj):
         token_dicts = sentence_obj.get("tokens")
@@ -322,11 +328,6 @@ def do_phonemize(config, args):
             for word_prons in sentence_prons:
                 if word_prons:
                     first_pron.append(word_prons[0].phonemes)
-
-            # Post-process first pronunciation
-            first_pron = gruut_lang.phonemizer.post_process_sentence(
-                args.language, tokens, first_pron, word_breaks=args.word_breaks
-            )
 
             sentence_obj["pronunciation"] = first_pron
 
