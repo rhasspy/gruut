@@ -1137,6 +1137,30 @@ def do_reorder_lexicon(config, args):
 # -----------------------------------------------------------------------------
 
 
+def do_guess_phonemes(config, args):
+    """Predict phonemes for words"""
+    from .g2p import GeepersG2P
+
+    with open("/home/hansenm/opt/geepers-train/local/en-us/config.json", "r") as f:
+        config = json.load(f)
+
+    g2p = GeepersG2P(
+        graphemes=config["model"]["graphemes"], phonemes=config["model"]["phonemes"]
+    )
+
+    g2p.load_variables("/home/hansenm/opt/geepers-train/local/en-us/g2p.npz")
+
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+
+        print(line, *g2p.predict(line))
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -1518,6 +1542,14 @@ def get_args() -> argparse.Namespace:
     )
     reorder_lexicon_parser.set_defaults(func=do_reorder_lexicon)
 
+    # --------------
+    # guess-phonemes
+    # --------------
+    guess_phonemes_parser = sub_parsers.add_parser(
+        "guess-phonemes", help="Predict pronunciation for word(s)"
+    )
+    guess_phonemes_parser.set_defaults(func=do_guess_phonemes)
+
     # ----------------
     # Shared arguments
     # ----------------
@@ -1537,6 +1569,7 @@ def get_args() -> argparse.Namespace:
         phonemes2ids_parser,
         print_phoneme_counts_parser,
         reorder_lexicon_parser,
+        guess_phonemes_parser,
     ]:
         sub_parser.add_argument(
             "--data-dir", help="Directory with language-specific data files"
