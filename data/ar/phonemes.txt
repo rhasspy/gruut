@@ -1,0 +1,47 @@
+# https://en.wikipedia.org/wiki/Arabic_phonology
+
+# Vowels
+i [] ɪ e e̞ ɛ
+u [] ʊ o o̞ ɔ
+iː
+uː
+a
+aː
+
+# Consonants
+m
+n
+t
+tˤ
+tˤˤ
+k
+q
+ʔ
+b
+d
+dˤ
+dˤˤ
+d͡ʒ [] dʒ dʒʒ
+f
+θ
+s
+sˤ
+sˤˤ
+ʃ
+x
+ħ
+h
+ð
+z
+ðˤ
+ðˤˤ
+ɣ
+ʕ
+l
+j
+w
+r
+
+# Dipthongs
+aw
+aj

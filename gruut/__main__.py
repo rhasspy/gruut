@@ -1141,21 +1141,41 @@ def do_guess_phonemes(config, args):
     """Predict phonemes for words"""
     from .g2p import GeepersG2P
 
-    with open("/home/hansenm/opt/geepers-train/local/en-us/config.json", "r") as f:
+    g2p_config_path = args.lang_dir / "g2p_config.json"
+    assert g2p_config_path.is_file(), f"Missing g2p config at {g2p_config_path}"
+
+    _LOGGER.debug("Loading config from %s", g2p_config_path)
+    with open(g2p_config_path, "r") as f:
         config = json.load(f)
+
+    g2p_npz_path = args.lang_dir / "g2p.npz"
+    assert g2p_npz_path.is_file(), f"Missing g2p weights at {g2p_npz_path}"
 
     g2p = GeepersG2P(
         graphemes=config["model"]["graphemes"], phonemes=config["model"]["phonemes"]
     )
 
-    g2p.load_variables("/home/hansenm/opt/geepers-train/local/en-us/g2p.npz")
+    _LOGGER.debug("Loading weights from %s", g2p_npz_path)
+    g2p.load_variables(g2p_npz_path)
+
+    if os.isatty(sys.stdin.fileno()):
+        print("Reading words from stdin...", file=sys.stderr)
 
     for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
 
-        print(line, *g2p.predict(line))
+        word = line
+        pron: typing.List[str] = []
+
+        try:
+            pron = g2p.predict(word)
+        except Exception:
+            _LOGGER.exception("No pronunciation for %s", word)
+            pass
+
+        print(line, *pron)
 
 
 # -----------------------------------------------------------------------------

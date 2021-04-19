@@ -118,9 +118,7 @@ class GeepersG2P:
 
     def _encode(self, graphemes: typing.List[str]) -> np.ndarray:
         x = [self.g2idx[g] for g in graphemes] + [self.eos_idx]
-        x = np.take(self.enc_emb, np.expand_dims(x, 0), axis=0)
-
-        return x
+        return np.take(self.enc_emb, np.expand_dims(x, 0), axis=0)
 
     def predict(self, word: str) -> typing.List[str]:
         """Predict phonemes for the given word"""
