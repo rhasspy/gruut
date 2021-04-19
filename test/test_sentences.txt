@@ -1,0 +1,13 @@
+cs-cz Dlouho jsem Tě neviděla 
+de-de Können Sie bitte langsamer sprechen?
+en-gb Where is the bathroom?
+en-us What time is it?
+es-es ¿Cómo te llamas?
+fa خيلي وقته که ازت خبري نيست
+fr-fr Pourriez-vous parler un peu moins vite?
+it-it Da dove vieni?
+nl Hoe laat is het?
+pt Como se chama?
+ru-ru Вы не могли бы говорить помедленнее?
+sv-se Det var länge sedan vi sågs sist!
+vi-n Khoẻ, cám ơn. Bạn thì sao?
