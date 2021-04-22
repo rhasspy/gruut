@@ -1,0 +1,9 @@
+# lang|text|truth
+
+# Test part-of-speech aware pronunciation.
+# "wound" the verb is pronounced differently than "wound" the noun.
+en-us|I wound the wound.|# ˈaɪ # w ˈaʊ n d # ð ə # w ˈu n d # ‖
+
+# Test liasons
+# Adjective + noun
+fr-fr|J’ai des petites oreilles.|# ʒ e # d e # p ə t i t z # ɔ ʁ ɛ j # ‖

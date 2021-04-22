@@ -8,12 +8,24 @@ import typing
 from dataclasses import dataclass
 from pathlib import Path
 
+import gruut_ipa
+
+PHONEMES_TYPE = typing.Union[typing.List[str], typing.Tuple[str, ...]]
+
+
+@dataclass
+class Token:
+    """Single token"""
+
+    text: str
+    pos: typing.Optional[str] = None  # part of speech
+
 
 @dataclass
 class WordPronunciation:
     """Single pronunciation for a word"""
 
-    phonemes: typing.Union[typing.List[str], typing.Tuple[str, ...]]
+    phonemes: PHONEMES_TYPE
     valid_pos: typing.Optional[typing.Set[str]] = None
 
 
@@ -151,3 +163,139 @@ def pairwise(iterable):
 def env_constructor(loader, node):
     """Expand !env STRING to replace environment variables in STRING."""
     return os.path.expandvars(node.value)
+
+
+# -----------------------------------------------------------------------------
+
+
+def fa_word_pronunciation(word_pron, token):
+    """Append e̞ in genitive case"""
+    if token.pos == "Ne":
+        word_pron = list(word_pron)
+        word_pron.append("e̞")
+
+    return word_pron
+
+
+# -----------------------------------------------------------------------------
+
+_WORD_BREAK = gruut_ipa.IPA.BREAK_WORD.value
+
+
+def _fr_has_silent_consonant(last_char: str, last_phoneme: str) -> bool:
+    """True if last consonant is silent in French"""
+    # Credit: https://github.com/Remiphilius/PoemesProfonds/blob/master/lecture.py
+
+    if last_char in {"d", "p", "t"}:
+        return last_phoneme != last_char
+    if last_char == "r":
+        return last_phoneme != "ʁ"
+    if last_char in {"s", "x", "z"}:
+        return last_phoneme not in {"s", "z"}
+    if last_char == "n":
+        return last_phoneme not in {"n", "ŋ"}
+
+    return False
+
+
+def _fr_is_vowel(phoneme: str) -> bool:
+    """True if phoneme is a French vowel"""
+    return phoneme in {
+        "i",
+        "y",
+        "u",
+        "e",
+        "ø",
+        "o",
+        "ə",
+        "ɛ",
+        "œ",
+        "ɔ",
+        "a",
+        "ɔ̃",
+        "ɛ̃",
+        "ɑ̃",
+        "œ̃",
+    }
+
+
+def fr_liason(
+    tokens: typing.Iterable[Token],
+    token_phonemes: typing.Iterable[PHONEMES_TYPE],
+    word_breaks: bool = False,
+):
+    """Add liasons to a sentence by examining word texts, parts of speech, and phonemes."""
+    if word_breaks:
+        # Exclude word breaks for now
+        token_phonemes = [p for p in token_phonemes if p != [_WORD_BREAK]]
+
+        # Produce initial word break
+        yield [_WORD_BREAK]
+
+    for (token1, token1_pron), (token2, token2_pron) in pairwise(
+        zip(itertools.chain(tokens, [None]), itertools.chain(token_phonemes, [None]))
+    ):
+        if token2 is None:
+            # Final token
+            yield token1_pron
+            continue
+
+        liason = False
+
+        # Conditions to meet for liason check:
+        # 1) token 1 ends with a silent consonant
+        # 2) token 2 starts with a vowel (phoneme)
+
+        last_char1 = token1.text[-1]
+        ends_silent_consonant = _fr_has_silent_consonant(last_char1, token1_pron[-1])
+        starts_vowel = _fr_is_vowel(token2_pron[0])
+
+        if ends_silent_consonant and starts_vowel:
+            # Handle mandatory liason cases
+            # https://www.commeunefrancaise.com/blog/la-liaison
+
+            if token1.text == "et":
+                # No liason
+                pass
+            elif token1.pos in {"DET", "NUM"}:
+                # Determiner/adjective -> noun
+                liason = True
+            elif (token1.pos == "PRON") and (token2.pos in {"AUX", "VERB"}):
+                # Pronoun -> verb
+                liason = True
+            elif (token1.pos == "ADP") or (token1.text == "très"):
+                # Preposition
+                liason = True
+            elif (token1.pos == "ADJ") and (token2.pos in {"NOUN", "PROPN"}):
+                # Adjective -> noun
+                liason = True
+            elif token1.pos in {"AUX", "VERB"}:
+                # Verb -> vowel
+                liason = True
+
+        if liason:
+            # Apply liason
+            # s -> z
+            # p -> p
+            # d|t -> d
+            liason_pron = token1_pron
+
+            if last_char1 in {"s", "x", "z"}:
+                liason_pron.append("z")
+            elif last_char1 == "d":
+                liason_pron.append("t")
+            elif last_char1 in {"t", "p", "n"}:
+                # Final phoneme is same as char
+                liason_pron.append(last_char1)
+
+            yield liason_pron
+
+            # (keep word break)
+            if word_breaks:
+                yield [_WORD_BREAK]
+        else:
+            # Keep pronunciations the same
+            yield token1_pron
+
+            if word_breaks:
+                yield [_WORD_BREAK]

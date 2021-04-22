@@ -11,19 +11,13 @@ from typing_extensions import Protocol
 
 from num2words import num2words
 
+from .utils import Token
+
 _LOGGER = logging.getLogger("gruut.toksen")
 
 _NON_WORD = re.compile(r"^(\W|_)+$")
 
 # -----------------------------------------------------------------------------
-
-
-@dataclass
-class Token:
-    """Single token"""
-
-    text: str
-    pos: typing.Optional[str] = None  # part of speech
 
 
 class TokenizeFunc(Protocol):

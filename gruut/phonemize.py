@@ -11,7 +11,14 @@ import phonetisaurus
 from gruut_ipa import IPA
 
 from .toksen import Token
-from .utils import LEXICON_TYPE, WordPronunciation, load_lexicon, maybe_gzip_open
+from .utils import (
+    LEXICON_TYPE,
+    PHONEMES_TYPE,
+    WordPronunciation,
+    fr_liason,
+    load_lexicon,
+    maybe_gzip_open,
+)
 
 # -----------------------------------------------------------------------------
 
@@ -350,6 +357,22 @@ class Phonemizer:
                 self.lexicon[word] = word_prons
 
         return word_prons
+
+    # -------------------------------------------------------------------------
+
+    def post_process_sentence(
+        self,
+        language: str,
+        tokens: typing.List[Token],
+        token_phonemes: typing.List[PHONEMES_TYPE],
+        word_breaks: bool = False,
+    ) -> typing.List[PHONEMES_TYPE]:
+        """Do language-specific post-processing on an entire sentence"""
+        if language == "fr-fr":
+            return list(fr_liason(tokens, token_phonemes, word_breaks=word_breaks))
+
+        # No post-processing
+        return token_phonemes
 
     # -------------------------------------------------------------------------
 
