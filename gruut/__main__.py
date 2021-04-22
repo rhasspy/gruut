@@ -1173,7 +1173,6 @@ def do_guess_phonemes(config, args):
             pron = g2p.predict(word)
         except Exception:
             _LOGGER.exception("No pronunciation for %s", word)
-            pass
 
         print(line, *pron)
 
