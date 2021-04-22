@@ -44,6 +44,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={"gruut": data_files + ["VERSION", "py.typed"]},
     install_requires=requirements,
+    extras_require={"fa": "hazm~=0.7.0"},
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
