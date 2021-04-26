@@ -1158,23 +1158,28 @@ def do_guess_phonemes(config, args):
     _LOGGER.debug("Loading weights from %s", g2p_npz_path)
     g2p.load_variables(g2p_npz_path)
 
-    if os.isatty(sys.stdin.fileno()):
-        print("Reading words from stdin...", file=sys.stderr)
+    words = sys.stdin
+    if args.words:
+        # Use arguments instead of stdin
+        words = args.words
+    else:
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading words from stdin...", file=sys.stderr)
 
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
+    for word in words:
+        word = word.strip()
+        if not word:
             continue
 
-        word = line
         pron: typing.List[str] = []
 
         try:
-            pron = g2p.predict(word)
+            for pron in g2p.predict(
+                word, num_guesses=args.num_guesses, beam_width=args.beam_width
+            ):
+                print(word, *pron)
         except Exception:
             _LOGGER.exception("No pronunciation for %s", word)
-
-        print(line, *pron)
 
 
 # -----------------------------------------------------------------------------
@@ -1566,6 +1571,21 @@ def get_args() -> argparse.Namespace:
     # --------------
     guess_phonemes_parser = sub_parsers.add_parser(
         "guess-phonemes", help="Predict pronunciation for word(s)"
+    )
+    guess_phonemes_parser.add_argument(
+        "--num-guesses",
+        type=int,
+        default=1,
+        help="Number of pronunciations to guess (default: 1)",
+    )
+    guess_phonemes_parser.add_argument(
+        "--beam-width",
+        type=int,
+        default=0,
+        help="Width for beam search (0=disabled, default: 0)",
+    )
+    guess_phonemes_parser.add_argument(
+        "words", nargs="*", help="Words to guess phonemes for (default: stdin)"
     )
     guess_phonemes_parser.set_defaults(func=do_guess_phonemes)
 
