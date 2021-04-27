@@ -77,7 +77,7 @@ class Phonemizer:
             # Use supplied object
             self.lexicon = lexicon
             self.lexicon_loaded = True
-        elif preload_lexicon:
+        else:
             # Load lexicon from file or database
             self.load_lexicon(preload=preload_lexicon)
 

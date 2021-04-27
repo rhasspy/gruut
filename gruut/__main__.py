@@ -330,9 +330,9 @@ def do_phonemize(config, args):
                     first_pron.append(word_prons[0].phonemes)
 
             # Post-process first pronunciation
-            first_pron = gruut_lang.phonemizer.post_process_sentence(
-                args.language, tokens, first_pron, word_breaks=args.word_breaks
-            )
+            # first_pron = gruut_lang.phonemizer.post_process_sentence(
+            #     args.language, tokens, first_pron, word_breaks=args.word_breaks
+            # )
 
             sentence_obj["pronunciation"] = first_pron
 
