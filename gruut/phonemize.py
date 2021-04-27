@@ -81,6 +81,13 @@ class Phonemizer:
             # Load lexicon from file or database
             self.load_lexicon(preload=preload_lexicon)
 
+        # Extend lexicon
+        for word, word_prons in self.config.get("extra_words", {}).items():
+            self.lexicon[word] = [
+                WordPronunciation(phonemes=phonemes_str.split())
+                for phonemes_str in word_prons
+            ]
+
     # -------------------------------------------------------------------------
 
     def phonemize(

@@ -40,6 +40,43 @@ symbols:
     - "?"
     - "!"
 
+
+datetime:
+  pattern_sep: " "
+  patterns:
+    mmddyyyy:
+      "regex": "\\b(\\d{1,2}/\\d{1,2}/\\d{4})\\b"
+      "parse": "%m/%d/%Y"
+      "format": "%B %d_ordinal, %Y_year"
+    mmddyy:
+      "regex": "\\b(\\d{1,2}/\\d{1,2}/\\d{2})\\b"
+      "parse": "%m/%d/%y"
+      "format": "%B %d_ordinal, %Y_year"
+    mmdd_date:
+      "regex": "\\b(\\d{1,2}/\\d{1,2})_date\\b"
+      "parse": "%m/%d"
+      "format": "%B %d_ordinal"
+    hhmm_am:
+      "regex": "\\b(\\d{1,2}:\\d{1,2})\\s{0,1}(?:AM|am)\\b"
+      "parse": "%H:%M"
+      "format": "%H %M a_ m_"
+    hhmm_pm:
+      "regex": "\\b(\\d{1,2}:\\d{1,2})\\s{0,1}(?:PM|pm)\\b"
+      "parse": "%H:%M"
+      "format": "%H %M p_ m_"
+    hhmm:
+      "regex": "\\b(\\d{1,2}:\\d{1,2})\\b"
+      "parse": "%H:%M"
+      "format": "%H %M"
+
+extra_words:
+  "a_":
+    - "ˈeɪ"
+  "m_":
+    - "ˈɛ m"
+  "p_":
+    - "p ˈi"
+
 numbers:
   currency: USD
 

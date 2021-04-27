@@ -174,7 +174,8 @@ def do_tokenize(config, args):
         sentences = list(
             tokenizer.tokenize(
                 line,
-                number_converters=args.number_converters,
+                number_converters=(args.number_converters or args.dates_and_times),
+                dates_and_times=args.dates_and_times,
                 replace_currency=(not args.disable_currency),
                 guess_pos=(not args.no_pos),
             )
@@ -1182,6 +1183,11 @@ def get_args() -> argparse.Namespace:
         "--number-converters",
         action="store_true",
         help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
+    )
+    tokenize_parser.add_argument(
+        "--dates-and-times",
+        action="store_true",
+        help="Automatically detect and expand dates and times (implies --number-converters)",
     )
     tokenize_parser.add_argument(
         "--exclude-non-words",

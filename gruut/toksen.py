@@ -1,8 +1,10 @@
 """Class for cleaning raw text and tokenizing"""
+import functools
 import logging
 import re
 import typing
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import babel
 import babel.numbers
@@ -44,6 +46,15 @@ class Sentence:
     raw_words: typing.List[str] = field(default_factory=list)
     clean_words: typing.List[str] = field(default_factory=list)
     tokens: typing.List[Token] = field(default_factory=list)
+
+
+@dataclass
+class DateTimeFormat:
+    """Regex, strptime, and strftime patterns for dates and times"""
+
+    match_regex: re.Pattern
+    parse_pattern: str
+    format_pattern: str
 
 
 # -----------------------------------------------------------------------------
@@ -170,6 +181,18 @@ class Tokenizer:
             # short form -> [expansion words]
             self.abbreviations[abbrev_key] = abbrev_value
 
+        # datetime formats
+        self.datetime_seperator = pydash.get(self.config, "datetime.pattern_sep", " ")
+        self.datetime_formats: typing.Dict[str, DateTimeFormat] = {}
+        for dt_key, dt_value in pydash.get(
+            self.config, "datetime.patterns", {}
+        ).items():
+            self.datetime_formats[dt_key] = DateTimeFormat(
+                match_regex=re.compile(dt_value["regex"]),
+                parse_pattern=dt_value["parse"],
+                format_pattern=dt_value["format"],
+            )
+
     # -------------------------------------------------------------------------
 
     def tokenize(
@@ -178,6 +201,7 @@ class Tokenizer:
         number_converters: bool = False,
         replace_currency: bool = True,
         guess_pos: bool = True,
+        dates_and_times: bool = False,
     ) -> typing.Iterable[Sentence]:
         """Split text into sentences, tokenize, and clean"""
         sentence_tokens: typing.List[typing.List[Token]] = []
@@ -191,6 +215,28 @@ class Tokenizer:
             # Do pre-tokenization replacements
             for pattern, replacement in self.replacements:
                 text = pattern.sub(replacement, text)
+
+            if dates_and_times:
+                # Transform dates and times
+                for dt_key, dt_format in self.datetime_formats.items():
+                    # Match datetime regexes
+                    def datetime_replace(dt_format, match):
+                        # Feed matched input into strptime.
+                        # Matched groups are joined by a separator (default: space).
+                        parse_input_str = self.datetime_seperator.join(match.groups())
+                        parsed_dt = datetime.strptime(
+                            parse_input_str, dt_format.parse_pattern
+                        )
+
+                        # Format parsed datetime
+                        return parsed_dt.strftime(dt_format.format_pattern)
+
+                    try:
+                        text = dt_format.match_regex.sub(
+                            functools.partial(datetime_replace, dt_format), text
+                        )
+                    except Exception:
+                        _LOGGER.exception("Date/time error (%s)", dt_key)
 
             # Tokenize
             raw_tokens = self.token_split_pattern.split(text)
@@ -341,7 +387,7 @@ class Tokenizer:
                         digit_str = token.text
                         num2words_kwargs = {"lang": self.num2words_lang}
 
-                        if number_converters:
+                        if number_converters and "_" in token.text:
                             # Look for 123_converter pattern.
                             # Available num2words converters are:
                             # cardinal (default), ordinal, ordinal_num, year, currency
