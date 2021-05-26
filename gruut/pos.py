@@ -81,7 +81,7 @@ def sent2features(sent):
 
 def sent2labels(sent):
     """Get target labels for all words in a sentence"""
-    return [token["xpos"] for token in sent]
+    return [token["xpos"] or "" for token in sent]
 
 
 # -----------------------------------------------------------------------------
