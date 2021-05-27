@@ -69,7 +69,7 @@ def word2features(sent, i):
     if i < len(sent) - 2:
         # Two words forward
         token_n2 = sent[i + 2]
-        features.update(local_features(token_n2, prefix="+1:"))
+        features.update(local_features(token_n2, prefix="+2:"))
 
     return features
 
