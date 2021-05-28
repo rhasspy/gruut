@@ -3,6 +3,9 @@
 import unittest
 
 from gruut.lang import EnglishTokenizer
+from gruut.utils import find_lang_dir
+
+LANG_DIR = find_lang_dir("en-us")
 
 
 class EnglishTokenizerTestCase(unittest.TestCase):
@@ -10,7 +13,7 @@ class EnglishTokenizerTestCase(unittest.TestCase):
 
     def test_unclean_text(self):
         """Test text with lots of noise"""
-        tokenizer = EnglishTokenizer()
+        tokenizer = EnglishTokenizer(lang_dir=LANG_DIR)
 
         text = "IT’S <a> 'test' (seNtEnce) for $100, dr., & [ I ] ## like ## it 100%!"
         sentences = list(tokenizer.tokenize(text))

@@ -10,7 +10,7 @@ from .utils import find_lang_dir, get_currency_names
 
 # -----------------------------------------------------------------------------
 
-ENGLISH_LANGS = {"en", "en-us", "en-gb"}
+ENGLISH_LANGS = {"en-us", "en-gb"}
 
 # Languages that are expected to have a model directory
 KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, {"fa"}))

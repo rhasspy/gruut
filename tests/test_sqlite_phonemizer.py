@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests for SqlitePhonemizer class"""
 import unittest
+from collections import defaultdict
 
 from gruut import (
     SqlitePhonemizer,
@@ -27,7 +28,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
         phonemizer.insert_prons("gruut", test_prons)
 
-        actual_prons = list(phonemizer.select_prons("gruut"))
+        actual_prons = list(pron for _word, pron in phonemizer.select_prons("gruut"))
 
         # Verify inserted pronunciations are returned
         self.assertEqual(test_prons, actual_prons)
@@ -35,10 +36,50 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
         # Delete pronunciations
         phonemizer.delete_prons("gruut")
 
-        actual_prons = list(phonemizer.select_prons("gruut"))
+        actual_prons = list(pron for _word, pron in phonemizer.select_prons("gruut"))
 
         # Verify they were deleted
         self.assertEqual(len(actual_prons), 0)
+
+    def test_select_prons(self):
+        """Test different modes for select_prons"""
+        phonemizer = SqlitePhonemizer(database=":memory:")
+        phonemizer.create_tables()
+
+        test_lexicon = {
+            "this": [WordPronunciation(["ð", "ɪ", "s"])],
+            "gruut": [
+                WordPronunciation(["g", "ɹ", "u", "t"]),
+                WordPronunciation(["g", "ɹ", "ʌ", "t"]),
+            ],
+            "test": [WordPronunciation(["t", "ɛ", "s", "t"])],
+        }
+
+        for word, word_prons in test_lexicon.items():
+            phonemizer.insert_prons(word, word_prons)
+
+        # Single word
+        single_word = "gruut"
+        single_lexicon = defaultdict(list)
+        for word, word_pron in phonemizer.select_prons(single_word):
+            single_lexicon[word].append(word_pron)
+
+        self.assertEqual(single_lexicon, {single_word: test_lexicon[single_word]})
+
+        # Multiple words
+        multi_words = ["gruut", "test"]
+        multi_lexicon = defaultdict(list)
+        for word, word_pron in phonemizer.select_prons(multi_words):
+            multi_lexicon[word].append(word_pron)
+
+        self.assertEqual(multi_lexicon, {k: test_lexicon[k] for k in multi_words})
+
+        # All words
+        all_lexicon = defaultdict(list)
+        for word, word_pron in phonemizer.select_prons():
+            all_lexicon[word].append(word_pron)
+
+        self.assertEqual(all_lexicon, test_lexicon)
 
     def test_word_index(self):
         """Test selection of pronunciation by index"""
@@ -77,7 +118,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
         phonemizer.insert_prons("wound", test_prons)
 
-        actual_prons = list(phonemizer.select_prons("wound"))
+        actual_prons = list(pron for _word, pron in phonemizer.select_prons("wound"))
 
         # Verify inserted pronunciations are returned
         self.assertEqual(test_prons, actual_prons)
