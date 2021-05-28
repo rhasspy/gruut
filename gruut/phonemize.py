@@ -201,7 +201,7 @@ class SqlitePhonemizer(Phonemizer):
         if minor_breaks:
             if not isinstance(minor_breaks, collections.abc.Mapping):
                 for break_str in minor_breaks:
-                    self.minor_breaks[break_str] = IPA.BREAK_MINOR
+                    self.minor_breaks[break_str] = IPA.BREAK_MINOR.value
             else:
                 self.minor_breaks = minor_breaks
 
@@ -210,7 +210,7 @@ class SqlitePhonemizer(Phonemizer):
         if major_breaks:
             if not isinstance(major_breaks, collections.abc.Mapping):
                 for break_str in major_breaks:
-                    self.major_breaks[break_str] = IPA.BREAK_MAJOR
+                    self.major_breaks[break_str] = IPA.BREAK_MAJOR.value
             else:
                 self.major_breaks = major_breaks
 

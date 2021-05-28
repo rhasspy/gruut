@@ -2,30 +2,68 @@
 
 A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages.
 
-```sh
-$ echo 'He wound it around the wound, saying "I read it was $10 to read."' | \
-    gruut en-us tokenize | \
-    gruut en-us phonemize | \
-    jq -c .clean_words,.pronunciation
+```python
+from gruut.lang import get_tokenizer, get_phonemizer
 
-["he","wound","it","around","the","wound",",","saying","i","read","it","was","ten","dollars","to","read","."]
-[["h","ˈi"],["w","ˈaʊ","n","d"],["ˈɪ","t"],["ɚ","ˈaʊ","n","d"],["ð","ˈi"],["w","ˈu","n","d"],["|"],["s","ˈeɪ","ɪ","ŋ"],["ˈaɪ"],["ɹ","ˈɛ","d"],["ˈɪ","t"],["w","ˈɑ","z"],["t","ˈɛ","n"],["d","ˈɑ","l","ɚ","z"],["t","ˈu"],["ɹ","ˈi","d"],["‖"]]
+text = 'He wound it around the wound, saying "I read it was $10 to read."'
+
+tokenizer = get_tokenizer("en-us")
+phonemizer = get_phonemizer("en-us")
+
+for sent in tokenizer.tokenize(text):
+    print("Raw:", *sent.raw_words)
+    print("Clean:", *sent.clean_words)
+
+    print("Phonemes:")
+    sent_phonemes = phonemizer.phonemize(sent.tokens)
+    for token, phonemes in zip(sent.tokens, sent_phonemes):
+        print(token.text, *phonemes)
 ```
 
-Includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations (e.g., "read" pronounced like "red" or "reed").
+which outputs:
 
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.9.0) are also available for the [supported languages](#support-languages).
+```
+Raw: he wound it around the wound , saying i read it was $ 10 to read .
+Clean: he wound it around the wound , saying i read it was ten dollars to read .
+Phonemes:
+he h ˈi
+wound w ˈaʊ n d
+it ˈɪ t
+around ɚ ˈaʊ n d
+the ð ə
+wound w ˈu n d
+, |
+saying s ˈeɪ ɪ ŋ
+i ˈaɪ
+read ɹ ˈɛ d
+it ˈɪ t
+was w ə z
+ten t ˈɛ n
+dollars d ˈɑ l ɚ z
+to t ə
+read ɹ ˈi d
+. ‖
+```
 
----
+Note that "wound" and "read" have different pronunciations when used in different contexts.
 
-Useful for transforming raw text into phonetic pronunciations, similar to [phonemizer](https://github.com/bootphon/phonemizer). Unlike phonemizer, gruut looks up words in a pre-built lexicon (pronunciation dictionary) or guesses word pronunciations with a pre-trained grapheme-to-phoneme model. Phonemes for each language come from a [carefully chosen inventory](https://en.wikipedia.org/wiki/Template:Language_phonologies).
+Includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations.
+[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v1.0.0) are also available for the [supported languages](#support-languages).
+
+## Intended Audience
+
+gruut is useful for transforming raw text into phonetic pronunciations, similar to [phonemizer](https://github.com/bootphon/phonemizer). Unlike phonemizer, gruut looks up words in a pre-built lexicon (pronunciation dictionary) or guesses word pronunciations with a pre-trained grapheme-to-phoneme model. Phonemes for each language come from a [carefully chosen inventory](https://en.wikipedia.org/wiki/Template:Language_phonologies).
 
 For each supported language, gruut includes a:
 
-* List of [phonemes](https://en.wikipedia.org/wiki/Phoneme) in the [International Phonetic Alphabet](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet)
-* Word pronunciation lexicon built from [Wiktionary](https://www.wiktionary.org/)
+* A word pronunciation lexicon built from open source data
     * See [pron_dict](https://github.com/Kyubyong/pron_dictionaries)
-* Pre-trained [grapheme-to-phoneme model](https://github.com/AdolfVonKleist/Phonetisaurus) for guessing word pronunciations
+* A pre-trained grapheme-to-phoneme model for guessing word pronunciations
+
+Some languages also include:
+
+* A pre-trained part of speech tagger built from open source data:
+    * See [universal dependencies](https://universaldependencies.org/)
 
 ## Supported Languages
 
@@ -57,8 +95,8 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
     * Currency/number handling
 * gruut-ipa
     * [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) pronunciation manipulation
-* [phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi)
-    * Guessing word pronunciations outside lexicon
+* [pycrfsuite](https://github.com/scrapinghub/python-crfsuite)
+    * Part of speech tagging and grapheme to phoneme models
 
 ## Installation
 
@@ -78,9 +116,9 @@ $ python3 -m gruut <LANGUAGE> download
 
 A U.S. English model is included in the distribution.
 
-By default, models are stored in `$HOME/.config/gruut`. This can be overridden by passing a `--data-dir` argument to all `gruut` commands.
+By default, models are stored in `$HOME/.config/gruut` (technically `$XDG_CONFIG_HOME/.gruut`). This can be overridden by passing a `--lang-dir` argument to all `gruut` commands.
 
-## Usage
+## Command-Line Usage
 
 The `gruut` module can be executed with `python3 -m gruut <LANGUAGE> <COMMAND> <ARGS>`
 
@@ -115,86 +153,3 @@ $ echo 'This, right here, is some RAW text!' \
 ```
 
 See `python3 -m gruut <LANGUAGE> phonemize --help` for more options.
-
-### phones2phonemes
-
-Takes IPA pronunciations (one per line) and outputs [JSONL](https://jsonlines.org/) with phonemes and their descriptions.
-
-```sh
-$ echo '/ˈt͡ʃuːz/' \
-    | python3 -m gruut en-us phones2phonemes --keep-stress \
-    | jq .phonemes
-[
-  {
-    "text": "t͡ʃ",
-    "letters": "t͡ʃ",
-    "example": "[ch]in",
-    "stress": "primary",
-    "type": "Consonant",
-    "place": "post-alveolar",
-    "voiced": false,
-    "nasalated": false,
-    "elongated": false
-  },
-  {
-    "text": "uː",
-    "letters": "u",
-    "example": "s[oo]n",
-    "stress": "none",
-    "height": "close",
-    "placement": "back",
-    "rounded": true,
-    "type": "Vowel",
-    "nasalated": false,
-    "elongated": true
-  },
-  {
-    "text": "z",
-    "letters": "z",
-    "example": "[z]ing",
-    "stress": "none",
-    "type": "Consonant",
-    "place": "alveolar",
-    "voiced": true,
-    "nasalated": false,
-    "elongated": false
-  }
-]
-```
-
-See `python3 -m gruut <LANGUAGE> phones2phonemes --help` for more options.
-
-## coverage
-
-Takes [JSONL](https://jsonlines.org/) from from `phonemize` and outputs a coverage report for all singleton and phoneme pairs.
-
-```sh
-$ echo 'The quick brown fox jumps over the lazy dog.' \
-    | python3 -m gruut en-us tokenize \
-    | python3 -m gruut en-us phonemize \
-    | python3 -m gruut en-us coverage \
-    | jq -c .coverage
-{"single":0.625,"pair":0.42028985507246375}
-```
-
-With [multiple sentences](https://www.cs.columbia.edu/~hgs/audio/harvard.html):
-
-```sh
-$ cat << EOF |
-The birch canoe slid on the smooth planks.
-Glue the sheet to the dark blue background.
-It's easy to tell the depth of a well.
-These days a chicken leg is a rare dish.
-Rice is often served in round bowls.
-The juice of lemons makes fine punch.
-The box was thrown beside the parked truck.
-The hogs were fed chopped corn and garbage.
-Four hours of steady work faced us.
-Large size in stockings is hard to sell.
-EOF
-    python3 -m gruut en-us tokenize \
-    | python3 -m gruut en-us phonemize \
-    | python3 -m gruut en-us coverage \
-    | jq -c .coverage
-{"single":0.9,"pair":0.8214285714285714}
-```
