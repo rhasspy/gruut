@@ -5,10 +5,12 @@ import logging
 import re
 import sqlite3
 import typing
+from pathlib import Path
 
 from gruut_ipa import IPA
 
 from .const import REGEX_TYPE, TOKEN_OR_STR, WORD_PHONEMES, Token, WordPronunciation
+from .g2p import GraphemesToPhonemes
 from .utils import maybe_compile_regex
 
 _LOGGER = logging.getLogger("gruut.phonemize")
@@ -19,6 +21,7 @@ _LOGGER = logging.getLogger("gruut.phonemize")
 class Phonemizer(abc.ABC):
     """Base class for phonemizers"""
 
+    # pylint: disable=R0201
     def pre_phonemize(self, tokens: typing.Sequence[Token]) -> typing.Sequence[Token]:
         """Pre-process tokens before phonemization (called in phonemize)"""
         return tokens
@@ -30,14 +33,18 @@ class Phonemizer(abc.ABC):
         """Generate phonetic pronunciation for each token"""
         pass
 
+    # pylint: disable=R0201
     def post_phonemize(
         self, token: Token, token_pron: WordPronunciation
-    ) -> typing.Sequence[WORD_PHONEMES]:
+    ) -> WORD_PHONEMES:
         """Post-process tokens/pronunciton after phonemization (called in phonemize)"""
         return token_pron.phonemes
 
     @abc.abstractmethod
-    def get_pronunciation(token: TOKEN_OR_STR) -> typing.Optional[WORD_PHONEMES]:
+    def get_pronunciation(
+        self, token: TOKEN_OR_STR
+    ) -> typing.Optional[WordPronunciation]:
+        """Gets the best pronunciation for a token (or None)"""
         pass
 
 
@@ -56,6 +63,7 @@ class SqlitePhonemizer(Phonemizer):
        a. The Nth pronunciation if a word index is provided (1-based)
        b. The pronunciation with the highest count of matching features (e.g., part of speech)
        c. The first pronunciation
+       d. Guessed using pre-trained gruut.g2p model
 
     Attributes
     ----------
@@ -115,10 +123,14 @@ class SqlitePhonemizer(Phonemizer):
         Pronunciations are cached in-memory when looked up in the database or guessed.
         default: True
 
-    lexicon: Optional[Mapping[str, Sequence[WordPronunciation]]]
-        Pre-existing lexicon used to augment database.
+    lexicon: Optional[MutableMapping[str, Sequence[WordPronunciation]]]
+        Pre-existing lexicon used to augment database (modified by class).
         default: None
 
+    g2p_model: Optional[Union[str, Path]]
+        Path to pre-trained grapheme-to-phoneme model.
+        See also: gruut.g2p
+        default: None
 
     """
 
@@ -147,8 +159,9 @@ class SqlitePhonemizer(Phonemizer):
         fail_on_unknown_words: bool = False,
         cache_pronunciations: bool = True,
         lexicon: typing.Optional[
-            typing.Mapping[str, typing.Sequence[WordPronunciation]]
+            typing.MutableMapping[str, typing.Sequence[WordPronunciation]]
         ] = None,
+        g2p_model: typing.Optional[typing.Union[str, Path]] = None,
     ):
         self.db_conn: typing.Optional[sqlite3.Connection] = database if isinstance(
             database, sqlite3.Connection
@@ -177,7 +190,7 @@ class SqlitePhonemizer(Phonemizer):
         self.fail_on_unknown_words = fail_on_unknown_words
 
         # break symbol -> break IPA
-        self.minor_breaks: typing.Dict[str, str] = {}
+        self.minor_breaks: typing.Mapping[str, str] = {}
         if minor_breaks:
             if not isinstance(minor_breaks, collections.abc.Mapping):
                 for break_str in minor_breaks:
@@ -186,7 +199,7 @@ class SqlitePhonemizer(Phonemizer):
                 self.minor_breaks = minor_breaks
 
         # break symbol -> break IPA
-        self.major_breaks: typing.Dict[str, str] = {}
+        self.major_breaks: typing.Mapping[str, str] = {}
         if major_breaks:
             if not isinstance(major_breaks, collections.abc.Mapping):
                 for break_str in major_breaks:
@@ -195,16 +208,23 @@ class SqlitePhonemizer(Phonemizer):
                 self.major_breaks = major_breaks
 
         self.cache_pronunciations = cache_pronunciations
-        self.lexicon: typing.Mapping[
+        self.lexicon: typing.MutableMapping[
             str, typing.Sequence[WordPronunciation]
         ] = lexicon if lexicon is not None else {}
+
+        self.g2p_tagger: typing.Optional[GraphemesToPhonemes] = None
+        if g2p_model is not None:
+            # Load g2p model
+            self.g2p_tagger = GraphemesToPhonemes(g2p_model)
 
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
     ) -> typing.Iterable[WORD_PHONEMES]:
         """Generate phonetic pronunciation for each token"""
         # Convert strings to tokens
-        tokens = [Token(t) if isinstance(t, str) else t for t in tokens]
+        tokens = typing.cast(
+            typing.List[Token], [Token(t) if isinstance(t, str) else t for t in tokens]
+        )
 
         if self.word_break:
             yield [self.word_break]
@@ -349,7 +369,13 @@ class SqlitePhonemizer(Phonemizer):
 
     def guess_pronunciations(self, token: Token) -> typing.Iterable[WordPronunciation]:
         """Guess pronunciations for a word missing from the lexicon"""
-        _LOGGER.debug("Guessing pronunciations for %s", token)
+        if self.g2p_tagger:
+            _LOGGER.debug("Guessing pronunciations for %s", token)
+            guessed_phonemes = self.g2p_tagger(token.text)
+            if guessed_phonemes:
+                # Single pronunciation for now
+                return [WordPronunciation(guessed_phonemes)]
+
         return []
 
     # -------------------------------------------------------------------------
@@ -381,6 +407,7 @@ class SqlitePhonemizer(Phonemizer):
     def create_tables(self, drop_existing: bool = False, commit: bool = True):
         """Create required database tables"""
         self._connect()
+        assert self.db_conn is not None
 
         if drop_existing:
             self.db_conn.execute("DROP TABLE IF EXISTS word_phonemes")
@@ -429,6 +456,7 @@ class SqlitePhonemizer(Phonemizer):
     ):
         """Insert pronunciations for a word into the database"""
         self._connect()
+        assert self.db_conn is not None
 
         cursor = self.db_conn.cursor()
 
@@ -470,6 +498,7 @@ class SqlitePhonemizer(Phonemizer):
         word, pronunciation tuples
         """
         self._connect()
+        assert self.db_conn is not None
 
         if word is None:
             # All words
@@ -492,7 +521,7 @@ class SqlitePhonemizer(Phonemizer):
 
         for row in cursor:
             # Assume phonemes are whitespace-separated
-            pron_id, word, phonemes = row[0], row[1], row[2].split()
+            pron_id, row_word, phonemes = row[0], row[1], row[2].split()
 
             preferred_features: typing.Dict[str, typing.Set[str]] = {}
             if include_features and self.id_to_feature:
@@ -515,7 +544,7 @@ class SqlitePhonemizer(Phonemizer):
                     feature_values.add(feature_value)
 
             yield (
-                word,
+                row_word,
                 WordPronunciation(
                     phonemes=phonemes, preferred_features=preferred_features
                 ),
@@ -524,6 +553,7 @@ class SqlitePhonemizer(Phonemizer):
     def delete_prons(self, word: str, commit: bool = True):
         """Delete all pronuncations of a word from the database"""
         self._connect()
+        assert self.db_conn is not None
 
         self.db_conn.execute("DELETE FROM word_phonemes WHERE word = ?", (word,))
 

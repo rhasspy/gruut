@@ -1,5 +1,6 @@
 """Language-specific tokenizers and phonemizers"""
 import itertools
+import logging
 import typing
 from pathlib import Path
 
@@ -7,6 +8,8 @@ from .const import WORD_PHONEMES, Token, TokenFeatures, WordPronunciation
 from .phonemize import Phonemizer, SqlitePhonemizer
 from .toksen import RegexTokenizer, Tokenizer
 from .utils import find_lang_dir, get_currency_names
+
+_LOGGER = logging.getLogger("gruut.lang")
 
 # -----------------------------------------------------------------------------
 
@@ -23,9 +26,15 @@ def get_tokenizer(
     if (lang_dir is None) and (lang in KNOWN_LANGS):
         lang_dir = find_lang_dir(lang)
 
+    if lang_dir is not None:
+        lang_dir = Path(lang_dir)
+
     if lang in ENGLISH_LANGS:
+        assert lang_dir is not None
         return EnglishTokenizer(lang_dir=lang_dir, **kwargs)
-    elif lang == "fa":
+
+    if lang == "fa":
+        assert lang_dir is not None
         return FarsiTokenizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic regex tokenizer
@@ -33,19 +42,33 @@ def get_tokenizer(
 
 
 def get_phonemizer(
-    lang: str, lang_dir: typing.Union[str, Path], **kwargs
+    lang: str, lang_dir: typing.Optional[typing.Union[str, Path]] = None, **kwargs
 ) -> Phonemizer:
     """Get language-specific phonemizer"""
     if (lang_dir is None) and (lang in KNOWN_LANGS):
         lang_dir = find_lang_dir(lang)
 
-    if (lang in KNOWN_LANGS) and ("database" not in kwargs):
-        # Use database in model directory
-        kwargs["database"] = str(lang_dir / "lexicon.db")
+    if lang_dir is not None:
+        lang_dir = Path(lang_dir)
+
+    if lang in KNOWN_LANGS:
+        assert lang_dir is not None
+        if "database" not in kwargs:
+            # Use database in model directory (required)
+            kwargs["database"] = str(lang_dir / "lexicon.db")
+
+        if "g2p_model" not in kwargs:
+            # Use grapheme to phoneme model in model directory (optional)
+            g2p_model = lang_dir / "g2p" / "model.crf"
+            if g2p_model.is_file():
+                kwargs["g2p_model"] = g2p_model
 
     if lang in ENGLISH_LANGS:
+        assert lang_dir is not None
         return EnglishPhonemizer(lang_dir=lang_dir, **kwargs)
-    elif lang == "fa":
+
+    if lang == "fa":
+        assert lang_dir is not None
         return FarsiPhonemizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic sqlite phonemizer
@@ -236,13 +259,16 @@ class FarsiPhonemizer(SqlitePhonemizer):
 
     def post_phonemize(
         self, token: Token, token_pron: WordPronunciation
-    ) -> typing.Sequence[WORD_PHONEMES]:
+    ) -> WORD_PHONEMES:
         """Post-process tokens/pronunciton after phonemization (called in phonemize)"""
         phonemes = super().post_phonemize(token, token_pron)
 
         # Genitive case
         pos = token.features.get(TokenFeatures.PART_OF_SPEECH)
         if pos == "Ne":
-            phonemes.append("e̞")
+            if isinstance(phonemes, list):
+                phonemes.append("e̞")
+            else:
+                return list(phonemes) + ["e̞"]
 
         return phonemes

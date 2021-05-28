@@ -14,7 +14,8 @@ def find_lang_dir(
     lang: str,
     search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
 ) -> typing.Optional[Path]:
-    search_dirs = [Path(p) for p in search_dirs or []]
+    """Search for a language's model directory by name"""
+    search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
 
     # ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut
     maybe_config_home = os.environ.get("XDG_CONFIG_HOME")

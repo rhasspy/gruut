@@ -1,0 +1,18 @@
+Trained on UD English treebanks:
+EWT
+GUM
+GUMReddit
+
+Tested on test set from EWT.
+
+c1=0
+c2=1
+iterations=100
+7949 out of 25097 word(s) had an incorrect tag (0.32%)
+1848 out of 2077 sentence(s) had at least one error (0.89%)
+
+c1=0.25
+c2=0.3
+iterations=100
+1782 out of 25097 word(s) had an incorrect tag (0.07%)
+914 out of 2077 sentence(s) had at least one error (0.44%)

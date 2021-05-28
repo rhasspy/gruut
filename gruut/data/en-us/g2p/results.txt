@@ -1,0 +1,8 @@
+Train on en-us lexicon with stress.
+Tested on same lexicon.
+
+c1=0
+c2=1
+iterations=100
+PER: 0.5 Errors: 858219
+Total missing: 2

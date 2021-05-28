@@ -1,10 +1,13 @@
+"""Implementations of CLI commands"""
 import dataclasses
-import sys
+import logging
 import typing
 
 from .const import Token
 from .phonemize import Phonemizer, UnknownWordError
 from .toksen import Tokenizer
+
+_LOGGER = logging.getLogger("gruut.commands")
 
 # -----------------------------------------------------------------------------
 
@@ -16,6 +19,11 @@ def tokenize(
     csv_delimiter: str = "|",
     split_sentences: bool = False,
 ) -> typing.Iterable[typing.Dict[str, typing.Any]]:
+    """Tokenize sentences into JSONL"""
+    # String used to join tokens.
+    # See RegexTokenizer
+    join_str: str = getattr(tokenizer, "join_str", " ")
+
     for line in lines:
         line = line.strip()
         if not line:
@@ -36,24 +44,20 @@ def tokenize(
                 if utt_id:
                     sentence_id = f"{utt_id}_{sentence_id}"
 
-                clean_words = sentence.clean_words
-                tokens = sentence.tokens
-
                 yield {
                     "id": sentence_id,
                     "raw_text": sentence.raw_text,
                     "raw_words": sentence.raw_words,
-                    "clean_words": clean_words,
+                    "clean_words": sentence.clean_words,
+                    "tokens": [dataclasses.asdict(t) for t in sentence.tokens],
                     "clean_text": sentence.clean_text,
                     "sentences": [],
                 }
-
-                yield sent_json
         else:
             # One output line per input line
-            raw_words = []
-            clean_words = []
-            tokens = []
+            raw_words: typing.List[str] = []
+            clean_words: typing.List[str] = []
+            tokens: typing.List[Token] = []
 
             for sentence in sentences:
                 raw_words.extend(sentence.raw_words)
@@ -66,7 +70,7 @@ def tokenize(
                 "raw_words": raw_words,
                 "clean_words": clean_words,
                 "tokens": [dataclasses.asdict(t) for t in tokens],
-                "clean_text": tokenizer.join_str.join(clean_words),
+                "clean_text": join_str.join(clean_words),
                 "sentences": [dataclasses.asdict(s) for s in sentences],
             }
 
@@ -82,6 +86,7 @@ def phonemize(
     fail_on_unknown_words: bool = False,
     skip_on_unknown_words: bool = False,
 ) -> typing.Iterable[typing.Dict[str, typing.Any]]:
+    """Phonemize JSONL from tokenize"""
     for sentence_obj in sentence_objects:
         token_dicts = sentence_obj.get("tokens")
         if token_dicts:

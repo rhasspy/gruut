@@ -1,114 +1,157 @@
 #!/usr/bin/env python3
 """
-Part of speech tagging using sklearn CRF suite.
+Part of speech tagging using python CRF suite.
 
 Credit to: https://towardsdatascience.com/pos-tagging-using-crfs-ea430c5fb78b
 """
 import argparse
+import base64
 import logging
-import pickle
+import os
 import string
+import sys
+import time
 import typing
 from pathlib import Path
 
-import sklearn_crfsuite
-from sklearn_crfsuite import metrics
+import jsonlines
+import pycrfsuite
 
 _LOGGER = logging.getLogger("gruut.pos")
 
-
 # -----------------------------------------------------------------------------
 
-
-def local_features(token, prefix=""):
-    """Get features for a single word"""
-    if isinstance(token, str):
-        word = token.lower()
-    else:
-        word = token["form"].lower()
-
-    return {
-        f"{prefix}bias": 1.0,
-        f"{prefix}word": word,
-        f"{prefix}len(word)": len(word),
-        f"{prefix}word[:4]": word[:4],
-        f"{prefix}word[:3]": word[:3],
-        f"{prefix}word[:2]": word[:2],
-        f"{prefix}word[-3:]": word[-3:],
-        f"{prefix}word[-2:]": word[-2:],
-        f"{prefix}word[-4:]": word[-4:],
-        f"{prefix}word.ispunctuation": (word in string.punctuation),
-        f"{prefix}word.isdigit()": word.isdigit(),
-    }
+FEATURES_TYPE = typing.Dict[
+    str, typing.Union[str, bool, int, float, typing.Collection[str]]
+]
 
 
-def word2features(sent, i):
-    """Get features for a word and surrounding context"""
-    token = sent[i]
-    features = local_features(token)
+class PartOfSpeechTagger:
+    """Part of speech tagger using a pre-trained CRF model"""
 
-    if i > 0:
-        # One word back
-        token_p1 = sent[i - 1]
-        features.update(local_features(token_p1, prefix="-1:"))
-    else:
-        features["BOS"] = True
+    def __init__(self, crf_tagger: typing.Union[str, Path, pycrfsuite.Tagger]):
+        if isinstance(crf_tagger, pycrfsuite.Tagger):
+            self.crf_tagger = crf_tagger
+        else:
+            # Load model
+            self.crf_tagger = pycrfsuite.Tagger()
+            self.crf_tagger.open(str(crf_tagger))
 
-    if i > 1:
-        # Two words back
-        token_p2 = sent[i - 2]
-        features.update(local_features(token_p2, prefix="-2:"))
+    def __call__(self, words: typing.List[str]) -> typing.List[str]:
+        """Returns POS tag for each word"""
+        features = PartOfSpeechTagger.sent2features(words)
+        return self.crf_tagger.tag(features)
 
-    if i < len(sent) - 1:
-        # One word forward
-        token_n1 = sent[i + 1]
-        features.update(local_features(token_n1, prefix="+1:"))
-    else:
-        features["EOS"] = True
+    @staticmethod
+    def local_features(
+        word: str,
+        prefix: str = "",
+        bias: float = 1.0,
+        add_punctuation: bool = True,
+        add_digit: bool = True,
+        add_length: bool = True,
+        chars_front: int = 3,
+        chars_back: int = 3,
+        encode: bool = True,
+    ) -> FEATURES_TYPE:
+        """Get features for a single word"""
+        features: FEATURES_TYPE = {
+            f"{prefix}bias": bias,
+            f"{prefix}word": PartOfSpeechTagger.encode_string(word) if encode else word,
+        }
 
-    if i < len(sent) - 2:
-        # Two words forward
-        token_n2 = sent[i + 2]
-        features.update(local_features(token_n2, prefix="+2:"))
+        if add_length:
+            features[f"{prefix}len(word)"] = len(word)
 
-    return features
+        if add_punctuation:
+            features[f"{prefix}word.ispunctuation"] = word in string.punctuation
 
+        if add_digit:
+            features[f"{prefix}word.isdigit()"] = word.isdigit()
 
-def sent2features(sent):
-    """Get features for all words in a sentence"""
-    return [word2features(sent, i) for i in range(len(sent))]
+        # Chunks from front
+        for i in range(2, chars_front + 1):
+            features[f"{prefix}word[:{i}]"] = word[:i]
 
+        # Chunks from pack
+        for i in range(2, chars_back + 1):
+            features[f"{prefix}word[-{i}:]"] = word[-i:]
 
-def sent2labels(sent):
-    """Get target labels for all words in a sentence"""
-    return [token["xpos"] or "" for token in sent]
+        return features
 
+    @staticmethod
+    def word2features(
+        sentence: typing.List[str],
+        i: int,
+        add_bos: bool = True,
+        add_eos: bool = True,
+        words_backward: int = 2,
+        words_forward: int = 2,
+        **kwargs,
+    ) -> FEATURES_TYPE:
+        """Get features for a word and surrounding context"""
+        word = sentence[i]
+        num_words = len(sentence)
+        features = PartOfSpeechTagger.local_features(word, **kwargs)
 
-# -----------------------------------------------------------------------------
+        if (i == 0) and add_bos:
+            features["BOS"] = True
 
+        if (i == (num_words - 1)) and add_eos:
+            features["EOS"] = True
 
-def load_model(model_path: typing.Union[str, Path]) -> sklearn_crfsuite.CRF:
-    """Load a CRF model from a pickle file"""
-    with open(model_path, "rb") as model_file:
-        model = pickle.load(model_file)
-        if not isinstance(model, sklearn_crfsuite.CRF):
-            _LOGGER.warning(
-                "Unknown model type (expected %s, got %s)",
-                sklearn_crfsuite.CRF.__name__,
-                model.__class__.__name__,
-            )
+        for j in range(1, words_backward + 1):
+            if i >= j:
+                word_prev = sentence[i - j]
+                features.update(
+                    PartOfSpeechTagger.local_features(
+                        word_prev, prefix=f"-{j}:", **kwargs
+                    )
+                )
 
-        return model
+        for j in range(1, words_forward + 1):
+            if i < (num_words - j):
+                word_next = sentence[i + j]
+                features.update(
+                    PartOfSpeechTagger.local_features(
+                        word_next, prefix=f"+{j}:", **kwargs
+                    )
+                )
+
+        return features
+
+    @staticmethod
+    def sent2features(
+        sentence: typing.List[str], **kwargs
+    ) -> typing.List[FEATURES_TYPE]:
+        """Get features for all words in a sentence"""
+        return [
+            PartOfSpeechTagger.word2features(sentence, i, **kwargs)
+            for i in range(len(sentence))
+        ]
+
+    @staticmethod
+    def encode_string(s: str) -> str:
+        """Encodes string in a form that crfsuite will accept (ASCII) and can be decoded"""
+        return base64.b64encode(s.encode()).decode("ascii")
+
+    @staticmethod
+    def decode_string(s: str) -> str:
+        """Decodes a string encoded by encode_string"""
+        return base64.b64decode(s.encode("ascii")).decode()
 
 
 # -----------------------------------------------------------------------------
 
 
 def train_model(
-    train_path: typing.Union[str, Path],
-    model_path: typing.Optional[typing.Union[str, Path]],
+    conllu_path: typing.Union[str, Path],
+    output_path: typing.Union[str, Path],
+    label: str = "xpos",
+    c1: float = 0.25,
+    c2: float = 0.3,
     max_iterations: int = 100,
-) -> sklearn_crfsuite.CRF:
+):
     """Train a new model from CONLLU data"""
     try:
         import conllu
@@ -117,137 +160,179 @@ def train_model(
         _LOGGER.fatal("pip install 'conllu>=4.4'")
         raise e
 
-    _LOGGER.debug("Loading train file (%s)", train_path)
-    with open(train_path, "r") as train_file:
-        train_sents = conllu.parse(train_file.read())
+    conllu_path = Path(conllu_path)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    _LOGGER.debug("Getting features for %s train sentence(s)", len(train_sents))
-    x_train = [sent2features(s) for s in train_sents]
-    y_train = [sent2labels(s) for s in train_sents]
+    _LOGGER.debug("Loading train file (%s)", conllu_path)
+    with open(conllu_path, "r") as conllu_file:
+        train_sents = conllu.parse(conllu_file.read())
 
     _LOGGER.debug("Training model for %s max iteration(s)", max_iterations)
-    crf = sklearn_crfsuite.CRF(
-        algorithm="lbfgs",
-        c1=0.25,
-        c2=0.3,
-        max_iterations=max_iterations,
-        all_possible_transitions=True,
+    trainer = pycrfsuite.Trainer(verbose=False)
+
+    _LOGGER.debug("Getting features for %s training sentence(s)", len(train_sents))
+    for sent in train_sents:
+        words = [token["form"] for token in sent]
+        features = PartOfSpeechTagger.sent2features(words)
+
+        labels = []
+        skip_sent = False
+        for token in sent:
+            token_label = token.get(label)
+            if token_label is None:
+                _LOGGER.warning("Example has empty label for %s: %s", token, sent)
+                skip_sent = True
+                break
+
+            labels.append(token_label)
+
+        if skip_sent:
+            continue
+
+        trainer.append(features, labels)
+
+    trainer.set_params(
+        {
+            "c1": c1,  # coefficient for L1 penalty
+            "c2": c2,  # coefficient for L2 penalty
+            "max_iterations": max_iterations,  # stop earlier
+            # include transitions that are possible, but not observed
+            "feature.possible_transitions": True,
+        }
     )
+    _LOGGER.debug(trainer.get_params())
 
-    crf.fit(x_train, y_train)
-    _LOGGER.info("Model successfully trained")
+    # Begin training
+    _LOGGER.info("Training")
 
-    if model_path:
-        model_path = Path(model_path)
-        model_path.parent.mkdir(parents=True, exist_ok=True)
+    start_time = time.perf_counter()
+    trainer.train(str(output_path))
+    end_time = time.perf_counter()
 
-        _LOGGER.debug("Writing model to %s", model_path)
-        with open(model_path, "wb") as model_file:
-            pickle.dump(crf, model_file)
-
-        _LOGGER.info("Wrote model to %s", model_path)
-
-    return crf
+    _LOGGER.info("Training completed in %s second(s)", end_time - start_time)
+    _LOGGER.info(trainer.logparser.last_iteration)
 
 
-def do_train(
-    train_path: typing.Union[str, Path],
-    model_path: typing.Union[str, Path],
-    max_iterations: int = 100,
-    **kwargs,
-):
+def do_train(args):
     """CLI method for train_model"""
-    train_model(train_path, model_path, max_iterations=max_iterations)
+    train_model(
+        conllu_path=args.conllu,
+        output_path=args.output,
+        label=args.label,
+        c1=args.c1,
+        c2=args.c2,
+        max_iterations=args.max_iterations,
+    )
 
 
 # -----------------------------------------------------------------------------
 
 
-def test_model(
-    model: sklearn_crfsuite.CRF,
-    test_path: typing.Union[str, Path],
-    out_file: typing.Optional[typing.TextIO] = None,
-):
-    """Print an accuracy report for a model to a file"""
+def do_print_labels(args):
+    """Print label set from a CONLLU file"""
     try:
         import conllu
     except ImportError as e:
-        _LOGGER.fatal("conllu package is required for testing")
+        _LOGGER.fatal("conllu package is required for training")
         _LOGGER.fatal("pip install 'conllu>=4.4'")
         raise e
 
-    _LOGGER.debug("Loading test file (%s)", test_path)
-    with open(test_path, "r") as test_file:
-        test_sents = conllu.parse(test_file.read())
+    labels = set()
+    with open(args.conllu, "r") as conllu_file:
+        for sent in conllu.parse(conllu_file.read()):
+            for token in sent:
+                token_label = token.get(args.label)
+                if token_label is not None:
+                    labels.add(token_label)
 
-    _LOGGER.debug("Getting features for %s test sentence(s)", len(test_sents))
-    x_test = [sent2features(s) for s in test_sents]
-    y_test = [sent2labels(s) for s in test_sents]
-
-    labels = list(model.classes_)
-
-    y_pred = model.predict(x_test)
-    print(
-        "F1 score on the test set = {}".format(
-            metrics.flat_f1_score(y_test, y_pred, average="weighted", labels=labels)
-        ),
-        file=out_file,
-    )
-    print(
-        "Accuracy on the test set = {}".format(
-            metrics.flat_accuracy_score(y_test, y_pred)
-        ),
-        file=out_file,
-    )
-
-    sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
-    print(
-        "Test set classification report: {}".format(
-            metrics.flat_classification_report(
-                y_test, y_pred, labels=sorted_labels, digits=3
-            )
-        ),
-        file=out_file,
-    )
-
-
-def do_test(
-    model_path: typing.Union[str, Path], test_path: typing.Union[str, Path], **kwargs
-):
-    """CLI method for test_model"""
-    _LOGGER.debug("Loading model from %s", model_path)
-    model = load_model(model_path)
-
-    test_model(model, test_path)
+    print(sorted(labels))
 
 
 # -----------------------------------------------------------------------------
 
 
-def predict(
-    model: sklearn_crfsuite.CRF, sentences: typing.List[typing.List[str]]
-) -> typing.List[typing.List[str]]:
-    """Predict POS tags for sentences"""
-    features = [sent2features(s) for s in sentences]
-    return model.predict(features)
-
-
-def do_predict(model_path: typing.Union[str, Path], texts: typing.List[str], **kwargs):
+def do_predict(args):
     """CLI method for predict"""
-    _LOGGER.debug("Loading model from %s", model_path)
-    model = load_model(model_path)
+    tagger = PartOfSpeechTagger(args.model)
 
-    sentences = [text.split() for text in texts]
-    pos = predict(model, sentences)
+    if args.texts:
+        lines = args.texts
+    else:
+        lines = sys.stdin
 
-    for sent, sent_pos in zip(sentences, pos):
-        print(list(zip(sent, sent_pos)))
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading sentences from stdin...", file=sys.stderr)
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        words = line.split()
+        words_and_tags = list(zip(words, tagger(words)))
+
+        writer.write(words_and_tags)
+
+
+def do_test(args):
+    """CLI method for testing"""
+    try:
+        import conllu
+    except ImportError as e:
+        _LOGGER.fatal("conllu package is required for training")
+        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        raise e
+
+    tagger = PartOfSpeechTagger(args.model)
+
+    _LOGGER.debug("Testing file (%s)", args.conllu)
+
+    num_sentences = 0
+    num_words = 0
+    sents_with_errors = 0
+    total_errors = 0
+    with open(args.conllu, "r") as conllu_file:
+        for sent in conllu.parse(conllu_file.read()):
+            words = [token["form"] for token in sent]
+            actual_labels = [token.get(args.label) for token in sent]
+            expected_labels = tagger(words)
+
+            had_error = False
+            for actual, expected in zip(actual_labels, expected_labels):
+                if actual != expected:
+                    total_errors += 1
+                    had_error = True
+
+                num_words += 1
+
+            if had_error:
+                sents_with_errors += 1
+
+            num_sentences += 1
+
+    if (num_sentences < 1) or (num_words < 1):
+        return
+
+    print(
+        "{0} out of {1} word(s) had an incorrect tag ({2:0.2f}%)".format(
+            total_errors, num_words, total_errors / num_words
+        )
+    )
+    print(
+        "{0} out of {1} sentence(s) had at least one error ({2:0.2f}%)".format(
+            sents_with_errors, num_sentences, sents_with_errors / num_sentences
+        )
+    )
 
 
 # -----------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="gruut.pos")
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(prog="pos.py")
 
     # Create subparsers for each sub-command
     sub_parsers = parser.add_subparsers()
@@ -258,10 +343,19 @@ if __name__ == "__main__":
     # Train
     # -----
     train_parser = sub_parsers.add_parser(
-        "train", help="Train a new POS model from CONLLU train/test files"
+        "train", help="Train a new POS model from CONLLU file"
     )
-    train_parser.add_argument("train_path", help="CONLLU file with training data")
-    train_parser.add_argument("model_path", help="Path to write model pickle")
+    train_parser.add_argument(
+        "--conllu", required=True, help="CONLLU file with training data"
+    )
+    train_parser.add_argument(
+        "--output", required=True, help="Path to write output model"
+    )
+    train_parser.add_argument(
+        "--label", default="xpos", help="Field to predict in training data"
+    )
+    train_parser.add_argument("--c1", type=float, default=0.25, help="L1 penalty")
+    train_parser.add_argument("--c2", type=float, default=0.3, help="L2 penalty")
     train_parser.add_argument(
         "--max-iterations",
         type=int,
@@ -273,10 +367,31 @@ if __name__ == "__main__":
     # ----
     # Test
     # ----
-    test_parser = sub_parsers.add_parser("test", help="Test an existing POS model")
-    test_parser.add_argument("model_path", help="Path to read model pickle")
-    test_parser.add_argument("test_path", help="CONLLU file with testing data")
+    test_parser = sub_parsers.add_parser(
+        "test", help="Test a POS model on a CONLLU file"
+    )
+    test_parser.add_argument("--model", required=True, help="Path to POS tagger model")
+    test_parser.add_argument(
+        "--conllu", required=True, help="CONLLU file with testing data"
+    )
+    test_parser.add_argument(
+        "--label", default="xpos", help="Field to predict in training data"
+    )
     test_parser.set_defaults(func=do_test)
+
+    # ------------
+    # Print Labels
+    # ------------
+    print_labels_parser = sub_parsers.add_parser(
+        "print-labels", help="Print set of unique labels from a CONLLU file"
+    )
+    print_labels_parser.add_argument(
+        "--conllu", required=True, help="CONLLU file with training data"
+    )
+    print_labels_parser.add_argument(
+        "--label", default="xpos", help="Field to predict in training data"
+    )
+    print_labels_parser.set_defaults(func=do_print_labels)
 
     # -------
     # Predict
@@ -284,14 +399,16 @@ if __name__ == "__main__":
     predict_parser = sub_parsers.add_parser(
         "predict", help="Predict POS tags for sentence(s)"
     )
-    predict_parser.add_argument("model_path", help="Path to read model pickle")
-    predict_parser.add_argument("texts", action="append", help="Sentences")
+    predict_parser.add_argument(
+        "--model", required=True, help="Path to POS tagger model"
+    )
+    predict_parser.add_argument("texts", nargs="*", help="Sentences")
     predict_parser.set_defaults(func=do_predict)
 
     # ----------------
     # Shared arguments
     # ----------------
-    for sub_parser in [train_parser, test_parser, predict_parser]:
+    for sub_parser in [train_parser, predict_parser, test_parser, print_labels_parser]:
         sub_parser.add_argument(
             "--debug", action="store_true", help="Print DEBUG messages to console"
         )
@@ -305,84 +422,8 @@ if __name__ == "__main__":
 
     _LOGGER.debug(args)
 
-    args.func(**vars(args))
+    args.func(args)
 
-    # with open("model.pkl", "rb") as f:
-    #     crf = pickle.load(f)
 
-    # test = crf.predict_single(
-    #     sent2features(["he", "wound", "the", "winding", "wind", "around", "the", "wound"])
-    # )
-
-    # print(test)
-
-    # print(list((w["form"], w["xpos"]) for w in test_sents[3]))
-
-    # x_train = [sent2features(s) for s in train_sents]
-    # x_test = [sent2features(s) for s in test_sents]
-
-    # y_train = [sent2labels(s) for s in train_sents]
-    # y_test = [sent2labels(s) for s in test_sents]
-
-    # # x_train, x_test, y_train, y_test = train_test_split(x, y)
-
-    # print("Train:", len(x_train), "Test:", len(x_test))
-
-    # crf = sklearn_crfsuite.CRF(
-    #     algorithm="lbfgs",
-    #     c1=0.25,
-    #     c2=0.3,
-    #     max_iterations=100,
-    #     all_possible_transitions=True,
-    # )
-    # crf.fit(x_train, y_train)
-
-    # with open("model.pkl", "wb") as f:
-    #     pickle.dump(crf, f)
-
-    # print("Done")
-
-    # labels = list(crf.classes_)
-    # labels.remove("X")
-
-    # y_pred = crf.predict(x_train)
-    # print(
-    #     "F1 score on the train set = {}".format(
-    #         metrics.flat_f1_score(y_train, y_pred, average="weighted", labels=labels)
-    #     )
-    # )
-    # print(
-    #     "Accuracy on the train set = {}".format(
-    #         metrics.flat_accuracy_score(y_train, y_pred)
-    #     )
-    # )
-
-    # sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
-    # print(
-    #     "Train set classification report: {}".format(
-    #         metrics.flat_classification_report(
-    #             y_train, y_pred, labels=sorted_labels, digits=3
-    #         )
-    #     )
-    # )
-
-    # y_pred = crf.predict(x_test)
-    # print(
-    #     "F1 score on the test set = {}".format(
-    #         metrics.flat_f1_score(y_test, y_pred, average="weighted", labels=labels)
-    #     )
-    # )
-    # print(
-    #     "Accuracy on the test set = {}".format(
-    #         metrics.flat_accuracy_score(y_test, y_pred)
-    #     )
-    # )
-
-    # sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
-    # print(
-    #     "Test set classification report: {}".format(
-    #         metrics.flat_classification_report(
-    #             y_test, y_pred, labels=sorted_labels, digits=3
-    #         )
-    #     )
-    # )
+if __name__ == "__main__":
+    main()

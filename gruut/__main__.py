@@ -1,44 +1,22 @@
 #!/usr/bin/env python3
 """Command-line interface to gruut"""
 import argparse
-import csv
-import dataclasses
-import itertools
 import json
 import logging
 import os
-import shutil
 import sys
-import tempfile
-import typing
-from collections import Counter
 from pathlib import Path
 
 import jsonlines
-
-# import gruut_ipa
 from gruut_ipa import IPA
 
 from .utils import find_lang_dir
-
-# import pydash
-# import yaml
-
-
-# from . import Language
-# from .toksen import Token
-# from .utils import (
-#     WordPronunciation,
-#     env_constructor,
-#     load_lexicon,
-#     maybe_gzip_open,
-#     pairwise,
-# )
 
 # -----------------------------------------------------------------------------
 
 _LOGGER = logging.getLogger("gruut")
 
+# Path to gruut base directory
 _DIR = Path(__file__).parent
 
 # -----------------------------------------------------------------------------
@@ -46,9 +24,6 @@ _DIR = Path(__file__).parent
 
 def main():
     """Main entry point"""
-    # Expand environment variables in string value
-    # yaml.SafeLoader.add_constructor("!env", env_constructor)
-
     args = get_args()
 
     if args.debug:
@@ -67,23 +42,6 @@ def main():
 
 
 # -----------------------------------------------------------------------------
-
-
-# def try_load_language(args, language: typing.Optional[str] = None, **kwargs):
-#     """Attempt to load a language by code (e.g. en-us)"""
-#     if not language:
-#         language = args.language
-
-#     assert language
-
-#     _LOGGER.debug("Loading %s from %s", language, args.lang_dir)
-#     gruut_lang = Language.load(language=language, lang_dir=args.lang_dir, **kwargs)
-#     assert gruut_lang, f"Language not found: {language} in {args.lang_dir}"
-
-#     return gruut_lang
-
-
-# # -----------------------------------------------------------------------------
 
 
 # def do_download(args):

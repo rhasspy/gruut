@@ -27,11 +27,13 @@ with open(version_path, "r") as version_file:
 
 # -----------------------------------------------------------------------------
 
+excluded_files = {"g2p.fst", "g2p.corpus", "lexicon.txt"}
+
 data_dir = module_dir / "data"
 data_files = [
     str(f.relative_to(module_dir))
     for f in data_dir.rglob("*")
-    if f.is_file() and (f.name not in {"g2p.corpus", "lexicon.txt"})
+    if f.is_file() and (f.name not in excluded_files)
 ]
 
 setuptools.setup(

@@ -15,7 +15,7 @@ python_files=("${src_dir}/gruut/"*.py)
 # -----------------------------------------------------------------------------
 
 flake8 "${python_files[@]}"
-pylint "${python_files[@]}"
+pylint "--rcfile=${src_dir}/.pylintrc" "${python_files[@]}"
 mypy "${python_files[@]}"
 black --check "${python_files[@]}"
 isort --check-only "${python_files[@]}"

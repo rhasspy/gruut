@@ -1,10 +1,6 @@
 Babel~=2.8.0
-dataclasses-json~=0.4.0
 gruut-ipa~=0.6.0
 jsonlines~=1.2.0
 num2words==0.5.10
-phonetisaurus~=0.3.0
-pydash~=4.7.0
-pyyaml~=5.4.0
-sklearn-crfsuite~=0.3.0
+python-crfsuite~=0.9.7
 tqdm~=4.48.0
