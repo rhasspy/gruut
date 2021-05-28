@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""Tests for RegexTokenizer class"""
+"""Tests for EnglishTokenizer class"""
 import unittest
 
-from gruut.lang import EnglishTokenizer
-from gruut.utils import find_lang_dir
-
-LANG_DIR = find_lang_dir("en-us")
+from gruut.lang import get_tokenizer
 
 
 class EnglishTokenizerTestCase(unittest.TestCase):
@@ -13,7 +10,7 @@ class EnglishTokenizerTestCase(unittest.TestCase):
 
     def test_unclean_text(self):
         """Test text with lots of noise"""
-        tokenizer = EnglishTokenizer(lang_dir=LANG_DIR)
+        tokenizer = get_tokenizer("en-us")
 
         text = "IT’S <a> 'test' (seNtEnce) for $100, dr., & [ I ] ## like ## it 100%!"
         sentences = list(tokenizer.tokenize(text))

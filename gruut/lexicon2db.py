@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Converts a text lexicon to a gruut sqlite3 database"""
 import argparse
-import sqlite3
 import sys
 
 from .const import TokenFeatures, WordPronunciation
 from .phonemize import SqlitePhonemizer
+
+# -----------------------------------------------------------------------------
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
 
     # -------------------------------------------------------------------------
 
-    word_casing = lambda x: x
+    word_casing = None
 
     if args.casing == "lower":
         word_casing = str.lower
@@ -78,7 +79,9 @@ def main():
                 phonemes = phonemes_str.split()
                 word_pron = WordPronunciation(phonemes)
 
-            word = word_casing(word)
+            if word_casing:
+                word = word_casing(word)
+
             pron_order = pron_orders.get(word, 0)
 
             # Don't commit on every word, or it will be terribly slow

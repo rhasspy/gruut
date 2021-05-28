@@ -6,7 +6,7 @@ from enum import Enum
 
 REGEX_TYPE = typing.Union[str, re.Pattern]
 
-WORD_PHONEMES = typing.List[str]
+WORD_PHONEMES = typing.Sequence[str]
 
 
 class TokenFeatures(str, Enum):
