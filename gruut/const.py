@@ -22,7 +22,7 @@ class Token:
     text: str
 
     # Optional token features (e.g., part of speech)
-    features: typing.Mapping[str, str] = field(default_factory=dict)
+    features: typing.MutableMapping[str, str] = field(default_factory=dict)
 
 
 TOKEN_OR_STR = typing.Union[Token, str]
@@ -35,7 +35,7 @@ class WordPronunciation:
     phonemes: typing.Sequence[str]
 
     # Features that cause this word pronunciation to be preferred
-    preferred_features: typing.Mapping[str, typing.Set[str]] = field(
+    preferred_features: typing.MutableMapping[str, typing.Set[str]] = field(
         default_factory=dict
     )
 

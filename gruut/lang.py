@@ -29,6 +29,12 @@ def get_tokenizer(
     if lang_dir is not None:
         lang_dir = Path(lang_dir)
 
+        if "pos_model" not in kwargs:
+            # Use part of speech tagger in model directory (optional)
+            pos_model = lang_dir / "pos" / "model.crf"
+            if pos_model.is_file():
+                kwargs["pos_model"] = pos_model
+
     if lang in ENGLISH_LANGS:
         assert lang_dir is not None
         return EnglishTokenizer(lang_dir=lang_dir, **kwargs)
@@ -150,6 +156,22 @@ class EnglishPhonemizer(SqlitePhonemizer):
         super().__init__(
             minor_breaks=ENGLISH_MINOR_BREAKS,
             major_breaks=ENGLISH_MAJOR_BREAKS,
+            feature_map={
+                TokenFeatures.PART_OF_SPEECH: {
+                    "NNS": "NN",
+                    "NNP": "NN",
+                    "NNPS": "NN",
+                    "PRP$": "PRP",
+                    "RBR": "RB",
+                    "RBS": "RB",
+                    "VBG": "VB",
+                    "VBN": "VB",
+                    "VBP": "VB",
+                    "VBZ": "VB",
+                    "JJR": "JJ",
+                    "JJS": "JJ",
+                }
+            },
             **kwargs,
         )
 

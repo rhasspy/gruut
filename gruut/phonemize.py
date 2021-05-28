@@ -132,6 +132,10 @@ class SqlitePhonemizer(Phonemizer):
         See also: gruut.g2p
         default: None
 
+    feature_map: Optional[Mapping[str, Mapping[str, str]]]
+        Mapping from feature name to a mapping from raw feature values to normalized values.
+        Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
+        default: None
     """
 
     # word_N where N is 1-based pronunciation index
@@ -162,6 +166,9 @@ class SqlitePhonemizer(Phonemizer):
             typing.MutableMapping[str, typing.Sequence[WordPronunciation]]
         ] = None,
         g2p_model: typing.Optional[typing.Union[str, Path]] = None,
+        feature_map: typing.Optional[
+            typing.Mapping[str, typing.Mapping[str, str]]
+        ] = None,
     ):
         self.db_conn: typing.Optional[sqlite3.Connection] = database if isinstance(
             database, sqlite3.Connection
@@ -216,6 +223,8 @@ class SqlitePhonemizer(Phonemizer):
         if g2p_model is not None:
             # Load g2p model
             self.g2p_tagger = GraphemesToPhonemes(g2p_model)
+
+        self.feature_map = feature_map
 
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
@@ -347,6 +356,16 @@ class SqlitePhonemizer(Phonemizer):
 
                     # Count number of matching feature values
                     for feature_name, feature_value in token.features.items():
+                        if self.feature_map:
+                            # Look up normalize value.
+                            # For example: anything noun-like becomes just NN.
+                            normalized_map = self.feature_map.get(feature_name)
+
+                            if normalized_map:
+                                feature_value = normalized_map.get(
+                                    feature_value, feature_value
+                                )
+
                         preferred_values = word_pron.preferred_features.get(
                             feature_name
                         )

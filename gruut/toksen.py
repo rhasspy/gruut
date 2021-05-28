@@ -4,10 +4,12 @@ import logging
 import re
 import typing
 from decimal import Decimal
+from pathlib import Path
 
 from num2words import num2words
 
-from .const import REGEX_TYPE, Sentence, Token
+from .const import REGEX_TYPE, Sentence, Token, TokenFeatures
+from .pos import PartOfSpeechTagger
 from .utils import maybe_compile_regex
 
 _LOGGER = logging.getLogger("gruut.toksen")
@@ -51,6 +53,7 @@ class RegexTokenizer(Tokenizer):
        a. empty and non-word tokens are dropped
        b. numbers are expanded to words
        c. casing_func is applied
+    5. Part of speech tags are predicted (if model available)
 
     Attributes
     ----------
@@ -144,6 +147,11 @@ class RegexTokenizer(Tokenizer):
         Pattern, replacement tuples that are applied to the string returned by num2words after currency conversion.
         Example: $1.50 becomes "one dollar, fifty cents", so you may want to replace "," with " and ".
         default: None
+
+    pos_model: Optional[Union[str, Path]]
+        Path to CRF part of speech tagger model.
+        See also: gruut.pos
+        default: None
     """
 
     # Pattern for initially splitting text into words
@@ -188,6 +196,7 @@ class RegexTokenizer(Tokenizer):
         currency_replacements: typing.Optional[
             typing.Sequence[typing.Tuple[REGEX_TYPE, str]]
         ] = None,
+        pos_model: typing.Optional[typing.Union[str, Path]] = None,
     ):
         self.split_pattern = maybe_compile_regex(split_pattern)
         self.join_str = join_str
@@ -218,6 +227,10 @@ class RegexTokenizer(Tokenizer):
         self.currency_replacements = [
             (maybe_compile_regex(p), r) for p, r in (currency_replacements or [])
         ]
+
+        self.pos_tagger: typing.Optional[PartOfSpeechTagger] = None
+        if pos_model is not None:
+            self.pos_tagger = PartOfSpeechTagger(pos_model)
 
     def pre_tokenize(self, text: str) -> str:
         """Pre-process text before tokenization (called in tokenize)"""
@@ -254,6 +267,16 @@ class RegexTokenizer(Tokenizer):
                     clean_words=clean_words,
                     tokens=post_clean_tokens,
                 )
+
+    def post_tokenize(self, tokens: typing.Sequence[Token]) -> typing.Sequence[Token]:
+        """Post-process tokens (called in tokenize)"""
+        if self.pos_tagger is not None:
+            # Predict tags for entire sentence
+            pos_tags = self.pos_tagger([t.text for t in tokens])
+            for token, pos in zip(tokens, pos_tags):
+                token.features[TokenFeatures.PART_OF_SPEECH] = pos
+
+        return tokens
 
     def is_word(self, text: str) -> bool:
         """True if text is considered a word"""

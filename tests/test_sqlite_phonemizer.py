@@ -301,6 +301,43 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
             ],
         )
 
+    def test_feature_map(self):
+        """Test grapheme to phoneme model for guessing pronunciations"""
+        pos = TokenFeatures.PART_OF_SPEECH
+        phonemizer = SqlitePhonemizer(
+            database=":memory:",
+            token_features=[pos],
+            feature_map={pos: {"NN": "N", "VBD": "V"}},
+        )
+        phonemizer.create_tables()
+
+        # Distinguish wound (noun) from wound (verb).
+        # Using simplified features.
+        test_prons = [
+            WordPronunciation(["w", "u", "n", "d"], preferred_features={pos: {"N"}}),
+            WordPronunciation(["w", "aʊ", "n", "d"], preferred_features={pos: {"V"}}),
+        ]
+
+        phonemizer.insert_prons("wound", test_prons)
+
+        # First pronunciation (no features)
+        actual_phonemes = next(phonemizer.phonemize([Token("wound")]))
+        self.assertEqual(test_prons[0].phonemes, actual_phonemes)
+
+        # Second pronunciation
+        # VBD will be mapped to V with feature map.
+        actual_phonemes = next(
+            phonemizer.phonemize([Token("wound", features={pos: "VBD"})])
+        )
+        self.assertEqual(test_prons[1].phonemes, actual_phonemes)
+
+        # First pronunciation again (with features)
+        # NN will be mapped to N with feature map.
+        actual_phonemes = next(
+            phonemizer.phonemize([Token("wound", features={pos: "NN"})])
+        )
+        self.assertEqual(test_prons[0].phonemes, actual_phonemes)
+
 
 # -----------------------------------------------------------------------------
 
