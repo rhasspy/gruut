@@ -5,25 +5,23 @@ set -e
 this_dir="$( cd "$( dirname "$0" )" && pwd )"
 src_dir="$(realpath "${this_dir}/..")"
 
-dist_dir="${src_dir}/dist/data"
+dist_dir="${src_dir}/dist"
 mkdir -p "${dist_dir}"
 
-data_dir="${src_dir}/data"
-find "${data_dir}" -mindepth 1 -maxdepth 1 -type d | \
+find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut_lang_*' -type d | \
     while read -r lang_dir;
     do
-        if [[ ! -f "${lang_dir}/language.yml" ]]; then
-            # Skip incomplete languages
+        if [[ ! -f "${lang_dir}/setup.py" ]]; then
+            # Skip
             continue
         fi
 
-        lang="$(basename "${lang_dir}")"
-        lang_file="${dist_dir}/${lang}.tar.gz"
-
-        rm -f "${lang_file}"
         pushd "${lang_dir}" > /dev/null
-        tar -czf "${lang_file}" --exclude=lexicon.txt --exclude=g2p.corpus *
+        rm -rf dist/ "*.egg-info/"
+        python3 setup.py sdist
+        mv dist/* "${dist_dir}/"
+        rm -rf dist/
         popd > /dev/null
 
-        echo "${lang_file}"
+        echo "${lang_dir}"
     done

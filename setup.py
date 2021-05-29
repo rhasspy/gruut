@@ -1,5 +1,6 @@
 """Setup file for gruut"""
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import setuptools
@@ -26,6 +27,31 @@ with open(version_path, "r") as version_file:
     version = version_file.read().strip()
 
 # -----------------------------------------------------------------------------
+# extras_require
+# -----------------------------------------------------------------------------
+
+# dependency => [tags]
+extras = {
+    "hazm~=0.7.0": ["fa"],
+    "conllu>=4.4": ["train"],
+    "rapidfuzz>=1.4.1": ["train"],
+}
+
+# Create language-specific extras
+for lang in ["cs", "de", "es", "fr", "it", "nl", "pt", "ru", "sv"]:
+    extras[f"gruut_lang_{lang}~=1.0.0"] = [lang]
+
+# Add "all" tag
+for tags in extras.values():
+    tags.append("all")
+
+# Invert for setup
+extras_require = defaultdict(list)
+for dep, tag in extras.items():
+    extras_require[tag].append(dep)
+
+
+# -----------------------------------------------------------------------------
 
 excluded_files = {"g2p.fst", "g2p.corpus", "lexicon.txt"}
 
@@ -46,7 +72,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={"gruut": data_files + ["VERSION", "py.typed"]},
     install_requires=requirements,
-    extras_require={"fa": "hazm~=0.7.0"},
+    extras_require=extras_require,
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",

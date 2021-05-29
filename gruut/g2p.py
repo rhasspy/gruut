@@ -279,7 +279,7 @@ def do_test(args):
         from rapidfuzz.string_metric import levenshtein
     except ImportError as e:
         _LOGGER.fatal("rapidfuzz library is needed for levenshtein distance")
-        _LOGGER.fatal("pip install rapidfuzz>=1.4.1")
+        _LOGGER.fatal("pip install 'rapidfuzz>=1.4.1'")
         raise e
 
     tagger = GraphemesToPhonemes(args.model)
