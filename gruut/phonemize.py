@@ -90,10 +90,20 @@ class SqlitePhonemizer(Phonemizer):
         Phoneme string to insert between words (e.g., "#" for IPA).
         default: None
 
+    ipa_minor_breaks: bool
+        If True, replace minor breaks with IPA.BREAK_MINOR symbol.
+        If False, the original symbol is used (e.g., ",")
+        default: True
+
     minor_breaks: Optional[Union[Collection[str], Mapping[str, str]]]
         List of minor break symbols, or mapping from symbol to phonemes (e.g. {",": "|"}).
         Minor breaks are short pauses in a sentence.
         default: None
+
+    ipa_major_breaks: bool
+        If True, replace major breaks with IPA.BREAK_MAJOR symbol.
+        If False, the original symbol is used (e.g., ".")
+        default: True
 
     major_breaks: Optional[Union[Collection[str], Mapping[str, str]]]
         List of major break symbols, or mapping from symbol to phonemes (e.g. {".": "‖"}).
@@ -151,9 +161,11 @@ class SqlitePhonemizer(Phonemizer):
         use_word_indexes: bool = False,
         word_index_pattern: REGEX_TYPE = WORD_INDEX_PATTERN,
         word_break: typing.Optional[str] = None,
+        ipa_minor_breaks: bool = True,
         minor_breaks: typing.Optional[
             typing.Union[typing.Collection[str], typing.Mapping[str, str]]
         ] = None,
+        ipa_major_breaks: bool = True,
         major_breaks: typing.Optional[
             typing.Union[typing.Collection[str], typing.Mapping[str, str]]
         ] = None,
@@ -201,7 +213,9 @@ class SqlitePhonemizer(Phonemizer):
         if minor_breaks:
             if not isinstance(minor_breaks, collections.abc.Mapping):
                 for break_str in minor_breaks:
-                    self.minor_breaks[break_str] = IPA.BREAK_MINOR.value
+                    self.minor_breaks[break_str] = (
+                        IPA.BREAK_MINOR.value if ipa_minor_breaks else break_str
+                    )
             else:
                 self.minor_breaks = minor_breaks
 
@@ -210,7 +224,9 @@ class SqlitePhonemizer(Phonemizer):
         if major_breaks:
             if not isinstance(major_breaks, collections.abc.Mapping):
                 for break_str in major_breaks:
-                    self.major_breaks[break_str] = IPA.BREAK_MAJOR.value
+                    self.major_breaks[break_str] = (
+                        IPA.BREAK_MAJOR.value if ipa_major_breaks else break_str
+                    )
             else:
                 self.major_breaks = major_breaks
 

@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger("gruut.lang")
 ENGLISH_LANGS = {"en-us", "en-gb"}
 
 # Languages that are expected to have a model directory
-KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, {"fa"}))
+KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, {"fa", "fr"}))
 
 
 def get_tokenizer(
@@ -42,6 +42,10 @@ def get_tokenizer(
     if lang == "fa":
         assert lang_dir is not None
         return FarsiTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "fr":
+        assert lang_dir is not None
+        return FrenchTokenizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic regex tokenizer
     return RegexTokenizer(**kwargs)
@@ -76,6 +80,10 @@ def get_phonemizer(
     if lang == "fa":
         assert lang_dir is not None
         return FarsiPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "fr":
+        assert lang_dir is not None
+        return FrenchPhonemizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic sqlite phonemizer
     return SqlitePhonemizer(**kwargs)
@@ -113,30 +121,28 @@ class EnglishTokenizer(RegexTokenizer):
                 ("(\\d+(?:[,.]\\d+)*)%\\B", "\\1 percent"),
             ],
             abbreviations={
-                # Excluding less-used abbreviations to avoid mistakes
-                "capt": "captain",
-                "co": "company",
-                # "col": "colonel",
-                "dr": "doctor",
-                "drs": "doctors",
-                # "esq": "esquire",
-                # "ft": "fort",
-                # "gen": "general",
-                # "hon": "honorable",
-                "jr": "junior",
-                "ltd": "limited",
-                # "lt": "lieutenant",
-                # "maj": "major",
-                "mr": "mister",
-                "mrs": "misess",
-                # "rev": "reverend",
-                # "sgt": "sergeant",
-                # "st": "saint",
+                "capt.": "captain",
+                "co.": "company",
+                "col.": "colonel",
+                "dr.": "doctor",
+                "drs.": "doctors",
+                "esq.": "esquire",
+                "ft.": "fort",
+                "gen.": "general",
+                "hon.": "honorable",
+                "jr.": "junior",
+                "ltd.": "limited",
+                "lt.": "lieutenant",
+                "maj.": "major",
+                "mr.": "mister",
+                "mrs.": "misess",
+                "rev.": "reverend",
+                "sgt.": "sergeant",
+                "st.": "saint",
             },
             punctuations=ENGLISH_PUNCTUATIONS,
             minor_breaks=ENGLISH_MINOR_BREAKS,
             major_breaks=ENGLISH_MAJOR_BREAKS,
-            drop_char_after_abbreviation=".",
             casing_func=str.lower,
             num2words_lang="en_US",
             babel_locale="en_US",
@@ -294,3 +300,93 @@ class FarsiPhonemizer(SqlitePhonemizer):
                 return list(phonemes) + ["e̞"]
 
         return phonemes
+
+
+# -----------------------------------------------------------------------------
+
+FRENCH_MINOR_BREAKS = {",", ":", ";"}
+FRENCH_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class FrenchTokenizer(RegexTokenizer):
+    """Tokenizer for French"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("fr_FR")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            abbreviations={
+                "M.": "monsieur",
+                "Mlle.": "mademoiselle",
+                "Mlles.": "mesdemoiselles",
+                "Mme.": "Madame",
+                "Mmes.": "Mesdames",
+                "N.B.": "nota bene",
+                "M.": "monsieur",
+                "p.c.q.": "parce que",
+                "Pr.": "professeur",
+                "qqch.": "quelque chose",
+                "rdv.": "rendez-vous",
+                "max.": "maximum",
+                "min.": "minimum",
+                "no.": "numéro",
+                "adr.": "adresse",
+                "dr.": "docteur",
+                "st.": "saint",
+                "co.": "companie",
+                "jr.": "junior",
+                "sgt.": "sergent",
+                "capt.": "capitain",
+                "col.": "colonel",
+                "av.": "avenue",
+                "av. J.-C.": "avant Jésus-Christ",
+                "apr. J.-C.": "après Jésus-Christ",
+                "art.": "article",
+                "boul.": "boulevard",
+                "c.-à-d.": "c’est-à-dire",
+                "etc.": "et cetera",
+                "ex.": "exemple",
+                "excl.": "exclusivement",
+                "boul.": "boulevard",
+                "Mlle": "mademoiselle",
+                "Mlles": "mesdemoiselles",
+                "Mme": "Madame",
+                "Mmes": "Mesdames",
+            },
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=FRENCH_MINOR_BREAKS,
+            major_breaks=FRENCH_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="fr_FR",
+            babel_locale="fr_FR",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class FrenchPhonemizer(SqlitePhonemizer):
+    """Phonemizer for French"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=FRENCH_MINOR_BREAKS, major_breaks=FRENCH_MAJOR_BREAKS, **kwargs
+        )

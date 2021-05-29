@@ -88,15 +88,9 @@ class RegexTokenizer(Tokenizer):
         Major break tokens are kept in sentence tokens.
         default: None
 
-    abbreviations: Optional[Mapping[str, Union[str, Sequence[str]]]]
+    abbreviations: Optional[Mapping[str, str]]
         Short/long form mapping.
         Long form can be a sequence, and can therefore be multiple words.
-        default: None
-
-    drop_char_after_abbreviation: Optional[str]
-        Single-character string that is automatically dropped after an abbreviation.
-        Without this, "Dr." will become ["Dr", "."] and then ["Doctor", "."].
-        Setting drop_char_after_abbreviation = "." will eliminate the trailing "." token.
         default: None
 
     number_pattern: REGEX_TYPE
@@ -180,10 +174,7 @@ class RegexTokenizer(Tokenizer):
         punctuations: typing.Optional[typing.Set[str]] = None,
         minor_breaks: typing.Optional[typing.Set[str]] = None,
         major_breaks: typing.Optional[typing.Set[str]] = None,
-        abbreviations: typing.Optional[
-            typing.Mapping[str, typing.Union[str, typing.Sequence[str]]]
-        ] = None,
-        drop_char_after_abbreviation: typing.Optional[str] = None,
+        abbreviations: typing.Optional[typing.Mapping[str, str]] = None,
         number_pattern: REGEX_TYPE = NUMBER_PATTERN,
         number_converter_pattern: REGEX_TYPE = NUMBER_CONVERTER_PATTERN,
         non_word_pattern: typing.Optional[REGEX_TYPE] = NON_WORD_PATTERN,
@@ -207,8 +198,6 @@ class RegexTokenizer(Tokenizer):
         self.punctuations = punctuations or set()
         self.minor_breaks = minor_breaks or set()
         self.major_breaks = major_breaks or set()
-        self.abbreviations = abbreviations or {}
-        self.drop_char_after_abbreviation = drop_char_after_abbreviation
         self.number_pattern = maybe_compile_regex(number_pattern)
         self.number_converter_pattern = (
             maybe_compile_regex(number_converter_pattern)
@@ -231,6 +220,9 @@ class RegexTokenizer(Tokenizer):
         self.pos_tagger: typing.Optional[PartOfSpeechTagger] = None
         if pos_model is not None:
             self.pos_tagger = PartOfSpeechTagger(pos_model)
+
+        # Must be after self.punctuations is set
+        self.abbreviations = self._make_abbreviation_patterns(abbreviations or {})
 
     def pre_tokenize(self, text: str) -> str:
         """Pre-process text before tokenization (called in tokenize)"""
@@ -329,99 +321,70 @@ class RegexTokenizer(Tokenizer):
         for word_text in self.split_pattern.split(text):
             original_words.append(word_text)
 
-            # Word or word with punctuation or currency symbol
-            sub_words = [""]
-            for i, c in enumerate(word_text):
-                if (c in self.punctuations) or (c in self.currency_names):
-                    # Punctuation or currency symbol
-                    if in_number:
-                        # Determine whether number is done
-                        finish_number = False
+            # Expand abbreviations
+            # e.g., dr -> doctor
+            word_text = self._expand_abbreviations(word_text)
 
-                        if c in self.currency_names:
-                            # <NUMBER> <CURRENCY>
-                            finish_number = True
-                        else:
-                            # Peek forward to see if this is <NUMBER>.<NUMBER> or <NUMBER>.
-                            if i < (len(word_text) - 1):
-                                next_c = word_text[i + 1]
-                                if not str.isdigit(next_c):
-                                    # Next char is not a digit, so number stops here
-                                    finish_number = True
-                            else:
-                                # End of string after next char, so number can't continue
+            # Split again
+            expanded_words = self.split_pattern.split(word_text)
+
+            for exp_word_text in expanded_words:
+                # Word or word with punctuation or currency symbol
+                sub_words = [""]
+                for i, c in enumerate(exp_word_text):
+                    if (c in self.punctuations) or (c in self.currency_names):
+                        # Punctuation or currency symbol
+                        if in_number:
+                            # Determine whether number is done
+                            finish_number = False
+
+                            if c in self.currency_names:
+                                # <NUMBER> <CURRENCY>
                                 finish_number = True
+                            else:
+                                # Peek forward to see if this is <NUMBER>.<NUMBER> or <NUMBER>.
+                                if i < (len(exp_word_text) - 1):
+                                    next_c = exp_word_text[i + 1]
+                                    if not str.isdigit(next_c):
+                                        # Next char is not a digit, so number stops here
+                                        finish_number = True
+                                else:
+                                    # End of string after next char, so number can't continue
+                                    finish_number = True
 
-                        if finish_number:
+                            if finish_number:
+                                sub_words.append("")
+                                in_number = None
+
+                        if in_number:
+                            # Continue adding to number
+                            sub_words[-1] += c
+                        else:
+                            # Start new sub-word
+                            sub_words.append(c)
                             sub_words.append("")
                             in_number = None
-
-                    if in_number:
-                        # Continue adding to number
+                    else:
+                        # Not a punctuation or currency symbol
                         sub_words[-1] += c
-                    else:
-                        # Start new sub-word
-                        sub_words.append(c)
-                        sub_words.append("")
-                        in_number = None
-                else:
-                    # Not a punctuation or currency symbol
-                    sub_words[-1] += c
-                    if str.isdigit(c):
-                        if in_number is None:
-                            # Start considering this sub-word a number
-                            in_number = True
-                    elif in_number:
-                        # Stop considering this sub-word a number
-                        in_number = False
+                        if str.isdigit(c):
+                            if in_number is None:
+                                # Start considering this sub-word a number
+                                in_number = True
+                        elif in_number:
+                            # Stop considering this sub-word a number
+                            in_number = False
 
-            # Accumulate sub-words into full words
-            last_word_was_abbreviation = False
-            for sub_word in sub_words:
-                if not sub_word:
-                    # Skip empty sub-words
-                    continue
+                # Accumulate sub-words into full words
+                for sub_word in sub_words:
+                    if not sub_word:
+                        # Skip empty sub-words
+                        continue
 
-                if last_word_was_abbreviation and (
-                    sub_word == self.drop_char_after_abbreviation
-                ):
-                    # Skip symbol after abbreviation
-                    # e.g., dr. -> dr
-                    continue
+                    # Append to current sentence
+                    sentence_tokens.append(Token(text=sub_word))
 
-                # Expand abbreviations
-                # e.g., dr -> doctor
-                expanded_words = []
-                if self.abbreviations:
-                    # Try to expand
-                    check_word = sub_word
-                    if self.casing_func:
-                        # Fix case first
-                        check_word = self.casing_func(check_word)
-
-                    # Expansions may be multiple words.
-                    expansion = self.abbreviations.get(check_word)
-                    if expansion:
-                        if isinstance(expansion, str):
-                            # Single word
-                            expanded_words.append(expansion)
-                        else:
-                            # Multiple words
-                            expanded_words.extend(expansion)
-
-                        last_word_was_abbreviation = True
-                    else:
-                        # Not an abbreviation (no expansion)
-                        expanded_words.append(check_word)
-                else:
-                    # No abbreviations, use word as-is
-                    expanded_words.append(sub_word)
-
-                # Append to current sentence
-                for exp_word in expanded_words:
-                    sentence_tokens.append(Token(text=exp_word))
-
-                    if exp_word in self.major_breaks:
+                    if sub_word in self.major_breaks:
                         yield original_words, sentence_tokens
 
                         # New sentence
@@ -431,6 +394,23 @@ class RegexTokenizer(Tokenizer):
         if original_words or sentence_tokens:
             # Final sentence
             yield original_words, sentence_tokens
+
+    def _expand_abbreviations(self, word: str) -> str:
+        """Expand abbreviations"""
+        # e.g., dr -> doctor
+        if self.abbreviations:
+            # Try to expand
+            check_word = word
+            if self.casing_func:
+                # Fix case first
+                check_word = self.casing_func(check_word)
+
+            for pattern, to_text in self.abbreviations.items():
+                new_word, num_subs = pattern.subn(to_text, check_word, count=1)
+                if num_subs > 0:
+                    return new_word
+
+        return word
 
     def _clean_tokens(
         self, tokens: typing.Sequence[Token], replace_currency: bool = False
@@ -629,3 +609,23 @@ class RegexTokenizer(Tokenizer):
                 num_str = pattern.sub(replacement, num_str)
 
         return num_str
+
+    def _make_abbreviation_patterns(
+        self, abbreviations: typing.Mapping[str, str]
+    ) -> typing.MutableMapping[re.Pattern, str]:
+        """Create regex patterns from abbrevations with optional surrounding punctuation"""
+        punctuation_class = "[" + re.escape("".join(self.punctuations)) + "]"
+
+        patterns: typing.MutableMapping[re.Pattern, str] = {}
+        for from_text, to_text in abbreviations.items():
+            pattern_text = (
+                f"^({punctuation_class}*)"
+                + "("
+                + re.escape(from_text)
+                + ")"
+                + f"({punctuation_class}*)$"
+            )
+
+            patterns[re.compile(pattern_text)] = f"\\1{to_text}\\3"
+
+        return patterns

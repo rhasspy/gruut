@@ -90,31 +90,28 @@ class RegexTokenizerTestCase(unittest.TestCase):
             # Need period as a punctuation so it gets split during tokenization
             punctuations={"."},
             # short_form -> [long, form]
-            abbreviations={
-                "dr": ["doctor"],
-                "w3c": ["world", "wide", "web", "consortium"],
-            },
-            # This will drop a period after any abbreviation
-            drop_char_after_abbreviation=".",
+            abbreviations={"dr.": "doctor", "w3c": "world wide web consortium"},
             # Apply a casing transformation so we only need to write one
             # abbreviation form.
             casing_func=str.lower,
         )
 
-        text = "The W3C invited Dr. Jones."
+        text = "Dr. Jones was invited to the W3C."
         sentences = list(tokenizer.tokenize(text))
         self.assertEqual(1, len(sentences))
 
         sentence = sentences[0]
         expected_words = [
+            "doctor",
+            "jones",
+            "was",
+            "invited",
+            "to",
             "the",
             "world",
             "wide",
             "web",
             "consortium",
-            "invited",
-            "doctor",
-            "jones",
         ]
 
         self.assertEqual(expected_words, [t.text for t in sentence.tokens])
