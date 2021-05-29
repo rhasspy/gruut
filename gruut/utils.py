@@ -1,10 +1,12 @@
 """Utility methods for gruut"""
+import logging
 import os
 import re
 import typing
 from pathlib import Path
 
 _DIR = Path(__file__).parent
+_LOGGER = logging.getLogger("gruut.utils")
 
 
 # -----------------------------------------------------------------------------
@@ -15,6 +17,18 @@ def find_lang_dir(
     search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
 ) -> typing.Optional[Path]:
     """Search for a language's model directory by name"""
+    try:
+        base_lang = lang.split("-")[0]
+        lang_module_name = f"gruut_lang_{base_lang}"
+        lang_module = __import__(lang_module_name)
+
+        _LOGGER.debug("Successfully imported %s", lang_module_name)
+
+        return lang_module.get_lang_dir()
+    except ImportError:
+        _LOGGER.debug("Failed to import module for %s. Searching manually.")
+        pass
+
     search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
 
     # ${XDG_CONFIG_HOME}/gruut or ${HOME}/gruut

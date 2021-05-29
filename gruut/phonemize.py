@@ -193,6 +193,7 @@ class SqlitePhonemizer(Phonemizer):
 
         self.feature_to_id: typing.Dict[str, int] = {}
         self.id_to_feature: typing.Dict[int, str] = {}
+        self.load_save_features: bool = True
 
         if token_features:
             # Generate feature id <-> name maps
@@ -437,7 +438,10 @@ class SqlitePhonemizer(Phonemizer):
                         self.id_to_feature[feature_id] = feature_name
 
                 except Exception:
-                    pass
+                    _LOGGER.exception(
+                        "Failed to load feature names. Disabling feature loading/saving."
+                    )
+                    self.load_save_features = False
 
     def create_tables(self, drop_existing: bool = False, commit: bool = True):
         """Create required database tables"""
@@ -503,19 +507,23 @@ class SqlitePhonemizer(Phonemizer):
                 (word, pron_idx, phonemes),
             )
 
-            # Insert preferred features
-            pron_id = cursor.lastrowid
-            for (feature_name, feature_values) in word_pron.preferred_features.items():
-                feature_id = self.feature_to_id.get(feature_name)
-                assert (
-                    feature_id is not None
-                ), f"Unknown feature {feature_name} in {self.feature_to_id.keys()}"
+            if self.load_save_features:
+                # Insert preferred features
+                pron_id = cursor.lastrowid
+                for (
+                    feature_name,
+                    feature_values,
+                ) in word_pron.preferred_features.items():
+                    feature_id = self.feature_to_id.get(feature_name)
+                    assert (
+                        feature_id is not None
+                    ), f"Unknown feature {feature_name} in {self.feature_to_id.keys()}"
 
-                for feature_value in feature_values:
-                    cursor.execute(
-                        "INSERT INTO pron_features (pron_id, feature_id, feature_value) VALUES (?, ?, ?)",
-                        (pron_id, feature_id, feature_value),
-                    )
+                    for feature_value in feature_values:
+                        cursor.execute(
+                            "INSERT INTO pron_features (pron_id, feature_id, feature_value) VALUES (?, ?, ?)",
+                            (pron_id, feature_id, feature_value),
+                        )
 
         if commit:
             self.db_conn.commit()
@@ -559,7 +567,8 @@ class SqlitePhonemizer(Phonemizer):
             pron_id, row_word, phonemes = row[0], row[1], row[2].split()
 
             preferred_features: typing.Dict[str, typing.Set[str]] = {}
-            if include_features and self.id_to_feature:
+
+            if include_features and self.load_save_features and self.id_to_feature:
                 # Load preferred features for pronunciation
                 feature_cursor = self.db_conn.execute(
                     "SELECT feature_id, feature_value FROM pron_features WHERE pron_id = ?",

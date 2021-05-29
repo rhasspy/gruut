@@ -10,9 +10,10 @@ __pycache__/
 coverage.xml
 .coverage
 
-/data/**/g2p.fst
-/data/**/g2p.corpus
-/data/**/lexicon.txt
-/data/**/lexicon.db
-/data/fa/postagger.model
-/data/**/model.mkl
+g2p.fst
+g2p.corpus
+lexicon.txt
+lexicon.db
+postagger.model
+model.mkl
+model.crf

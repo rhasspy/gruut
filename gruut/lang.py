@@ -13,16 +13,45 @@ _LOGGER = logging.getLogger("gruut.lang")
 
 # -----------------------------------------------------------------------------
 
+LANG_ALIASES = {
+    "cs": "cs-cz",
+    "de": "de-de",
+    "en": "en-us",
+    "es": "es-es",
+    "fa": "fa",
+    "fr": "fr-fr",
+    "it": "it-it",
+    "nl": "nl",
+    "pt-br": "pt",
+    "ru": "ru-ru",
+    "sv": "sv-se",
+}
+
 ENGLISH_LANGS = {"en-us", "en-gb"}
 
 # Languages that are expected to have a model directory
-KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, {"fa", "fr"}))
+KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, LANG_ALIASES.values()))
+
+
+def resolve_lang(lang: str) -> str:
+    """Try to resolve language using aliases"""
+    lang = LANG_ALIASES.get(lang, lang)
+
+    if lang not in KNOWN_LANGS:
+        # Try with _ replaced by -
+        maybe_lang = lang.replace("_", "-")
+        if maybe_lang in KNOWN_LANGS:
+            lang = maybe_lang
+
+    return lang
 
 
 def get_tokenizer(
     lang: str, lang_dir: typing.Optional[typing.Union[str, Path]] = None, **kwargs
 ) -> Tokenizer:
     """Get language-specific tokenizer"""
+    lang = resolve_lang(lang)
+
     if (lang_dir is None) and (lang in KNOWN_LANGS):
         lang_dir = find_lang_dir(lang)
 
@@ -35,17 +64,45 @@ def get_tokenizer(
             if pos_model.is_file():
                 kwargs["pos_model"] = pos_model
 
+    if lang == "cs-cz":
+        assert lang_dir is not None
+        return CzechTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "de-de":
+        assert lang_dir is not None
+        return GermanTokenizer(lang_dir=lang_dir, **kwargs)
+
     if lang in ENGLISH_LANGS:
         assert lang_dir is not None
         return EnglishTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "es-es":
+        assert lang_dir is not None
+        return SpanishTokenizer(lang_dir=lang_dir, **kwargs)
 
     if lang == "fa":
         assert lang_dir is not None
         return FarsiTokenizer(lang_dir=lang_dir, **kwargs)
 
-    if lang == "fr":
+    if lang == "fr-fr":
         assert lang_dir is not None
         return FrenchTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "it-it":
+        assert lang_dir is not None
+        return ItalianTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "pt":
+        assert lang_dir is not None
+        return PortugueseTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "ru-ru":
+        assert lang_dir is not None
+        return RussianTokenizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "sv-se":
+        assert lang_dir is not None
+        return SwedishTokenizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic regex tokenizer
     return RegexTokenizer(**kwargs)
@@ -55,6 +112,8 @@ def get_phonemizer(
     lang: str, lang_dir: typing.Optional[typing.Union[str, Path]] = None, **kwargs
 ) -> Phonemizer:
     """Get language-specific phonemizer"""
+    lang = resolve_lang(lang)
+
     if (lang_dir is None) and (lang in KNOWN_LANGS):
         lang_dir = find_lang_dir(lang)
 
@@ -73,22 +132,174 @@ def get_phonemizer(
             if g2p_model.is_file():
                 kwargs["g2p_model"] = g2p_model
 
+    if lang == "cs-cz":
+        assert lang_dir is not None
+        return CzechPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "de-de":
+        assert lang_dir is not None
+        return GermanPhonemizer(lang_dir=lang_dir, **kwargs)
+
     if lang in ENGLISH_LANGS:
         assert lang_dir is not None
         return EnglishPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "es-es":
+        assert lang_dir is not None
+        return SpanishPhonemizer(lang_dir=lang_dir, **kwargs)
 
     if lang == "fa":
         assert lang_dir is not None
         return FarsiPhonemizer(lang_dir=lang_dir, **kwargs)
 
-    if lang == "fr":
+    if lang == "fr-fr":
         assert lang_dir is not None
         return FrenchPhonemizer(lang_dir=lang_dir, **kwargs)
 
-    # Fall back to basic sqlite phonemizer
+    if lang == "it-it":
+        assert lang_dir is not None
+        return ItalianPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "pt":
+        assert lang_dir is not None
+        return PortuguesePhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "ru-ru":
+        assert lang_dir is not None
+        return RussianPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "sv-se":
+        assert lang_dir is not None
+        return SwedishPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    # Fall back to basic sqlite phonemizer.
+    # This will fail if no database argument is provided.
     return SqlitePhonemizer(**kwargs)
 
 
+# -----------------------------------------------------------------------------
+# cs-cz
+# -----------------------------------------------------------------------------
+
+CZECH_MINOR_BREAKS = {",", ":", ";"}
+CZECH_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class CzechTokenizer(RegexTokenizer):
+    """Tokenizer for Czech (čeština)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("cs_CZ")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=CZECH_MINOR_BREAKS,
+            major_breaks=CZECH_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="cs_CZ",
+            babel_locale="cs_CZ",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class CzechPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Czech (čeština)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=CZECH_MINOR_BREAKS, major_breaks=CZECH_MAJOR_BREAKS, **kwargs
+        )
+
+
+# -----------------------------------------------------------------------------
+# de-de
+# -----------------------------------------------------------------------------
+
+GERMAN_MINOR_BREAKS = {",", ":", ";"}
+GERMAN_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class GermanTokenizer(RegexTokenizer):
+    """Tokenizer for German (Deutsch)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("de_DE")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+            ],
+            punctuations={
+                '"',
+                ",",
+                ";",
+                ":",
+                ".",
+                "?",
+                "!",
+                "„",
+                "“",
+                "”",
+                "«",
+                "»",
+                "’",
+            },
+            minor_breaks=GERMAN_MINOR_BREAKS,
+            major_breaks=GERMAN_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="de_DE",
+            babel_locale="de_DE",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class GermanPhonemizer(SqlitePhonemizer):
+    """Phonemizer for German (Deutsch)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=GERMAN_MINOR_BREAKS, major_breaks=GERMAN_MAJOR_BREAKS, **kwargs
+        )
+
+
+# -----------------------------------------------------------------------------
+# en-us, en-gb
 # -----------------------------------------------------------------------------
 
 ENGLISH_PUNCTUATIONS = {'"', ",", ";", ":", ".", "?", "!"}
@@ -183,6 +394,79 @@ class EnglishPhonemizer(SqlitePhonemizer):
 
 
 # -----------------------------------------------------------------------------
+# es-es
+# -----------------------------------------------------------------------------
+
+SPANISH_MINOR_BREAKS = {",", ":", ";"}
+SPANISH_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class SpanishTokenizer(RegexTokenizer):
+    """Tokenizer for Spanish (Español)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("es_ES")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={
+                '"',
+                ",",
+                ";",
+                ":",
+                ".",
+                "?",
+                "¿",
+                "!",
+                "¡",
+                "„",
+                "“",
+                "”",
+                "«",
+                "»",
+            },
+            minor_breaks=SPANISH_MINOR_BREAKS,
+            major_breaks=SPANISH_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="es_ES",
+            babel_locale="es_ES",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class SpanishPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Spanish (Español)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=SPANISH_MINOR_BREAKS,
+            major_breaks=SPANISH_MAJOR_BREAKS,
+            **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# fa
+# -----------------------------------------------------------------------------
 
 
 class FarsiTokenizer(RegexTokenizer):
@@ -276,7 +560,7 @@ class FarsiTokenizer(RegexTokenizer):
 
 
 class FarsiPhonemizer(SqlitePhonemizer):
-    """Phonemizer for Farsi/Persian"""
+    """Phonemizer for Farsi/Persian (فارسی)"""
 
     def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
         self.lang_dir = lang_dir
@@ -303,13 +587,15 @@ class FarsiPhonemizer(SqlitePhonemizer):
 
 
 # -----------------------------------------------------------------------------
+# fr-fr
+# -----------------------------------------------------------------------------
 
 FRENCH_MINOR_BREAKS = {",", ":", ";"}
 FRENCH_MAJOR_BREAKS = {".", "?", "!"}
 
 
 class FrenchTokenizer(RegexTokenizer):
-    """Tokenizer for French"""
+    """Tokenizer for French (Français)"""
 
     def __init__(
         self,
@@ -380,11 +666,249 @@ class FrenchTokenizer(RegexTokenizer):
 
 
 class FrenchPhonemizer(SqlitePhonemizer):
-    """Phonemizer for French"""
+    """Phonemizer for French (Français)"""
 
     def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
         self.lang_dir = lang_dir
 
         super().__init__(
             minor_breaks=FRENCH_MINOR_BREAKS, major_breaks=FRENCH_MAJOR_BREAKS, **kwargs
+        )
+
+
+# -----------------------------------------------------------------------------
+# it-it
+# -----------------------------------------------------------------------------
+
+ITALIAN_MINOR_BREAKS = {",", ":", ";"}
+ITALIAN_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class ItalianTokenizer(RegexTokenizer):
+    """Tokenizer for Italian (Italiano)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("it_IT")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=ITALIAN_MINOR_BREAKS,
+            major_breaks=ITALIAN_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="it_IT",
+            babel_locale="it_IT",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class ItalianPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Italian (Italiano)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=ITALIAN_MINOR_BREAKS,
+            major_breaks=ITALIAN_MAJOR_BREAKS,
+            **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# pt
+# -----------------------------------------------------------------------------
+
+PORTUGUESE_MINOR_BREAKS = {",", ":", ";"}
+PORTUGUESE_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class PortugueseTokenizer(RegexTokenizer):
+    """Tokenizer for Portuguese (Português)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("pt")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={
+                '"',
+                ",",
+                ";",
+                ":",
+                ".",
+                "?",
+                "¿",
+                "!",
+                "¡",
+                "„",
+                "“",
+                "”",
+                "«",
+                "»",
+            },
+            minor_breaks=PORTUGUESE_MINOR_BREAKS,
+            major_breaks=PORTUGUESE_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="pt",
+            babel_locale="pt",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class PortuguesePhonemizer(SqlitePhonemizer):
+    """Phonemizer for Portuguese (Português)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=PORTUGUESE_MINOR_BREAKS,
+            major_breaks=PORTUGUESE_MAJOR_BREAKS,
+            **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# ru-ru
+# -----------------------------------------------------------------------------
+
+RUSSIAN_MINOR_BREAKS = {",", ":", ";"}
+RUSSIAN_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class RussianTokenizer(RegexTokenizer):
+    """Tokenizer for Russian (Русский)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("ru_RU")
+        currency_names["₽"] = "RUB"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=RUSSIAN_MINOR_BREAKS,
+            major_breaks=RUSSIAN_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="ru_RU",
+            babel_locale="ru_RU",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class RussianPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Russian (Русский)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=RUSSIAN_MINOR_BREAKS,
+            major_breaks=RUSSIAN_MAJOR_BREAKS,
+            **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# sv-se
+# -----------------------------------------------------------------------------
+
+SWEDISH_MINOR_BREAKS = {",", ":", ";"}
+SWEDISH_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class SwedishTokenizer(RegexTokenizer):
+    """Tokenizer for Swedish (svenska)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("sv_SE")
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=SWEDISH_MINOR_BREAKS,
+            major_breaks=SWEDISH_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="sv_SE",
+            babel_locale="sv_SE",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class SwedishPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Swedish (svenska)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=SWEDISH_MINOR_BREAKS,
+            major_breaks=SWEDISH_MAJOR_BREAKS,
+            **kwargs,
         )

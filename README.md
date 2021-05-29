@@ -69,20 +69,18 @@ Some languages also include:
 
 gruut currently supports:
 
+* Czech (`cs-cz`)
+* German (`de-de`)
 * U.S. English (`en-us`)
    * Supports part-of-speech aware pronunciations
 * U.K. English (`en-gb`)
-* Dutch (`nl`)
-* Czech (`cs-cz`)
-* German (`de-de`)
+* Spanish (`es-es`)
+* Farsi/Persian (`fa`)
 * French (`fr-fr`)
 * Italian (`it-it`)
-* Spanish (`es-es`)
+* Dutch (`nl`)
 * Russian (`ru-ru`)
 * Swedish (`sv-se`)
-* Greek (`el-gr`)
-* Persian (`fa`)
-* Vietnamese (`vi-n`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
