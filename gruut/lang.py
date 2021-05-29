@@ -47,7 +47,10 @@ def resolve_lang(lang: str) -> str:
 
 
 def get_tokenizer(
-    lang: str, lang_dir: typing.Optional[typing.Union[str, Path]] = None, **kwargs
+    lang: str,
+    lang_dir: typing.Optional[typing.Union[str, Path]] = None,
+    no_pos: bool = False,
+    **kwargs,
 ) -> Tokenizer:
     """Get language-specific tokenizer"""
     lang = resolve_lang(lang)
@@ -63,6 +66,10 @@ def get_tokenizer(
             pos_model = lang_dir / "pos" / "model.crf"
             if pos_model.is_file():
                 kwargs["pos_model"] = pos_model
+
+    if no_pos:
+        # Don't use part-of-speech tagger
+        kwargs.pop("pos_model", None)
 
     if lang == "cs-cz":
         assert lang_dir is not None
@@ -109,7 +116,10 @@ def get_tokenizer(
 
 
 def get_phonemizer(
-    lang: str, lang_dir: typing.Optional[typing.Union[str, Path]] = None, **kwargs
+    lang: str,
+    lang_dir: typing.Optional[typing.Union[str, Path]] = None,
+    no_g2p: bool = False,
+    **kwargs,
 ) -> Phonemizer:
     """Get language-specific phonemizer"""
     lang = resolve_lang(lang)
@@ -131,6 +141,10 @@ def get_phonemizer(
             g2p_model = lang_dir / "g2p" / "model.crf"
             if g2p_model.is_file():
                 kwargs["g2p_model"] = g2p_model
+
+    if no_g2p:
+        # Don't use grapheme-to-phoneme model
+        kwargs.pop("g2p_model", None)
 
     if lang == "cs-cz":
         assert lang_dir is not None

@@ -44,36 +44,6 @@ def main():
 # -----------------------------------------------------------------------------
 
 
-# def do_download(args):
-#     """
-#     Downloads and extracts pre-trained model to args.data_dir
-#     """
-#     from . import __version__
-#     from .download import download_file
-
-#     # x.y.z -> x.y.0
-#     version_parts = __version__.split(".")
-#     version = ".".join(version_parts[:-1] + ["0"])
-
-#     lang_dir = args.data_dir / args.language
-
-#     _LOGGER.debug("Creating %s", lang_dir)
-#     lang_dir.mkdir(parents=True, exist_ok=True)
-
-#     url = args.url_format.format(lang=args.language, version=version)
-#     with tempfile.NamedTemporaryFile(mode="wb+", suffix=".tar.gz") as lang_file:
-#         _LOGGER.debug("Downloading %s to %s", url, lang_file.name)
-#         download_file(url, lang_file.name, f"{args.language}.tar.gz")
-
-#         _LOGGER.debug("Extracting %s to %s", lang_file.name, lang_dir)
-#         shutil.unpack_archive(lang_file.name, lang_dir)
-
-#     _LOGGER.info("Successfully downloaded %s to %s", args.language, lang_dir)
-
-
-# # -----------------------------------------------------------------------------
-
-
 def do_tokenize(args):
     """
     Split lines from stdin into sentences, tokenize and clean.
@@ -83,7 +53,7 @@ def do_tokenize(args):
     from .commands import tokenize
     from .lang import get_tokenizer
 
-    tokenizer = get_tokenizer(args.language, args.lang_dir)
+    tokenizer = get_tokenizer(args.language, lang_dir=args.lang_dir, no_pos=args.no_pos)
 
     if args.text:
         # Use arguments
@@ -126,6 +96,7 @@ def do_phonemize(args):
         args.lang_dir,
         use_word_indexes=args.word_indexes,
         word_break=word_break,
+        no_g2p=args.no_g2p,
     )
 
     if os.isatty(sys.stdin.fileno()):
@@ -158,18 +129,6 @@ def get_args() -> argparse.Namespace:
     sub_parsers.dest = "command"
 
     # --------
-    # download
-    # --------
-    # download_parser = sub_parsers.add_parser(
-    #     "download", help="Download and extract pre-trained model"
-    # )
-    # download_parser.add_argument(
-    #     "--url-format",
-    #     default="https://github.com/rhasspy/gruut/releases/download/v{version}/{lang}.tar.gz",
-    #     help="Format string for download URL (gets {version} and {lang}, default: Github)",
-    # )
-
-    # --------
     # tokenize
     # --------
     tokenize_parser = sub_parsers.add_parser(
@@ -198,9 +157,11 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Output one line for every sentence",
     )
-    # tokenize_parser.add_argument(
-    #     "--no-pos", action="store_true", help="Don't guess parts of speech for words"
-    # )
+    tokenize_parser.add_argument(
+        "--no-pos",
+        action="store_true",
+        help="Don't load part of speech tagger if available",
+    )
     tokenize_parser.add_argument(
         "--csv", action="store_true", help="Input format is id|text"
     )
@@ -238,11 +199,11 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Add the IPA word break symbol (#) between each word",
     )
-    # phonemize_parser.add_argument(
-    #     "--no-pos",
-    #     action="store_true",
-    #     help="Don't use part of speech to resolve pronunciations",
-    # )
+    phonemize_parser.add_argument(
+        "--no-g2p",
+        action="store_true",
+        help="Don't load grapheme to phoneme model if available for guessing pronunciations",
+    )
     phonemize_parser.add_argument(
         "--fail-on-unknown-words",
         action="store_true",
@@ -257,11 +218,7 @@ def get_args() -> argparse.Namespace:
     # ----------------
     # Shared arguments
     # ----------------
-    for sub_parser in [
-        # download_parser,
-        tokenize_parser,
-        phonemize_parser,
-    ]:
+    for sub_parser in [tokenize_parser, phonemize_parser]:
         sub_parser.add_argument(
             "--lang-dir", help="Directory with language-specific data files"
         )
