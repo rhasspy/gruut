@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tests for RegexTokenizer class"""
+import re
 import unittest
 
 from gruut import RegexTokenizer
@@ -113,6 +114,26 @@ class RegexTokenizerTestCase(unittest.TestCase):
             "web",
             "consortium",
         ]
+
+        self.assertEqual(expected_words, [t.text for t in sentence.tokens])
+
+    def test_abbreviation_pattern(self):
+        """Test abbreviation expansion using a custom pattern"""
+        tokenizer = RegexTokenizer(
+            punctuations={","},
+            # short_form -> [long, form]
+            abbreviations={re.compile(r"^([0-9]+)$"): "<num1>", "456": "<num2>"},
+        )
+
+        # 123 will match <num1> pattern.
+        # 456, will match <num2> pattern because it was surrounded by optional
+        # punctuation.
+        text = "123 456,"
+        sentences = list(tokenizer.tokenize(text))
+        self.assertEqual(1, len(sentences))
+
+        sentence = sentences[0]
+        expected_words = ["<num1>", "<num2>"]
 
         self.assertEqual(expected_words, [t.text for t in sentence.tokens])
 

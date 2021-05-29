@@ -46,9 +46,9 @@ class RegexTokenizer(Tokenizer):
     Pipline is (roughly):
     1. pre_tokenize applies regex replacements to raw text
     2. text is split using split_pattern into words
+       a. abbreviations are expanded, text is re-split
     3. words are split into sub-words using punctuations
-       a. abbreviations are expanded
-       b. sub-words are grouped by sentence and converted to Tokens
+       a. sub-words are grouped by sentence and converted to Tokens
     4. Tokens are cleaned
        a. empty and non-word tokens are dropped
        b. numbers are expanded to words
@@ -88,9 +88,10 @@ class RegexTokenizer(Tokenizer):
         Major break tokens are kept in sentence tokens.
         default: None
 
-    abbreviations: Optional[Mapping[str, str]]
-        Short/long form mapping.
-        Long form can be a sequence, and can therefore be multiple words.
+    abbreviations: Optional[Mapping[Union[str, re.Pattern], str]]
+        Short/long form mapping. Text is resplit on whitespace after expansion.
+        If key is a str, optional punctuation is automatically added around the pattern.
+        If key is a Pattern, it must be suitable for use with re.subn(count=1).
         default: None
 
     number_pattern: REGEX_TYPE
@@ -174,7 +175,9 @@ class RegexTokenizer(Tokenizer):
         punctuations: typing.Optional[typing.Set[str]] = None,
         minor_breaks: typing.Optional[typing.Set[str]] = None,
         major_breaks: typing.Optional[typing.Set[str]] = None,
-        abbreviations: typing.Optional[typing.Mapping[str, str]] = None,
+        abbreviations: typing.Optional[
+            typing.Mapping[typing.Union[str, re.Pattern], str]
+        ] = None,
         number_pattern: REGEX_TYPE = NUMBER_PATTERN,
         number_converter_pattern: REGEX_TYPE = NUMBER_CONVERTER_PATTERN,
         non_word_pattern: typing.Optional[REGEX_TYPE] = NON_WORD_PATTERN,
@@ -611,21 +614,30 @@ class RegexTokenizer(Tokenizer):
         return num_str
 
     def _make_abbreviation_patterns(
-        self, abbreviations: typing.Mapping[str, str]
+        self, abbreviations: typing.Mapping[typing.Union[str, re.Pattern], str]
     ) -> typing.MutableMapping[re.Pattern, str]:
         """Create regex patterns from abbrevations with optional surrounding punctuation"""
         punctuation_class = "[" + re.escape("".join(self.punctuations)) + "]"
 
         patterns: typing.MutableMapping[re.Pattern, str] = {}
         for from_text, to_text in abbreviations.items():
-            pattern_text = (
-                f"^({punctuation_class}*)"
-                + "("
-                + re.escape(from_text)
-                + ")"
-                + f"({punctuation_class}*)$"
-            )
+            if isinstance(from_text, re.Pattern):
+                # Use literally
+                patterns[from_text] = to_text
+            elif self.punctuations:
+                # Surround with optional punctuation
+                pattern_text = (
+                    f"^({punctuation_class}*)"
+                    + "("
+                    + re.escape(from_text)
+                    + ")"
+                    + f"({punctuation_class}*)$"
+                )
 
-            patterns[re.compile(pattern_text)] = f"\\1{to_text}\\3"
+                patterns[re.compile(pattern_text)] = f"\\1{to_text}\\3"
+            else:
+                # No punctuation
+                pattern_text = "^" + re.escape(from_text) + "$"
+                patterns[re.compile(pattern_text)] = to_text
 
         return patterns
