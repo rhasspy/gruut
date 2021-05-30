@@ -51,3 +51,6 @@ class Sentence:
     clean_text: str = ""
     clean_words: typing.Sequence[str] = field(default_factory=list)
     tokens: typing.Sequence[Token] = field(default_factory=list)
+
+    # Added by phonemizer
+    phonemes: typing.Optional[typing.Sequence[WORD_PHONEMES]] = None
