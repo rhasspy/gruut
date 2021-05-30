@@ -4,10 +4,10 @@ import logging
 import typing
 from pathlib import Path
 
-from .const import WORD_PHONEMES, Token, TokenFeatures, WordPronunciation
+from .const import TOKEN_OR_STR, WORD_PHONEMES, Token, TokenFeatures, WordPronunciation
 from .phonemize import Phonemizer, SqlitePhonemizer
 from .toksen import RegexTokenizer, Tokenizer
-from .utils import find_lang_dir, get_currency_names
+from .utils import find_lang_dir, get_currency_names, pairwise
 
 _LOGGER = logging.getLogger("gruut.lang")
 
@@ -119,6 +119,7 @@ def get_phonemizer(
     lang: str,
     lang_dir: typing.Optional[typing.Union[str, Path]] = None,
     no_g2p: bool = False,
+    fr_no_liason: bool = False,
     **kwargs,
 ) -> Phonemizer:
     """Get language-specific phonemizer"""
@@ -168,7 +169,7 @@ def get_phonemizer(
 
     if lang == "fr-fr":
         assert lang_dir is not None
-        return FrenchPhonemizer(lang_dir=lang_dir, **kwargs)
+        return FrenchPhonemizer(lang_dir=lang_dir, no_liason=fr_no_liason, **kwargs)
 
     if lang == "it-it":
         assert lang_dir is not None
@@ -682,12 +683,123 @@ class FrenchTokenizer(RegexTokenizer):
 class FrenchPhonemizer(SqlitePhonemizer):
     """Phonemizer for French (Français)"""
 
-    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+    def __init__(
+        self, lang_dir: typing.Union[str, Path], no_liason: bool = False, **kwargs
+    ):
         self.lang_dir = lang_dir
+        self.no_liason = no_liason
 
         super().__init__(
             minor_breaks=FRENCH_MINOR_BREAKS, major_breaks=FRENCH_MAJOR_BREAKS, **kwargs
         )
+
+    def phonemize(
+        self, tokens: typing.Sequence[TOKEN_OR_STR]
+    ) -> typing.Iterable[WORD_PHONEMES]:
+        """Add liasons to a sentence by examining word texts, parts of speech, and phonemes."""
+        token_phonemes = super().phonemize(tokens)
+
+        if self.no_liason:
+            # Liasons disabled
+            yield from token_phonemes
+
+        for (token1, token1_pron), (token2, token2_pron) in pairwise(
+            zip(tokens, token_phonemes)
+        ):
+            liason = False
+
+            # Conditions to meet for liason check:
+            # 1) token 1 ends with a silent consonant
+            # 2) token 2 starts with a vowel (phoneme)
+
+            last_char1 = token1.text[-1]
+            ends_silent_consonant = FrenchPhonemizer._has_silent_consonant(
+                last_char1, token1_pron[-1]
+            )
+            starts_vowel = FrenchPhonemizer._is_vowel(token2_pron[0])
+
+            token1_pos = token1.features.get(TokenFeatures.PART_OF_SPEECH)
+            token2_pos = token2.features.get(TokenFeatures.PART_OF_SPEECH)
+
+            if ends_silent_consonant and starts_vowel:
+                # Handle mandatory liason cases
+                # https://www.commeunefrancaise.com/blog/la-liaison
+
+                if token1.text == "et":
+                    # No liason
+                    pass
+                elif token1_pos in {"DET", "NUM"}:
+                    # Determiner/adjective -> noun
+                    liason = True
+                elif (token1_pos == "PRON") and (token2_pos in {"AUX", "VERB"}):
+                    # Pronoun -> verb
+                    liason = True
+                elif (token1_pos == "ADP") or (token1.text == "très"):
+                    # Preposition
+                    liason = True
+                elif (token1_pos == "ADJ") and (token2_pos in {"NOUN", "PROPN"}):
+                    # Adjective -> noun
+                    liason = True
+                elif token1_pos in {"AUX", "VERB"}:
+                    # Verb -> vowel
+                    liason = True
+
+            if liason:
+                # Apply liason
+                # s -> z
+                # p -> p
+                # d|t -> d
+                liason_pron = token1_pron
+
+                if last_char1 in {"s", "x", "z"}:
+                    liason_pron.append("z")
+                elif last_char1 == "d":
+                    liason_pron.append("t")
+                elif last_char1 in {"t", "p", "n"}:
+                    # Final phoneme is same as char
+                    liason_pron.append(last_char1)
+
+                yield liason_pron
+            else:
+                # Keep pronunciations the same
+                yield token1_pron
+
+    @staticmethod
+    def _has_silent_consonant(last_char: str, last_phoneme: str) -> bool:
+        """True if last consonant is silent in French"""
+        # Credit: https://github.com/Remiphilius/PoemesProfonds/blob/master/lecture.py
+
+        if last_char in {"d", "p", "t"}:
+            return last_phoneme != last_char
+        if last_char == "r":
+            return last_phoneme != "ʁ"
+        if last_char in {"s", "x", "z"}:
+            return last_phoneme not in {"s", "z"}
+        if last_char == "n":
+            return last_phoneme not in {"n", "ŋ"}
+
+        return False
+
+    @staticmethod
+    def _is_vowel(phoneme: str) -> bool:
+        """True if phoneme is a French vowel"""
+        return phoneme in {
+            "i",
+            "y",
+            "u",
+            "e",
+            "ø",
+            "o",
+            "ə",
+            "ɛ",
+            "œ",
+            "ɔ",
+            "a",
+            "ɔ̃",
+            "ɛ̃",
+            "ɑ̃",
+            "œ̃",
+        }
 
 
 # -----------------------------------------------------------------------------

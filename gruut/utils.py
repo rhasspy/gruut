@@ -1,4 +1,5 @@
 """Utility methods for gruut"""
+import itertools
 import logging
 import os
 import re
@@ -83,3 +84,13 @@ def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
         pass
 
     return currency_names
+
+
+# -----------------------------------------------------------------------------
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
