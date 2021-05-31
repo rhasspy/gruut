@@ -99,6 +99,10 @@ def get_tokenizer(
         assert lang_dir is not None
         return ItalianTokenizer(lang_dir=lang_dir, **kwargs)
 
+    if lang == "nl":
+        assert lang_dir is not None
+        return DutchTokenizer(lang_dir=lang_dir, **kwargs)
+
     if lang == "pt":
         assert lang_dir is not None
         return PortugueseTokenizer(lang_dir=lang_dir, **kwargs)
@@ -174,6 +178,10 @@ def get_phonemizer(
     if lang == "it-it":
         assert lang_dir is not None
         return ItalianPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "nl":
+        assert lang_dir is not None
+        return DutchPhonemizer(lang_dir=lang_dir, **kwargs)
 
     if lang == "pt":
         assert lang_dir is not None
@@ -855,6 +863,60 @@ class ItalianPhonemizer(SqlitePhonemizer):
             minor_breaks=ITALIAN_MINOR_BREAKS,
             major_breaks=ITALIAN_MAJOR_BREAKS,
             **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# nl
+# -----------------------------------------------------------------------------
+
+DUTCH_MINOR_BREAKS = {",", ":", ";"}
+DUTCH_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class DutchTokenizer(RegexTokenizer):
+    """Tokenizer for Dutch (Nederlands)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("nl")
+        currency_names["€"] = "EUR"
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=DUTCH_MINOR_BREAKS,
+            major_breaks=DUTCH_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="nl",
+            babel_locale="nl",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class DutchPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Dutch (Nederlands)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=DUTCH_MINOR_BREAKS, major_breaks=DUTCH_MAJOR_BREAKS, **kwargs
         )
 
 
