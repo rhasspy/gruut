@@ -25,14 +25,27 @@ _PHONEMIZER_CACHE_LOCK = threading.RLock()
 
 
 class TextToPhonemesReturn(str, Enum):
-    """Format of return value from text_to_phonemes"""
+    """
+    Format of return value from :py:meth:`~gruut.text_to_phonemes`.
+    """
 
     WORD_TUPLES = "word_tuples"
+    """Tuples of the form (sentence index, word, word phonemes)"""
+
     FLAT_PHONEMES = "flat_phonemes"
+    """Flat list of phoneme strings"""
+
     WORD_PHONEMES = "word_phonemes"
+    """Lists of phonemes grouped by words only"""
+
     SENTENCE_PHONEMES = "sentence_phonemes"
+    """Lists of phonemes grouped by sentence only"""
+
     SENTENCE_WORD_PHONEMES = "sentence_word_phonemes"
+    """Lists of phonemes grouped by sentence, then word"""
+
     SENTENCES = "sentences"
+    """List of :py:class:`~gruut.const.Sentence` objects with tokens, features, etc."""
 
 
 # (sentence index, word, [phonemes])
@@ -62,32 +75,55 @@ def text_to_phonemes(
     return_format: typing.Union[str, TextToPhonemesReturn] = "word_tuples",
     no_cache: bool = False,
     tokenizer: typing.Optional[Tokenizer] = None,
-    phonemizer: typing.Optional[Phonemizer] = None,
     tokenizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
+    phonemizer: typing.Optional[Phonemizer] = None,
     phonemizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
 ) -> TEXT_TO_PHONEMES_RETURN_TYPE:
     """
     High-level text to phonemes interface.
 
-    Attributes
-    ----------
-    text: str
-        Text to tokenize and phonemize.
+    Args:
+        text: Text to tokenize and phonemize
+        lang: Language of the text
+        return_format: Format of return value
+        no_cache: If True, tokenizer/phonemizer cache are not used
+        tokenizer: Optional tokenizer to use instead of creating one
+        tokenizer_args: Optional keyword arguments used when creating tokenizer
+        phonemizer: Optional phonemizer to use instead of creating one
+        phonemizer_args: Optional keyword arguments used when creating phonemizer
 
-    lang: str
-        Language of the text.
-        default: en-us
+    Returns:
+        Tuples of the form (sentence index, word, [word phonemes]). See TextToPhonemesReturn enum for more return formats.
 
-    return_format: Union[str, TextToPhonemesReturn]
-        Format of return value.
-        See also: TextToPhonemesReturn enum
-        default: word_tuples
+    Example:
+        ::
 
-    Returns
-    -------
-    word_tuples: Sequence[Tuple[int, str, Sequence[str]]]
-        Tuples of the form (sentence index, word, [word phonemes])
-        Only when return_format = "word_tuples"
+            from gruut import text_to_phonemes
+
+            text = 'He wound it around the wound, saying "I read it was $10 to read."'
+
+            for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
+                print(word, *word_phonemes)
+
+        Output::
+
+            he h ˈi
+            wound w ˈaʊ n d
+            it ˈɪ t
+            around ɚ ˈaʊ n d
+            the ð ə
+            wound w ˈu n d
+            , |
+            saying s ˈeɪ ɪ ŋ
+            i ˈaɪ
+            read ɹ ˈɛ d
+            it ˈɪ t
+            was w ə z
+            ten t ˈɛ n
+            dollars d ˈɑ l ɚ z
+            to t ə
+            read ɹ ˈi d
+            . ‖
     """
     lang = resolve_lang(lang)
 

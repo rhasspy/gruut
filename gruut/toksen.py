@@ -18,21 +18,45 @@ _LOGGER = logging.getLogger("gruut.toksen")
 
 
 class Tokenizer(abc.ABC):
-    """Base class for tokenizers"""
+    """Abstract base class for tokenizers"""
 
     # pylint: disable=R0201
     def pre_tokenize(self, text: str) -> str:
-        """Pre-process text before tokenization (called in tokenize)"""
+        """
+        Pre-process text before tokenization (called in :py:meth:`tokenize`).
+
+        Args:
+            text: Text to pre-process
+
+        Returns:
+            Pre-processed text
+        """
         return text
 
     @abc.abstractmethod
     def tokenize(self, text: str, **kwargs) -> typing.Iterable[Sentence]:
-        """Split text into tokenized sentences (with pre/post processing)"""
+        """
+        Split text into tokenized sentences (with pre/post processing).
+
+        Args:
+            text: Text to tokenize
+
+        Returns:
+            sentences
+        """
         pass
 
     # pylint: disable=R0201
     def post_tokenize(self, tokens: typing.Sequence[Token]) -> typing.Sequence[Token]:
-        """Post-process tokens (called in tokenize)"""
+        """
+        Post-process tokens (called in :py:meth:`tokenize`)
+
+        Args:
+            tokens: Tokens to post-process
+
+        Returns:
+            Post-processed tokens
+        """
         return tokens
 
 
@@ -44,125 +68,65 @@ class RegexTokenizer(Tokenizer):
     Full-featured tokenizer with support for number expansion.
 
     Pipline is (roughly):
-    1. pre_tokenize applies regex replacements to raw text
-    2. text is split using split_pattern into words
-       a. abbreviations are expanded, text is re-split
-    3. words are split into sub-words using punctuations
-       a. sub-words are grouped by sentence and converted to Tokens
-    4. Tokens are cleaned
-       a. empty and non-word tokens are dropped
-       b. numbers are expanded to words
-       c. casing_func is applied
-    5. Part of speech tags are predicted (if model available)
 
-    Attributes
-    ----------
-    split_pattern: REGEX_TYPE
-        str or Pattern used to split text into words.
-        default: WHITESPACE_PATTERN
+    #. pre_tokenize applies regex replacements to raw text
+    #. text is split using split_pattern into words
 
-    join_str: str
-        str used to join words back into text.
-        default: " "
+       * abbreviations are expanded, text is re-split
 
-    replacements: Optional[Sequence[Tuple[REGEX_TYPE, str]]]
-        Pattern, replacement tuples used in pre_tokenize on text.
-        default: None
+    #. words are split into sub-words using punctuations
 
-    casing_func: Optional[Callable[[str], str]]
-        Function applied during token cleaning and abbreviation expansion (e.g., str.lower).
-        default: None
+       * sub-words are grouped by sentence and converted to Tokens
 
-    punctuations: Optional[Set[str]]
-        Single-character strings that cause words to split into sub-words.
-        Punctuation tokens are dropped from sentence tokens unless its a major/minor break.
-        default: None
+    #. Tokens are cleaned
 
-    minor_breaks: Optional[Set[str]]
-        Single-character strings that indicate short pauses in a sentence.
-        Minor break tokens are kept in sentence tokens.
-        default: None
+       * empty and non-word tokens are dropped
+       * numbers are expanded to words
+       * casing_func is applied
 
-    major_breaks: Optional[Set[str]]
-        Single-character strings that indicate the start of a new sentence.
-        Major break tokens are kept in sentence tokens.
-        default: None
+    #. Part of speech tags are predicted (if model available)
 
-    abbreviations: Optional[Mapping[Union[str, re.Pattern], str]]
-        Short/long form mapping. Text is resplit on whitespace after expansion.
-        If key is a str, optional punctuation is automatically added around the pattern.
-        If key is a Pattern, it must be suitable for use with re.subn(count=1).
-        default: None
 
-    number_pattern: REGEX_TYPE
-        Pattern used to match numbers.
-        First group must capture the number text.
-        default: NUMBER_PATTERN
-
-    number_converter_pattern: REGEX_TYPE
-        Pattern used to match numbers with a converter specified.
-        For example, 2021_year will expanded to "twenty twenty one" instead of "two thousand twenty one".
-        First group must capture the number text, second group the converter.
-        default: NUMBER_CONVERTER_PATTERN
-        see also: use_number_converters
-
-    non_word_pattern: Optional[REGEX_TYPE]
-        Pattern used to match non-words, which may be excluded from sentence tokens.
-        See also: exclude_non_words
-        default: NON_WORD_PATTERN
-
-    exclude_non_words: bool
-        Excludes non words from sentence tokens (see RegexTokenizer.is_word).
-        default: True
-
-    num2words_lang: Optional[str]
-        Language for num2words number expansion (e.g., "en_US").
-        default: None
-
-    babel_locale: Optional[str]
-        Locale for babel number parsing (e.g., "en_US").
-        default: None
-
-    use_number_converters: bool
-        If True, numbers may contain converters (see number_converter_pattern).
-        default: False,
-
-    currency_names: Optional[Dict[str, str]]
-        Mapping from currency symbol (e.g., "$") to currency name (e.g., "USD").
-        Used by num2words during number expansion.
-        Currency symbols are also treated as punctuation during sub-word tokenization.
-        default: None
-
-    do_replace_currency: bool
-        If True, numbers after a currency symbol are converted using the num2words "currency" converter.
-        See currency_names.
-        default: False
-
-    currency_replacements: Optional[Sequence[Tuple[REGEX_TYPE, str]]]
-        Pattern, replacement tuples that are applied to the string returned by num2words after currency conversion.
-        Example: $1.50 becomes "one dollar, fifty cents", so you may want to replace "," with " and ".
-        default: None
-
-    pos_model: Optional[Union[str, Path]]
-        Path to CRF part of speech tagger model.
-        See also: gruut.pos
-        default: None
+    Attributes:
+        split_pattern: `str` or :py:class:`re.Pattern` used to split text into words
+        join_str: `str` used to join words back into text
+        replacements: (:py:class:`re.Pattern`, replacement `str`) tuples used in pre_tokenize on text
+        casing_func: Function applied during token cleaning and abbreviation expansion (e.g., :py:meth:`str.lower`).
+        punctuations: Single-character strings that cause words to split into sub-words. Punctuation tokens are dropped from sentence tokens unless its a major/minor break.
+        minor_breaks: Single-character strings that indicate short pauses in a sentence. Minor break tokens are kept in sentence tokens.
+        major_breaks: Single-character strings that indicate the start of a new sentence. Major break tokens are kept in sentence tokens.
+        abbreviations: Short/long form mapping. Text is resplit on whitespace after expansion. If key is a `str`, optional punctuation is automatically added around the pattern. If key is an :py:class:`re.Pattern`, it must be suitable for use with :py:meth:`re.subn` with `count=1`.
+        number_pattern: Pattern used to match numbers. First group must capture the number text.
+        number_converter_pattern: Pattern used to match numbers with a converter specified. For example, "2021_year" will expanded to "twenty twenty one" instead of "two thousand twenty one". First group must capture the number text, second group the converter.
+        non_word_pattern: Pattern used to match non-words, which will be excluded from sentence tokens if `exclude_non_words=True`
+        exclude_non_words: Excludes non words from sentence tokens (see :py:meth:`RegexTokenizer.is_word`)
+        num2words_lang: Language for num2words number expansion (e.g., "en_US")
+        babel_locale: Locale for babel number parsing (e.g., "en_US")
+        use_number_converters: If `True`, numbers may contain converters (see `number_converter_pattern`).
+        currency_names: Mapping from currency symbol (e.g., "$") to currency name (e.g., "USD"). Used by `num2words` during number expansion. Currency symbols are also treated as punctuation during sub-word tokenization.
+        do_replace_currency: If `True`, numbers after a currency symbol are converted using the `num2words` "currency" converter. See `currency_names`.
+        currency_replacements: (:py:class:`re.Pattern`, replacement) tuples that are applied to the string returned by `num2words` after currency conversion. Example: "$1.50" becomes "one dollar, fifty cents", so you may want to replace "," with " and ".
+        pos_model: Path to CRF part of speech tagger model. See also: :py:mod:`gruut.pos`.
     """
 
-    # Pattern for initially splitting text into words
     WHITESPACE_PATTERN = re.compile(r"\s+")
+    """Default pattern for initially splitting text into words"""
 
-    # Default pattern for matching non-words
     NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
+    """Default pattern for matching non-words"""
 
-    # Default pattern for matching numbers like 3.14.
-    # First group must be number text ("3.14").
     NUMBER_PATTERN = re.compile(r"^(-?\d+(?:[,.]\d+)*)$")
+    """
+    Default pattern for matching numbers like 3.14.
+    First group must be number text ("3.14").
+    """
 
-    # Default pattern for matching numbers with a "converter" like "1970_year".
-    # First group must be number text ("1970").
-    # Second group must be converter ("year").
     NUMBER_CONVERTER_PATTERN = re.compile(r"^(-?\d+(?:[,.]\d+)*)_(\w+)$")
+    """
+    Default pattern for matching numbers with a "converter" like "1970_year".
+    First group must be number text ("1970").
+    Second group must be converter ("year").
+    """
 
     def __init__(
         self,
@@ -228,14 +192,12 @@ class RegexTokenizer(Tokenizer):
         self.abbreviations = self._make_abbreviation_patterns(abbreviations or {})
 
     def pre_tokenize(self, text: str) -> str:
-        """Pre-process text before tokenization (called in tokenize)"""
         for pattern, replacement in self.replacements:
             text = pattern.sub(replacement, text)
 
         return text
 
     def tokenize(self, text: str, **kwargs) -> typing.Iterable[Sentence]:
-        """Split text into tokenized sentences (with pre/post processing)"""
         # Pre-processing
         text = self.pre_tokenize(text)
 
@@ -264,7 +226,6 @@ class RegexTokenizer(Tokenizer):
                 )
 
     def post_tokenize(self, tokens: typing.Sequence[Token]) -> typing.Sequence[Token]:
-        """Post-process tokens (called in tokenize)"""
         if self.pos_tagger is not None:
             # Predict tags for entire sentence
             pos_tags = self.pos_tagger([t.text for t in tokens])
@@ -274,7 +235,15 @@ class RegexTokenizer(Tokenizer):
         return tokens
 
     def is_word(self, text: str) -> bool:
-        """True if text is considered a word"""
+        """
+        Determine if text is a word or not.
+
+        Args:
+            text: Text to check
+
+        Returns:
+            `True` if text is considered a word
+        """
         text = text.strip()
         if not text:
             # Empty string
@@ -297,7 +266,16 @@ class RegexTokenizer(Tokenizer):
     def match_number(
         self, text: str, number_converters: bool = False
     ) -> typing.Optional[re.Match]:
-        """Returns a regex Match if text is a number"""
+        """
+        Tries to determine if text is a number.
+
+        Args:
+            text: Text to try and match
+            number_converters: If `True`, allow form "123_converter"
+
+        Returns:
+            Match if successful or None
+        """
         if number_converters and self.number_converter_pattern:
             return self.number_converter_pattern.match(text)
 
@@ -314,7 +292,11 @@ class RegexTokenizer(Tokenizer):
         """
         Process text into words and sentence tokens.
 
-        Returns: (original_words, sentence_tokens) for each sentence
+        Args:
+            text: Text to process
+
+        Returns:
+            words and tokens for each sentence
         """
         # Sentence tokens have abbreviations expanded.
         original_words: typing.List[str] = []
@@ -399,7 +381,7 @@ class RegexTokenizer(Tokenizer):
             yield original_words, sentence_tokens
 
     def _expand_abbreviations(self, word: str) -> str:
-        """Expand abbreviations"""
+        """Expand user-defined abbreviations"""
         # e.g., dr -> doctor
         if self.abbreviations:
             # Try to expand
@@ -421,7 +403,7 @@ class RegexTokenizer(Tokenizer):
         """
         Clean tokens and expand numbers.
 
-        Returns: raw_words, clean_words, clean_tokens
+        Returns: (raw_words, clean_words, clean_tokens)
         """
         raw_words: typing.List[str] = []
         clean_words: typing.List[str] = []
@@ -509,6 +491,7 @@ class RegexTokenizer(Tokenizer):
         last_token_currency: typing.Optional[str] = None,
         babel_locale: typing.Optional[str] = None,
     ):
+        """Attempt to convert a number to words using num2words and Babel."""
         match_groups = number_match.groups()
 
         try:
@@ -599,6 +582,7 @@ class RegexTokenizer(Tokenizer):
         return []
 
     def _post_process_currency(self, num_str: str, num_has_frac: bool) -> str:
+        """Fix up num2words currency out and apply currency replacements."""
         if num_has_frac:
             # Discard num2words separator
             num_str = num_str.replace("|", "")

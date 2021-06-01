@@ -20,32 +20,65 @@ _LOGGER = logging.getLogger("gruut.phonemize")
 
 
 class Phonemizer(abc.ABC):
-    """Base class for phonemizers"""
+    """Abstract base class for phonemizers"""
 
     # pylint: disable=R0201
     def pre_phonemize(self, tokens: typing.Sequence[Token]) -> typing.Sequence[Token]:
-        """Pre-process tokens before phonemization (called in phonemize)"""
+        """
+        Pre-process tokens before phonemization (called in :py:meth:`phonemize`).
+
+        Args:
+            tokens: Tokens to pre-process
+
+        Returns:
+            Pre-processed tokens
+        """
         return tokens
 
     @abc.abstractmethod
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
     ) -> typing.Iterable[WORD_PHONEMES]:
-        """Generate phonetic pronunciation for each token"""
+        """
+        Generate phonetic pronunciation for each token.
+
+        Args:
+            tokens: Tokens to generate pronunciations for
+
+        Returns:
+            List of phonemes for each token
+        """
         pass
 
     # pylint: disable=R0201
     def post_phonemize(
         self, token: Token, token_pron: WordPronunciation
     ) -> WORD_PHONEMES:
-        """Post-process tokens/pronunciton after phonemization (called in phonemize)"""
+        """
+        Post-process tokens/pronunciton after phonemization (called in phonemize).
+
+        Args:
+            token: Token to post-process
+            token_pron: Phonetic pronunciation of word
+
+        Returns:
+            Post-processed list of phonemes
+        """
         return token_pron.phonemes
 
     @abc.abstractmethod
     def get_pronunciation(
         self, token: TOKEN_OR_STR
     ) -> typing.Optional[WordPronunciation]:
-        """Gets the best pronunciation for a token (or None)"""
+        """
+        Gets the best pronunciation for a token (or None).
+
+        Args:
+            token: Token to get phonetic pronunciation for
+
+        Returns:
+            Phonetic pronunciation or None (if not available or cannot be guessed)
+        """
         pass
 
 
@@ -54,106 +87,45 @@ class Phonemizer(abc.ABC):
 
 class SqlitePhonemizer(Phonemizer):
     """
-    Full-featured phonemizer with sqlite database lexicon.
+    Full-featured phonemizer with sqlite database lexicon backend.
 
     Pipeline is (roughly):
-    1. Cache is checked first for exact word, then filtered word (non-word chars stripped)
-    2. Database is checked first for exact word, then filtered word
-    3. Pronunciations are guessed with self.guess_pronunciations
-    4. The best pronunciation is:
-       a. The Nth pronunciation if a word index is provided (1-based)
-       b. The pronunciation with the highest count of matching features (e.g., part of speech)
-       c. The first pronunciation
-       d. Guessed using pre-trained gruut.g2p model
 
-    Attributes
-    ----------
-    database_path: Union[str, Path]
-        Path to sqlite3 database.
-        See also: SqlitePhonemizer.create_tables()
+    #. Cache is checked first for exact word, then filtered word (non-word chars stripped)
+    #. Database is checked first for exact word, then filtered word
+    #. Pronunciations are guessed with self.guess_pronunciations
+    #. The best pronunciation is:
 
-    token_features: Optional[Sequence[str]]
-        List of feature names that tokens should have.
-        Automatically populated from an existing database.
-        See also: TokenFeatures
-        default: None
+       * The Nth pronunciation if a word index is provided (1-based)
+       * The pronunciation with the highest count of matching features (e.g., part of speech)
+       * The first pronunciation
+       * Guessed using pre-trained gruut.g2p model
 
-    use_word_indexes: bool
-        Allow words of the form word_N where N is the 1-based pronunciation index.
-        defaut: False
-
-    word_index_pattern: REGEX_TYPE
-        Regex used to group words into text (first group) and pronunciation index (second group).
-        See also: use_word_indexes
-        default: WORD_INDEX_PATTERN
-
-    word_break: Optional[str]
-        Phoneme string to insert between words (e.g., "#" for IPA).
-        default: None
-
-    ipa_minor_breaks: bool
-        If True, replace minor breaks with IPA.BREAK_MINOR symbol.
-        If False, the original symbol is used (e.g., ",")
-        default: True
-
-    minor_breaks: Optional[Union[Collection[str], Mapping[str, str]]]
-        List of minor break symbols, or mapping from symbol to phonemes (e.g. {",": "|"}).
-        Minor breaks are short pauses in a sentence.
-        default: None
-
-    ipa_major_breaks: bool
-        If True, replace major breaks with IPA.BREAK_MAJOR symbol.
-        If False, the original symbol is used (e.g., ".")
-        default: True
-
-    major_breaks: Optional[Union[Collection[str], Mapping[str, str]]]
-        List of major break symbols, or mapping from symbol to phonemes (e.g. {".": "‖"}).
-        Major breaks are between sentences.
-        default: None
-
-    lookup_with_only_words_chars: bool
-        If word cannot be found in lexicon, strip non-word characters from it and try again.
-        See also: non_word_chars_pattern
-        default: False
-
-    non_word_chars_pattern: REGEX_TYPE
-        Pattern used to strip non-word characters from a word.
-        See also: lookup_with_only_words_chars
-        default: NON_WORD_CHARS_PATTERN,
-
-    use_features: bool
-        If True, multiple pronunciations are disambiguated using token and word pronunciation features.
-        The best pronunciation has the most preferred features matching the token.
-        default: True
-
-    fail_on_unknown_words: bool
-        If True, phonemization will raise an exception if a word does not have a pronunciation.
-        default: False
-
-    cache_pronunciations: bool
-        Pronunciations are cached in-memory when looked up in the database or guessed.
-        default: True
-
-    lexicon: Optional[MutableMapping[str, List[WordPronunciation]]]
-        Pre-existing lexicon used to augment database (modified by class).
-        default: None
-
-    g2p_model: Optional[Union[str, Path]]
-        Path to pre-trained grapheme-to-phoneme model.
-        See also: gruut.g2p
-        default: None
-
-    feature_map: Optional[Mapping[str, Mapping[str, str]]]
-        Mapping from feature name to a mapping from raw feature values to normalized values.
-        Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
-        default: None
+    Attributes:
+        database_path: Path to sqlite3 database
+        token_features: List of feature names that tokens should have. Automatically populated from an existing database.
+        use_word_indexes: Allow words of the form "word_N" where N is the 1-based pronunciation index
+        word_index_pattern: Regex used to group words into text (first group) and pronunciation index (second group).
+        word_break: Phoneme string to insert between words (e.g., "#" for IPA)
+        ipa_minor_breaks: If `True`, replace minor breaks with `gruut_ipa.IPA.BREAK_MINOR` symbol. If `False`, the original symbol is used (e.g., ",")
+        minor_breaks: List of minor break symbols, or mapping from symbol to phonemes (e.g. {",": "|"}). Minor breaks are short pauses in a sentence.
+        ipa_major_breaks: If `True`, replace major breaks with `gruut_ipa.IPA.BREAK_MAJOR` symbol. If `False`, the original symbol is used (e.g., ".")
+        major_breaks: List of major break symbols, or mapping from symbol to phonemes (e.g. {".": "‖"}). Major breaks are between sentences.
+        lookup_with_only_words_chars: If word cannot be found in lexicon, strip non-word characters from it and try again
+        non_word_chars_pattern: Regex pattern used to strip non-word characters from a word
+        use_features: If `True`, multiple pronunciations are disambiguated using token and word pronunciation features. The best pronunciation has the most preferred features matching the token.
+        fail_on_unknown_words: If True, phonemization will raise an :py:class:`UnknownWordError` if a word does not have a pronunciation
+        cache_pronunciations: Pronunciations are cached in-memory when looked up in the database or guessed
+        lexicon: Pre-existing lexicon used to augment database (modified by phonemizer)
+        g2p_model: Path to pre-trained grapheme-to-phoneme model. See also: :py:mod:`gruut.g2p`
+        feature_map: Mapping from feature name (e.g. "pos") to a mapping from raw feature values to normalized values (e.g., "NNS": "NN"). Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
     """
 
-    # word_N where N is 1-based pronunciation index
     WORD_INDEX_PATTERN = re.compile(r"^(.+)_(\d+)$")
+    """word_N where N is 1-based pronunciation index"""
 
-    # Pattern to match non-word characters
     NON_WORD_CHARS_PATTERN = re.compile(r"\W")
+    """Pattern to match non-word characters"""
 
     def __init__(
         self,
@@ -252,7 +224,6 @@ class SqlitePhonemizer(Phonemizer):
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
     ) -> typing.Iterable[WORD_PHONEMES]:
-        """Generate phonetic pronunciation for each token"""
         # Convert strings to tokens
         tokens = typing.cast(
             typing.List[Token], [Token(t) if isinstance(t, str) else t for t in tokens]
@@ -365,7 +336,26 @@ class SqlitePhonemizer(Phonemizer):
         word_prons: typing.Sequence[WordPronunciation],
         word_index: typing.Optional[int] = None,
     ) -> typing.Optional[WordPronunciation]:
-        """Chooses the best pronunciation for a token from a list"""
+        """
+        Chooses the best pronunciation for a token from a list.
+
+        The method is fairly simple:
+
+        #. If a word_index is supplied, that specific pronunciation is chosen
+        #. Otherwise, the pronunciation with the most matching features is chosen
+
+           * For example, if the token has a "NOUN" part of speech tag in its :py:attr:`~gruut.const.Token.features` and one word pronunciation has a matching "NOUN" value in its :py:attr:`~gruut.const.WordPronunciation.preferred_features`, then it will be chosen
+
+        #. Otherwise, the first pronunciation is chosen
+
+        Args:
+            token: The token to choose a pronunciation for
+            word_prons: Available pronunciations
+            word_index: Optional 1-based index of desired pronunciation
+
+        Returns:
+            Best pronunciation or None if one is not available
+        """
         if word_prons:
             if word_index is not None:
                 # Use explicit index
@@ -413,7 +403,16 @@ class SqlitePhonemizer(Phonemizer):
         return None
 
     def guess_pronunciations(self, token: Token) -> typing.Iterable[WordPronunciation]:
-        """Guess pronunciations for a word missing from the lexicon"""
+        """
+        Guess pronunciations for a word missing from the lexicon using a :py:class:`gruut.g2p` model.
+
+        Args:
+            token: Token whose pronunciation should be guessed
+
+        Returns:
+            Zero or more guessed pronunciations
+
+        """
         if self.g2p_tagger:
             _LOGGER.debug("Guessing pronunciations for %s", token)
             guessed_phonemes = self.g2p_tagger(token.text)
@@ -562,9 +561,8 @@ class SqlitePhonemizer(Phonemizer):
         """
         Look up pronunciations for one word (str), many words (list), or all words (None) in the database.
 
-        Returns
-        -------
-        word, pronunciation tuples
+        Returns:
+            word, pronunciation tuples
         """
         self._connect()
 

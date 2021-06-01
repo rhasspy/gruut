@@ -3,29 +3,17 @@
 A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages.
 
 ```python
-from gruut.lang import get_tokenizer, get_phonemizer
+from gruut import text_to_phonemes
 
 text = 'He wound it around the wound, saying "I read it was $10 to read."'
 
-tokenizer = get_tokenizer("en-us")
-phonemizer = get_phonemizer("en-us")
-
-for sent in tokenizer.tokenize(text):
-    print("Raw:", *sent.raw_words)
-    print("Clean:", *sent.clean_words)
-
-    print("Phonemes:")
-    sent_phonemes = phonemizer.phonemize(sent.tokens)
-    for token, phonemes in zip(sent.tokens, sent_phonemes):
-        print(token.text, *phonemes)
+for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
+    print(word, *word_phonemes)
 ```
 
 which outputs:
 
 ```
-Raw: he wound it around the wound , saying i read it was $ 10 to read .
-Clean: he wound it around the wound , saying i read it was ten dollars to read .
-Phonemes:
 he h ˈi
 wound w ˈaʊ n d
 it ˈɪ t
@@ -47,7 +35,7 @@ read ɹ ˈi d
 
 Note that "wound" and "read" have different pronunciations when used in different contexts.
 
-Includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations.
+Gruut includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations.
 [Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v1.0.0) are also available for the [supported languages](#support-languages).
 
 ## Intended Audience

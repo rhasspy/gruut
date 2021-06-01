@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: check clean reformat dist venv test
+.PHONY: check clean reformat dist venv test docs
 
 all: dist
 
@@ -19,3 +19,7 @@ dist:
 
 test:
 	scripts/run-tests.sh
+
+docs:
+	sphinx-apidoc -f -o docs/source gruut
+	sphinx-build -b html docs/source/ docs/build/
