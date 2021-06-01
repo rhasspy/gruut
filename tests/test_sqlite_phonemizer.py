@@ -18,7 +18,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_crud(self):
         """Test database creation, insertion, and selection"""
-        phonemizer = SqlitePhonemizer(database=":memory:")
+        phonemizer = SqlitePhonemizer(database_path=":memory:")
         phonemizer.create_tables()
 
         test_prons = [
@@ -44,7 +44,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_select_prons(self):
         """Test different modes for select_prons"""
-        phonemizer = SqlitePhonemizer(database=":memory:")
+        phonemizer = SqlitePhonemizer(database_path=":memory:")
         phonemizer.create_tables()
 
         test_lexicon = {
@@ -84,7 +84,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_word_index(self):
         """Test selection of pronunciation by index"""
-        phonemizer = SqlitePhonemizer(database=":memory:", use_word_indexes=True)
+        phonemizer = SqlitePhonemizer(database_path=":memory:", use_word_indexes=True)
         phonemizer.create_tables()
 
         test_prons = [
@@ -108,7 +108,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
     def test_insert_select_features(self):
         """Test insertion and selection of pronunciations with preferred features"""
         pos = TokenFeatures.PART_OF_SPEECH
-        phonemizer = SqlitePhonemizer(database=":memory:", token_features=[pos])
+        phonemizer = SqlitePhonemizer(database_path=":memory:", token_features=[pos])
         phonemizer.create_tables()
 
         # Distinguish wound (noun) from wound (verb)
@@ -127,7 +127,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
     def test_phonemize_with_features(self):
         """Test selection of pronunciation using preferred features"""
         pos = TokenFeatures.PART_OF_SPEECH
-        phonemizer = SqlitePhonemizer(database=":memory:", token_features=[pos])
+        phonemizer = SqlitePhonemizer(database_path=":memory:", token_features=[pos])
         phonemizer.create_tables()
 
         # Distinguish wound (noun) from wound (verb)
@@ -156,7 +156,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_missing_word(self):
         """Test phonemize with a word not in the lexicon"""
-        phonemizer = SqlitePhonemizer(database=":memory:")
+        phonemizer = SqlitePhonemizer(database_path=":memory:")
         phonemizer.create_tables()
 
         # No guessing
@@ -186,7 +186,9 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_missing_fail(self):
         """Test phonemize with a word not in the lexicon and failure is requested"""
-        phonemizer = SqlitePhonemizer(database=":memory:", fail_on_unknown_words=True)
+        phonemizer = SqlitePhonemizer(
+            database_path=":memory:", fail_on_unknown_words=True
+        )
         phonemizer.create_tables()
 
         # No guessing
@@ -200,7 +202,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_non_word_chars(self):
         """Test lookup with non-word characters removed"""
-        phonemizer = SqlitePhonemizer(database=":memory:")
+        phonemizer = SqlitePhonemizer(database_path=":memory:")
         phonemizer.create_tables()
 
         # No guessing
@@ -226,7 +228,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
     def test_word_breaks(self):
         """Test addition of break phonemes between words"""
-        phonemizer = SqlitePhonemizer(database=":memory:", word_break="#")
+        phonemizer = SqlitePhonemizer(database_path=":memory:", word_break="#")
         phonemizer.create_tables()
 
         # No guessing
@@ -261,7 +263,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
     def test_all_breaks(self):
         """Test addition of break phonemes between words with major/minor breaks"""
         phonemizer = SqlitePhonemizer(
-            database=":memory:",
+            database_path=":memory:",
             word_break="#",
             major_breaks={".": "||"},
             minor_breaks={",": "|"},
@@ -306,7 +308,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
         """Test grapheme to phoneme model for guessing pronunciations"""
         pos = TokenFeatures.PART_OF_SPEECH
         phonemizer = SqlitePhonemizer(
-            database=":memory:",
+            database_path=":memory:",
             token_features=[pos],
             feature_map={pos: {"NN": "N", "VBD": "V"}},
         )
@@ -346,6 +348,7 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
 
         phonemizer.preload_prons()
         self.assertGreater(len(phonemizer.lexicon), 0)
+
 
 # -----------------------------------------------------------------------------
 

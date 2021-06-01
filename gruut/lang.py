@@ -137,9 +137,9 @@ def get_phonemizer(
 
     if lang in KNOWN_LANGS:
         assert lang_dir is not None
-        if "database" not in kwargs:
+        if "database_path" not in kwargs:
             # Use database in model directory (required)
-            kwargs["database"] = str(lang_dir / "lexicon.db")
+            kwargs["database_path"] = str(lang_dir / "lexicon.db")
 
         if "g2p_model" not in kwargs:
             # Use grapheme to phoneme model in model directory (optional)
@@ -196,7 +196,7 @@ def get_phonemizer(
         return SwedishPhonemizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic sqlite phonemizer.
-    # This will fail if no database argument is provided.
+    # This will fail if no database_path argument is provided.
     return SqlitePhonemizer(**kwargs)
 
 

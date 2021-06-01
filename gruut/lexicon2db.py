@@ -46,7 +46,9 @@ def main():
     if args.pos:
         token_features.append(TokenFeatures.PART_OF_SPEECH)
 
-    phonemizer = SqlitePhonemizer(database=args.database, token_features=token_features)
+    phonemizer = SqlitePhonemizer(
+        database_path=args.database, token_features=token_features
+    )
     phonemizer.create_tables(drop_existing=True)
 
     # word -> pron_order
