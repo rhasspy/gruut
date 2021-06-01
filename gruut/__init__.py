@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 
 from .const import WORD_PHONEMES, Sentence, Token, TokenFeatures, WordPronunciation
-from .lang import get_phonemizer, get_tokenizer, resolve_lang
+from .lang import get_phonemizer, get_tokenizer, resolve_lang, KNOWN_LANGS
 from .phonemize import Phonemizer, SqlitePhonemizer, UnknownWordError
 from .toksen import RegexTokenizer, Tokenizer
 
@@ -215,3 +215,11 @@ def text_to_phonemes(
         )
 
     return return_tuples
+
+
+# -----------------------------------------------------------------------------
+
+
+def is_language_supported(lang: str) -> bool:
+    """True if gruut supports lang"""
+    return resolve_lang(lang) in KNOWN_LANGS

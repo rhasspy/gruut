@@ -119,6 +119,7 @@ class SqlitePhonemizer(Phonemizer):
         lexicon: Pre-existing lexicon used to augment database (modified by phonemizer)
         g2p_model: Path to pre-trained grapheme-to-phoneme model. See also: :py:mod:`gruut.g2p`
         feature_map: Mapping from feature name (e.g. "pos") to a mapping from raw feature values to normalized values (e.g., "NNS": "NN"). Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
+        remove_stress: If `True`, remove stress characters when loading/guessing prounciations
     """
 
     WORD_INDEX_PATTERN = re.compile(r"^(.+)_(\d+)$")
@@ -154,6 +155,7 @@ class SqlitePhonemizer(Phonemizer):
         feature_map: typing.Optional[
             typing.Mapping[str, typing.Mapping[str, str]]
         ] = None,
+        remove_stress: bool = False,
     ):
         # Thread-local variables
         self.thread_local = threading.local()
@@ -211,6 +213,8 @@ class SqlitePhonemizer(Phonemizer):
             self.g2p_tagger = GraphemesToPhonemes(g2p_model)
 
         self.feature_map = feature_map
+
+        self.remove_stress = remove_stress
 
         # Lock used for lexicon modification
         self.lexicon_lock = threading.RLock()
@@ -417,6 +421,10 @@ class SqlitePhonemizer(Phonemizer):
             _LOGGER.debug("Guessing pronunciations for %s", token)
             guessed_phonemes = self.g2p_tagger(token.text)
             if guessed_phonemes:
+                if self.remove_stress:
+                    # Remove stress characters
+                    guessed_phonemes = [IPA.without_stress(p) for p in guessed_phonemes]
+
                 # Single pronunciation for now
                 return [WordPronunciation(guessed_phonemes)]
 
@@ -589,7 +597,13 @@ class SqlitePhonemizer(Phonemizer):
 
         for row in cursor:
             # Assume phonemes are whitespace-separated
-            pron_id, row_word, phonemes = row[0], row[1], row[2].split()
+            pron_id, row_word, phonemes_str = row[0], row[1], row[2]
+
+            if self.remove_stress:
+                # Remove stress characters
+                phonemes_str = IPA.without_stress(phonemes_str)
+
+            phonemes = phonemes_str.split()
 
             preferred_features: typing.Dict[str, typing.Set[str]] = {}
 
@@ -661,7 +675,13 @@ class SqlitePhonemizer(Phonemizer):
             last_pron = None
 
             for row in cursor:
-                pron_id, word, phonemes = row[0], row[1], row[2].split()
+                pron_id, word, phonemes_str = row[0], row[1], row[2]
+
+                if self.remove_stress:
+                    # Remove stress characters
+                    phonemes_str = IPA.without_stress(phonemes_str)
+
+                phonemes = phonemes_str.split()
 
                 if pron_id != last_pron_id:
                     last_pron = WordPronunciation(phonemes)

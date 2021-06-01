@@ -27,7 +27,7 @@ def find_lang_dir(
 
         return lang_module.get_lang_dir()
     except ImportError:
-        _LOGGER.debug("Failed to import module for %s. Searching manually.")
+        _LOGGER.debug("Failed to import module for %s. Searching manually.", lang)
         pass
 
     search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
