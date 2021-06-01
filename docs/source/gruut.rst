@@ -20,14 +20,6 @@ gruut.const module
    :undoc-members:
    :show-inheritance:
 
-gruut.download module
----------------------
-
-.. automodule:: gruut.download
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 gruut.g2p module
 ----------------
 
