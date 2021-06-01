@@ -7,8 +7,6 @@ __pycache__/
 dist/
 /etc/
 
-docs/build/
-
 coverage.xml
 .coverage
 

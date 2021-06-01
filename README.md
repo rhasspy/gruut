@@ -35,8 +35,7 @@ read ɹ ˈi d
 
 Note that "wound" and "read" have different pronunciations when used in different contexts.
 
-Gruut includes a pre-trained U.S. English model with part-of-speech/tense aware pronunciations.
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v1.0.0) are also available for the [supported languages](#support-languages).
+See [the documentation](https://rhasspy.github.io/gruut) for more details.
 
 ## Intended Audience
 
@@ -57,18 +56,16 @@ Some languages also include:
 
 gruut currently supports:
 
-* Czech (`cs-cz`)
-* German (`de-de`)
-* U.S. English (`en-us`)
-   * Supports part-of-speech aware pronunciations
-* U.K. English (`en-gb`)
-* Spanish (`es-es`)
+* Czech (`cs`)
+* German (`de`)
+* English (`en`)
+* Spanish (`es`)
 * Farsi/Persian (`fa`)
-* French (`fr-fr`)
-* Italian (`it-it`)
+* French (`fr`)
+* Italian (`it`)
 * Dutch (`nl`)
-* Russian (`ru-ru`)
-* Swedish (`sv-se`)
+* Russian (`ru`)
+* Swedish (`sv`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
@@ -90,19 +87,11 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 $ pip install gruut
 ```
 
-For Raspberry Pi (ARM), you will first need to [manually install phonetisaurus](https://github.com/rhasspy/phonetisaurus-pypi/releases).
-
-## Language Download
-
-[Pre-trained models](https://github.com/rhasspy/gruut/releases/tag/v0.8.0) for gruut can be downloaded with:
+Additional languages can be added during installation. For example, with French and Italian support:
 
 ```sh
-$ python3 -m gruut <LANGUAGE> download
+$ pip install gruut[fr,it]
 ```
-
-A U.S. English model is included in the distribution.
-
-By default, models are stored in `$HOME/.config/gruut` (technically `$XDG_CONFIG_HOME/.gruut`). This can be overridden by passing a `--lang-dir` argument to all `gruut` commands.
 
 ## Command-Line Usage
 
