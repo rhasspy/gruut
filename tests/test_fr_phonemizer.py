@@ -38,7 +38,6 @@ class FrenchPhonemizerTestCase(unittest.TestCase):
         phonemes = text_to_phonemes("Est-ce-que", lang="fr")
         self.assertGreater(len(phonemes), 0)
 
-
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":

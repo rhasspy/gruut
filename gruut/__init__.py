@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 
 from .const import WORD_PHONEMES, Sentence, Token, TokenFeatures, WordPronunciation
-from .lang import get_phonemizer, get_tokenizer, resolve_lang, KNOWN_LANGS
+from .lang import KNOWN_LANGS, get_phonemizer, get_tokenizer, resolve_lang
 from .phonemize import Phonemizer, SqlitePhonemizer, UnknownWordError
 from .toksen import RegexTokenizer, Tokenizer
 

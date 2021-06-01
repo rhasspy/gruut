@@ -8,7 +8,7 @@ src_dir="$(realpath "${this_dir}/..")"
 dist_dir="${src_dir}/dist"
 mkdir -p "${dist_dir}"
 
-find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut_lang_*' -type d | \
+find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
     while read -r lang_dir;
     do
         if [[ ! -f "${lang_dir}/setup.py" ]]; then
