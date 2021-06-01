@@ -10,6 +10,7 @@ from gruut import (
     TokenFeatures,
     UnknownWordError,
 )
+from gruut.lang import get_phonemizer
 
 
 class SqlitePhonemizerTestCase(unittest.TestCase):
@@ -338,6 +339,13 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
         )
         self.assertEqual(test_prons[0].phonemes, actual_phonemes)
 
+    def test_preload_prons(self):
+        """Test preload_prons method"""
+        phonemizer = get_phonemizer("en-us")
+        self.assertEqual(len(phonemizer.lexicon), 0)
+
+        phonemizer.preload_prons()
+        self.assertGreater(len(phonemizer.lexicon), 0)
 
 # -----------------------------------------------------------------------------
 

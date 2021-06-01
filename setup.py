@@ -47,8 +47,9 @@ for tags in extras.values():
 
 # Invert for setup
 extras_require = defaultdict(list)
-for dep, tag in extras.items():
-    extras_require[tag].append(dep)
+for dep, tags in extras.items():
+    for tag in tags:
+        extras_require[tag].append(dep)
 
 
 # -----------------------------------------------------------------------------

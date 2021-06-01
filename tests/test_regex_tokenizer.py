@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tests for RegexTokenizer class"""
+import pickle
 import re
 import unittest
 
@@ -272,6 +273,15 @@ class RegexTokenizerTestCase(unittest.TestCase):
 
         # Still digits in raw text
         self.assertEqual(["It's", "2021_year"], sentence.raw_words)
+
+    def test_pickle(self):
+        """Test that tokenizer is picklable"""
+        expected_tokenizer = RegexTokenizer()
+        data = pickle.dumps(expected_tokenizer)
+
+        actual_tokenizer = pickle.loads(data)
+
+        self.assertEqual(expected_tokenizer.__dict__, actual_tokenizer.__dict__)
 
 
 # -----------------------------------------------------------------------------

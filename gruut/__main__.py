@@ -24,6 +24,18 @@ _DIR = Path(__file__).parent
 
 def main():
     """Main entry point"""
+    if len(sys.argv) < 2:
+        # Print known languages and exit
+        from .lang import KNOWN_LANGS
+
+        print("Languages:", *sorted(list(KNOWN_LANGS)))
+        sys.exit(0)
+    elif sys.argv[1] == "--version":
+        from . import __version__
+
+        print(__version__)
+        sys.exit(0)
+
     args = get_args()
 
     if args.debug:

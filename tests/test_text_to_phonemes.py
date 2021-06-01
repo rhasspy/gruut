@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Tests for text_to_phonemes API"""
+import concurrent.futures
+import functools
 import unittest
 
 from gruut import text_to_phonemes, Sentence
@@ -31,6 +33,17 @@ class TextToPhonemesTestCase(unittest.TestCase):
         self.assertIsInstance(actual_sentences[0], Sentence)
 
         self.assertEqual(expected_phonemes, actual_sentences[0].phonemes)
+
+    def test_executor(self):
+        """Test use in a ThreadPoolExecutor"""
+        texts = ["All work and no play makes Jack a very dull person."] * 100
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            sentences = list(
+                executor.map(functools.partial(text_to_phonemes, parallel=True), texts)
+            )
+
+        self.assertEqual(len(sentences), len(texts))
 
 
 # -----------------------------------------------------------------------------

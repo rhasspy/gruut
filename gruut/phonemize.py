@@ -134,7 +134,7 @@ class SqlitePhonemizer(Phonemizer):
         Pronunciations are cached in-memory when looked up in the database or guessed.
         default: True
 
-    lexicon: Optional[MutableMapping[str, Sequence[WordPronunciation]]]
+    lexicon: Optional[MutableMapping[str, List[WordPronunciation]]]
         Pre-existing lexicon used to augment database (modified by class).
         default: None
 
@@ -176,7 +176,7 @@ class SqlitePhonemizer(Phonemizer):
         fail_on_unknown_words: bool = False,
         cache_pronunciations: bool = True,
         lexicon: typing.Optional[
-            typing.MutableMapping[str, typing.Sequence[WordPronunciation]]
+            typing.MutableMapping[str, typing.List[WordPronunciation]]
         ] = None,
         g2p_model: typing.Optional[typing.Union[str, Path]] = None,
         feature_map: typing.Optional[
@@ -234,7 +234,7 @@ class SqlitePhonemizer(Phonemizer):
 
         self.cache_pronunciations = cache_pronunciations
         self.lexicon: typing.MutableMapping[
-            str, typing.Sequence[WordPronunciation]
+            str, typing.List[WordPronunciation]
         ] = lexicon if lexicon is not None else {}
 
         self.g2p_tagger: typing.Optional[GraphemesToPhonemes] = None
@@ -244,11 +244,11 @@ class SqlitePhonemizer(Phonemizer):
 
         self.feature_map = feature_map
 
-        # Lock used for database access
-        self.db_lock = threading.Lock()
-
         # Lock used for lexicon access
-        self.lexicon_lock = threading.Lock()
+        self.lexicon_lock = threading.RLock()
+
+        # True if pronunciations have all been loaded from the database
+        self.prons_preloaded = False
 
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
@@ -428,77 +428,75 @@ class SqlitePhonemizer(Phonemizer):
 
     def _connect(self):
         """Ensure connection to database"""
-        with self.db_lock:
-            if self.db_conn is None:
-                assert self.db_path is not None, "No sqlite3 database path"
+        if self.db_conn is None:
+            assert self.db_path is not None, "No sqlite3 database path"
 
-                _LOGGER.debug("Connecting to %s", self.db_path)
-                self.db_conn = sqlite3.connect(self.db_path)
+            _LOGGER.debug("Connecting to %s", self.db_path)
+            self.db_conn = sqlite3.connect(self.db_path)
 
-                if not self.feature_to_id:
-                    # Try to load feature names from the database
-                    try:
-                        _LOGGER.debug("Attempting to load feature names")
-                        cursor = self.db_conn.execute(
-                            "SELECT feature_id, feature FROM feature_names"
-                        )
+            if not self.feature_to_id:
+                # Try to load feature names from the database
+                try:
+                    _LOGGER.debug("Attempting to load feature names")
+                    cursor = self.db_conn.execute(
+                        "SELECT feature_id, feature FROM feature_names"
+                    )
 
-                        for row in cursor:
-                            feature_id, feature_name = row[0], row[1]
-                            self.feature_to_id[feature_name] = feature_id
-                            self.id_to_feature[feature_id] = feature_name
+                    for row in cursor:
+                        feature_id, feature_name = row[0], row[1]
+                        self.feature_to_id[feature_name] = feature_id
+                        self.id_to_feature[feature_id] = feature_name
 
-                    except Exception:
-                        _LOGGER.exception(
-                            "Failed to load feature names. Disabling feature loading/saving."
-                        )
-                        self.load_save_features = False
+                except Exception:
+                    _LOGGER.exception(
+                        "Failed to load feature names. Disabling feature loading/saving."
+                    )
+                    self.load_save_features = False
 
     def create_tables(self, drop_existing: bool = False, commit: bool = True):
         """Create required database tables"""
         self._connect()
 
-        with self.db_lock:
-            assert self.db_conn is not None
+        assert self.db_conn is not None
 
-            if drop_existing:
-                self.db_conn.execute("DROP TABLE IF EXISTS word_phonemes")
-                self.db_conn.execute("DROP TABLE IF EXISTS feature_names")
-                self.db_conn.execute("DROP TABLE IF EXISTS pron_features")
+        if drop_existing:
+            self.db_conn.execute("DROP TABLE IF EXISTS word_phonemes")
+            self.db_conn.execute("DROP TABLE IF EXISTS feature_names")
+            self.db_conn.execute("DROP TABLE IF EXISTS pron_features")
 
-            # Word/phoneme pairs with explicit ordering
+        # Word/phoneme pairs with explicit ordering
+        self.db_conn.execute(
+            "CREATE TABLE word_phonemes "
+            + "(id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT, pron_order INTEGER, phonemes TEXT);"
+        )
+
+        # Names of all features (token_features)
+        self.db_conn.execute(
+            "CREATE TABLE feature_names "
+            + "(id INTEGER PRIMARY KEY AUTOINCREMENT, feature_id INTEGER, feature TEXT);"
+        )
+
+        # Insert known features
+        for feature_id, feature_name in self.id_to_feature.items():
             self.db_conn.execute(
-                "CREATE TABLE word_phonemes "
-                + "(id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT, pron_order INTEGER, phonemes TEXT);"
+                "INSERT INTO feature_names (feature_id, feature) VALUES (?, ?)",
+                (feature_id, feature_name),
             )
 
-            # Names of all features (token_features)
-            self.db_conn.execute(
-                "CREATE TABLE feature_names "
-                + "(id INTEGER PRIMARY KEY AUTOINCREMENT, feature_id INTEGER, feature TEXT);"
-            )
+        # Feature values for each pronunciation
+        self.db_conn.execute(
+            "CREATE TABLE pron_features "
+            + "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + "pron_id INTEGER, "
+            + "feature_id INTEGER, "
+            + "feature_value TEXT, "
+            + "FOREIGN KEY(pron_id) REFERENCES word_phonemes(id), "
+            + "FOREIGN KEY(feature_id) REFERENCES feature_names(feature_id) "
+            + ");"
+        )
 
-            # Insert known features
-            for feature_id, feature_name in self.id_to_feature.items():
-                self.db_conn.execute(
-                    "INSERT INTO feature_names (feature_id, feature) VALUES (?, ?)",
-                    (feature_id, feature_name),
-                )
-
-            # Feature values for each pronunciation
-            self.db_conn.execute(
-                "CREATE TABLE pron_features "
-                + "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + "pron_id INTEGER, "
-                + "feature_id INTEGER, "
-                + "feature_value TEXT, "
-                + "FOREIGN KEY(pron_id) REFERENCES word_phonemes(id), "
-                + "FOREIGN KEY(feature_id) REFERENCES feature_names(feature_id) "
-                + ");"
-            )
-
-            if commit:
-                self.db_conn.commit()
+        if commit:
+            self.db_conn.commit()
 
     def insert_prons(
         self,
@@ -509,39 +507,38 @@ class SqlitePhonemizer(Phonemizer):
         """Insert pronunciations for a word into the database"""
         self._connect()
 
-        with self.db_lock:
-            assert self.db_conn is not None
+        assert self.db_conn is not None
 
-            cursor = self.db_conn.cursor()
+        cursor = self.db_conn.cursor()
 
-            for pron_idx, word_pron in enumerate(word_prons):
-                phonemes = " ".join(word_pron.phonemes)
+        for pron_idx, word_pron in enumerate(word_prons):
+            phonemes = " ".join(word_pron.phonemes)
 
-                cursor.execute(
-                    "INSERT INTO word_phonemes (word, pron_order, phonemes) VALUES (?, ?, ?)",
-                    (word, pron_idx, phonemes),
-                )
+            cursor.execute(
+                "INSERT INTO word_phonemes (word, pron_order, phonemes) VALUES (?, ?, ?)",
+                (word, pron_idx, phonemes),
+            )
 
-                if self.load_save_features:
-                    # Insert preferred features
-                    pron_id = cursor.lastrowid
-                    for (
-                        feature_name,
-                        feature_values,
-                    ) in word_pron.preferred_features.items():
-                        feature_id = self.feature_to_id.get(feature_name)
-                        assert (
-                            feature_id is not None
-                        ), f"Unknown feature {feature_name} in {self.feature_to_id.keys()}"
+            if self.load_save_features:
+                # Insert preferred features
+                pron_id = cursor.lastrowid
+                for (
+                    feature_name,
+                    feature_values,
+                ) in word_pron.preferred_features.items():
+                    feature_id = self.feature_to_id.get(feature_name)
+                    assert (
+                        feature_id is not None
+                    ), f"Unknown feature {feature_name} in {self.feature_to_id.keys()}"
 
-                        for feature_value in feature_values:
-                            cursor.execute(
-                                "INSERT INTO pron_features (pron_id, feature_id, feature_value) VALUES (?, ?, ?)",
-                                (pron_id, feature_id, feature_value),
-                            )
+                    for feature_value in feature_values:
+                        cursor.execute(
+                            "INSERT INTO pron_features (pron_id, feature_id, feature_value) VALUES (?, ?, ?)",
+                            (pron_id, feature_id, feature_value),
+                        )
 
-            if commit:
-                self.db_conn.commit()
+        if commit:
+            self.db_conn.commit()
 
     def select_prons(
         self,
@@ -557,71 +554,129 @@ class SqlitePhonemizer(Phonemizer):
         """
         self._connect()
 
-        with self.db_lock:
-            assert self.db_conn is not None
+        assert self.db_conn is not None
 
-            if word is None:
-                # All words
-                cursor = self.db_conn.execute(
-                    "SELECT id, word, phonemes FROM word_phonemes ORDER by word, pron_order"
+        if word is None:
+            # All words
+            cursor = self.db_conn.execute(
+                "SELECT id, word, phonemes FROM word_phonemes ORDER by word, pron_order"
+            )
+        elif isinstance(word, str):
+            # One word
+            cursor = self.db_conn.execute(
+                "SELECT id, word, phonemes FROM word_phonemes WHERE word = ? ORDER by pron_order",
+                (word,),
+            )
+        else:
+            # Many words
+            question_marks = ",".join("?" * len(word))
+            cursor = self.db_conn.execute(
+                f"SELECT id, word, phonemes FROM word_phonemes WHERE word IN ({question_marks}) ORDER by pron_order",
+                tuple(word),
+            )
+
+        for row in cursor:
+            # Assume phonemes are whitespace-separated
+            pron_id, row_word, phonemes = row[0], row[1], row[2].split()
+
+            preferred_features: typing.Dict[str, typing.Set[str]] = {}
+
+            if include_features and self.load_save_features and self.id_to_feature:
+                # Load preferred features for pronunciation
+                feature_cursor = self.db_conn.execute(
+                    "SELECT feature_id, feature_value FROM pron_features WHERE pron_id = ?",
+                    (pron_id,),
                 )
-            elif isinstance(word, str):
-                # One word
-                cursor = self.db_conn.execute(
-                    "SELECT id, word, phonemes FROM word_phonemes WHERE word = ? ORDER by pron_order",
-                    (word,),
-                )
-            else:
-                # Many words
-                question_marks = ",".join("?" * len(word))
-                cursor = self.db_conn.execute(
-                    f"SELECT id, word, phonemes FROM word_phonemes WHERE word IN ({question_marks}) ORDER by pron_order",
-                    tuple(word),
-                )
 
-            for row in cursor:
-                # Assume phonemes are whitespace-separated
-                pron_id, row_word, phonemes = row[0], row[1], row[2].split()
+                # Accumulate features
+                for feature_row in feature_cursor:
+                    feature_id, feature_value = feature_row[0], feature_row[1]
+                    feature_name = self.id_to_feature[feature_id]
 
-                preferred_features: typing.Dict[str, typing.Set[str]] = {}
+                    feature_values = preferred_features.get(feature_name)
+                    if feature_values is None:
+                        feature_values = set()
+                        preferred_features[feature_name] = feature_values
 
-                if include_features and self.load_save_features and self.id_to_feature:
-                    # Load preferred features for pronunciation
-                    feature_cursor = self.db_conn.execute(
-                        "SELECT feature_id, feature_value FROM pron_features WHERE pron_id = ?",
-                        (pron_id,),
-                    )
+                    feature_values.add(feature_value)
 
-                    # Accumulate features
-                    for feature_row in feature_cursor:
-                        feature_id, feature_value = feature_row[0], feature_row[1]
-                        feature_name = self.id_to_feature[feature_id]
-
-                        feature_values = preferred_features.get(feature_name)
-                        if feature_values is None:
-                            feature_values = set()
-                            preferred_features[feature_name] = feature_values
-
-                        feature_values.add(feature_value)
-
-                yield (
-                    row_word,
-                    WordPronunciation(
-                        phonemes=phonemes, preferred_features=preferred_features
-                    ),
-                )
+            yield (
+                row_word,
+                WordPronunciation(
+                    phonemes=phonemes, preferred_features=preferred_features
+                ),
+            )
 
     def delete_prons(self, word: str, commit: bool = True):
         """Delete all pronuncations of a word from the database"""
         self._connect()
 
-        with self.db_lock:
-            assert self.db_conn is not None
+        assert self.db_conn is not None
 
-            self.db_conn.execute("DELETE FROM word_phonemes WHERE word = ?", (word,))
+        self.db_conn.execute("DELETE FROM word_phonemes WHERE word = ?", (word,))
 
-            if commit:
-                self.db_conn.commit()
+        if commit:
+            self.db_conn.commit()
+
+    def preload_prons(
+        self, include_features: bool = True, skip_if_already_loaded: bool = True
+    ):
+        """Pre-load all pronunciations from the database"""
+        if self.prons_preloaded and skip_if_already_loaded:
+            return
+
+        self._connect()
+        assert self.db_conn is not None
+
+        if include_features and self.load_save_features and self.id_to_feature:
+            # With features
+            sql = (
+                "SELECT word_phonemes.id, word_phonemes.word, word_phonemes.phonemes, pron_features.feature_id, pron_features.feature_value "
+                + "FROM word_phonemes LEFT JOIN pron_features ON word_phonemes.id = pron_features.pron_id "
+                + "ORDER BY word_phonemes.id, word_phonemes.word, word_phonemes.pron_order"
+            )
+        else:
+            # Without features
+            sql = (
+                "SELECT id, word, phonemes FROM word_phonemes ORDER BY word, pron_order"
+            )
+
+        cursor = self.db_conn.execute(sql)
+
+        with self.lexicon_lock:
+            last_pron_id = None
+            last_pron = None
+
+            for row in cursor:
+                pron_id, word, phonemes = row[0], row[1], row[2].split()
+
+                if pron_id != last_pron_id:
+                    last_pron = WordPronunciation(phonemes)
+
+                    word_prons = self.lexicon.get(word)
+                    if word_prons is None:
+                        word_prons = []
+                        self.lexicon[word] = word_prons
+
+                    word_prons.append(last_pron)
+                    last_pron_id = pron_id
+
+                if len(row) > 3:
+                    # Add features
+                    assert last_pron is not None
+                    last_pron.preferred_features = last_pron.preferred_features or {}
+
+                    feature_id, feature_value = row[3], row[4]
+                    feature_name = self.id_to_feature[feature_id]
+
+                    feature_values = last_pron.preferred_features.get(feature_name)
+                    if feature_values is None:
+                        feature_values = set()
+                        last_pron.preferred_features[feature_name] = feature_values
+
+                    feature_values.add(feature_value)
+
+        self.prons_preloaded = True
 
 
 # -----------------------------------------------------------------------------
