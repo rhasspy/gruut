@@ -712,8 +712,15 @@ class FrenchPhonemizer(SqlitePhonemizer):
             yield from token_phonemes
 
         for (token1, token1_pron), (token2, token2_pron) in pairwise(
-            zip(tokens, token_phonemes)
+            zip(
+                itertools.chain(tokens, [None]), itertools.chain(token_phonemes, [None])
+            )
         ):
+            if token2 is None:
+                # Last token
+                yield token1_pron
+                continue
+
             liason = False
 
             # Conditions to meet for liason check:

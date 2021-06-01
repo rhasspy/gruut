@@ -2,7 +2,7 @@
 """Tests for FrenchPhonemizer class"""
 import unittest
 
-from gruut import Token
+from gruut import text_to_phonemes, Token
 from gruut.lang import get_phonemizer, get_tokenizer
 
 
@@ -32,6 +32,11 @@ class FrenchPhonemizerTestCase(unittest.TestCase):
         for word, word_phonemes in zip(sentence.clean_words, phonemes_no_liason):
             if word == liason_word:
                 self.assertEqual(phonemes, ["p", "ə", "t", "i", "t", "z"])
+
+    def test_last_token(self):
+        """Ensure liason does not leave last token"""
+        phonemes = text_to_phonemes("Est-ce-que", lang="fr")
+        self.assertGreater(len(phonemes), 0)
 
 
 # -----------------------------------------------------------------------------
