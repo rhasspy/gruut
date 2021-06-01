@@ -3,4 +3,3 @@ gruut-ipa~=0.6.0
 jsonlines~=1.2.0
 num2words==0.5.10
 python-crfsuite~=0.9.7
-tqdm~=4.48.0
