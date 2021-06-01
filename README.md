@@ -35,7 +35,7 @@ read ɹ ˈi d
 
 Note that "wound" and "read" have different pronunciations when used in different contexts.
 
-See [the documentation](https://rhasspy.github.io/gruut) for more details.
+See [the documentation](https://rhasspy.github.io/gruut/) for more details.
 
 ## Intended Audience
 

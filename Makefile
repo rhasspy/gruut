@@ -22,4 +22,4 @@ test:
 
 docs:
 	sphinx-apidoc -f -o docs/source gruut
-	sphinx-build -b html docs/source/ docs/build/
+	sphinx-build -b html docs/source/ docs/
