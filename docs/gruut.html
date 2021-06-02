@@ -276,7 +276,9 @@ Multiple graphemes are separated by “|”:</p>
 </section>
 <section id="module-gruut.lang">
 <span id="gruut-lang-module"></span><h2>gruut.lang module<a class="headerlink" href="#module-gruut.lang" title="Permalink to this headline">¶</a></h2>
-<p>Language-specific tokenizers and phonemizers</p>
+<p>Language-specific tokenizers and phonemizers for gruut.</p>
+<p>The <a class="reference internal" href="#gruut.lang.get_tokenizer" title="gruut.lang.get_tokenizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_tokenizer()</span></code></a> and <a class="reference internal" href="#gruut.lang.get_phonemizer" title="gruut.lang.get_phonemizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_phonemizer()</span></code></a> methods will get the appropriate tokenizer/phonemizer for a known language.
+See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.lang.resolve_lang"><code class="xref py py-meth docutils literal notranslate"><span class="pre">resolve_lang()</span></code></a> to understand how language aliases are resolved.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.lang.CzechPhonemizer">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">CzechPhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.CzechPhonemizer" title="Permalink to this definition">¶</a></dt>
@@ -468,10 +470,22 @@ Multiple graphemes are separated by “|”:</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.lang.get_phonemizer">
 <span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">get_phonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_g2p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fr_no_liason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.get_phonemizer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get language-specific phonemizer</p>
+<dd><p>Get language-specific phonemizer.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="#gruut.phonemize.Phonemizer" title="gruut.phonemize.Phonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Phonemizer</span></code></a></p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Language name or alias</p></li>
+<li><p><strong>lang_dir</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]) – Optional path to language files directory (see also <a class="reference internal" href="#gruut.utils.find_lang_dir" title="gruut.utils.find_lang_dir"><code class="xref py py-meth docutils literal notranslate"><span class="pre">find_lang_dir()</span></code></a>)</p></li>
+<li><p><strong>no_g2p</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, disable grapheme to phoneme prediction for unknown words</p></li>
+<li><p><strong>fr_no_liason</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, disable addition of liasons in <a class="reference internal" href="#gruut.lang.FrenchPhonemizer" title="gruut.lang.FrenchPhonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FrenchPhonemizer</span></code></a></p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments passed to phonemizer’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#gruut.phonemize.Phonemizer" title="gruut.phonemize.Phonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Phonemizer</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Language-specific phonemizer</p>
 </dd>
 </dl>
 </dd></dl>
@@ -479,10 +493,21 @@ Multiple graphemes are separated by “|”:</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.lang.get_tokenizer">
 <span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">get_tokenizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.get_tokenizer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get language-specific tokenizer</p>
+<dd><p>Get language-specific tokenizer.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="#gruut.toksen.Tokenizer" title="gruut.toksen.Tokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code></a></p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Language name or alias</p></li>
+<li><p><strong>lang_dir</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]) – Optional path to language files directory (see also <a class="reference internal" href="#gruut.utils.find_lang_dir" title="gruut.utils.find_lang_dir"><code class="xref py py-meth docutils literal notranslate"><span class="pre">find_lang_dir()</span></code></a>)</p></li>
+<li><p><strong>no_pos</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, part of speech tagging is disabled for supported tokenizers</p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments passed to tokenizer’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#gruut.toksen.Tokenizer" title="gruut.toksen.Tokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Language-specific tokenizer</p>
 </dd>
 </dl>
 </dd></dl>
@@ -490,10 +515,16 @@ Multiple graphemes are separated by “|”:</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.lang.resolve_lang">
 <span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">resolve_lang</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.resolve_lang" title="Permalink to this definition">¶</a></dt>
-<dd><p>Try to resolve language using aliases</p>
+<dd><p>Try to resolve language using aliases.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Language name or alias</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Resolved language name</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1327,10 +1358,31 @@ First group must be number text (“3.14”).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.utils.find_lang_dir">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">find_lang_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_dirs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.find_lang_dir" title="Permalink to this definition">¶</a></dt>
-<dd><p>Search for a language’s model directory by name</p>
+<dd><p>Search for a language’s model directory by name.</p>
+<p>Tries to find a directory by:</p>
+<ol class="arabic simple">
+<li><p>Importing a module name <code class="docutils literal notranslate"><span class="pre">gruut_lang_&lt;short_lang&gt;</span></code> where short_lang is “en” for “en-us”, etc.</p></li>
+<li><p>Looking for <code class="docutils literal notranslate"><span class="pre">&lt;lang&gt;/lexicon.db</span></code> in each directory in order:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">search_dirs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/gruut</span></code></p></li>
+<li><p>A “data” directory next to the gruut module</p></li>
+<li><p>A “data” directory inside gruut module</p></li>
+</ul>
+</li>
+</ol>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>]</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Full language name (e.g., en-us)</p></li>
+<li><p><strong>search_dirs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>]]]) – Optional iterable of directory paths to search first</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>]</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Path to the language model directory or None if it can’t be found</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1338,10 +1390,13 @@ First group must be number text (“3.14”).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.utils.get_currency_names">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">get_currency_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">locale_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.get_currency_names" title="Permalink to this definition">¶</a></dt>
-<dd><p>Try to get currency names and symbols for a Babel locale</p>
+<dd><p>Try to get currency names and symbols for a Babel locale.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary whose keys are currency symbols (like “$”) and whose values are currency names (like “USD”)</p>
 </dd>
 </dl>
 </dd></dl>

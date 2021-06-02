@@ -17,7 +17,26 @@ def find_lang_dir(
     lang: str,
     search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
 ) -> typing.Optional[Path]:
-    """Search for a language's model directory by name"""
+    """
+    Search for a language's model directory by name.
+
+    Tries to find a directory by:
+
+    #. Importing a module name ``gruut_lang_<short_lang>`` where short_lang is "en" for "en-us", etc.
+    #. Looking for ``<lang>/lexicon.db`` in each directory in order:
+
+       * ``search_dirs``
+       * ``$XDG_CONFIG_HOME/gruut``
+       * A "data" directory next to the gruut module
+       * A "data" directory inside gruut module
+
+    Args:
+        lang: Full language name (e.g., en-us)
+        search_dirs: Optional iterable of directory paths to search first
+
+    Returns:
+        Path to the language model directory or None if it can't be found
+    """
     try:
         base_lang = lang.split("-")[0]
         lang_module_name = f"gruut_lang_{base_lang}"
@@ -69,7 +88,12 @@ def maybe_compile_regex(str_or_pattern: typing.Union[str, re.Pattern]) -> re.Pat
 
 
 def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
-    """Try to get currency names and symbols for a Babel locale"""
+    """
+    Try to get currency names and symbols for a Babel locale.
+
+    Returns:
+        Dictionary whose keys are currency symbols (like "$") and whose values are currency names (like "USD")
+    """
     currency_names = {}
 
     try:

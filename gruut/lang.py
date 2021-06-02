@@ -1,4 +1,9 @@
-"""Language-specific tokenizers and phonemizers"""
+"""
+Language-specific tokenizers and phonemizers for gruut.
+
+The :py:meth:`~gruut.lang.get_tokenizer` and :py:meth:`~gruut.lang.get_phonemizer` methods will get the appropriate tokenizer/phonemizer for a known language.
+See :py:meth:`~gruut.lang.resolve_lang` to understand how language aliases are resolved.
+"""
 import itertools
 import logging
 import typing
@@ -34,7 +39,15 @@ KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, LANG_ALIASES.values()))
 
 
 def resolve_lang(lang: str) -> str:
-    """Try to resolve language using aliases"""
+    """
+    Try to resolve language using aliases.
+
+    Args:
+        lang: Language name or alias
+
+    Returns:
+        Resolved language name
+    """
     lang = LANG_ALIASES.get(lang, lang)
 
     if lang not in KNOWN_LANGS:
@@ -52,7 +65,18 @@ def get_tokenizer(
     no_pos: bool = False,
     **kwargs,
 ) -> Tokenizer:
-    """Get language-specific tokenizer"""
+    """
+    Get language-specific tokenizer.
+
+    Args:
+        lang: Language name or alias
+        lang_dir: Optional path to language files directory (see also :py:meth:`~gruut.utils.find_lang_dir`)
+        no_pos: If ``True``, part of speech tagging is disabled for supported tokenizers
+        kwargs: Keyword arguments passed to tokenizer's ``__init__`` method
+
+    Returns:
+        Language-specific tokenizer
+    """
     lang = resolve_lang(lang)
 
     if (lang_dir is None) and (lang in KNOWN_LANGS):
@@ -126,7 +150,19 @@ def get_phonemizer(
     fr_no_liason: bool = False,
     **kwargs,
 ) -> Phonemizer:
-    """Get language-specific phonemizer"""
+    """
+    Get language-specific phonemizer.
+
+    Args:
+        lang: Language name or alias
+        lang_dir: Optional path to language files directory (see also :py:meth:`~gruut.utils.find_lang_dir`)
+        no_g2p: If ``True``, disable grapheme to phoneme prediction for unknown words
+        fr_no_liason: If ``True``, disable addition of liasons in :py:class:`~gruut.lang.FrenchPhonemizer`
+        kwargs: Keyword arguments passed to phonemizer's ``__init__`` method
+
+    Returns:
+        Language-specific phonemizer
+    """
     lang = resolve_lang(lang)
 
     if (lang_dir is None) and (lang in KNOWN_LANGS):

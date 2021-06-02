@@ -49,20 +49,28 @@ Additional languages can be added during installation. For example, with French 
 $ pip install gruut[fr,it]
 ```
 
+You may also [manually download language files](https://github.com/rhasspy/gruut/releases/tag/v1.0.0) and use the `--lang-dir` option:
+
+```sh
+$ gruut <lang> <command> --lang-dir /path/to/language-files/
+```
+
+Extracting the files to `$HOME/.config/gruut/` will allow gruut to automatically make use of them. gruut will look for language files in the directory `$HOME/.config/gruut/<lang>/` if the corresponding Python package is not installed. Note that `<lang>` here is the **full** language name, e.g. `de-de` instead of just `de`. 
+
 ## Supported Languages
 
 gruut currently supports:
 
-* Czech (`cs`)
-* German (`de`)
-* English (`en`)
-* Spanish (`es`)
+* Czech (`cs` or `cs-cz`)
+* German (`de` or `de-de`)
+* English (`en` or `en-us`)
+* Spanish (`es` or `es-es`)
 * Farsi/Persian (`fa`)
-* French (`fr`)
-* Italian (`it`)
+* French (`fr` or `fr-fr`)
+* Italian (`it` or `it-it`)
 * Dutch (`nl`)
-* Russian (`ru`)
-* Swedish (`sv`)
+* Russian (`ru` or `ru-ru`)
+* Swedish (`sv` or `sv-se`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
