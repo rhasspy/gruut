@@ -172,8 +172,31 @@ When choosing among several pronunciations for a <a class="reference internal" h
 <section id="module-gruut.g2p">
 <span id="gruut-g2p-module"></span><h2>gruut.g2p module<a class="headerlink" href="#module-gruut.g2p" title="Permalink to this headline">¶</a></h2>
 <p>Grapheme to phoneme prediction using python CRF suite.</p>
-<p>For training, requires pre-aligned corpus in Phonetisaurus format.
+<p>Training requires pre-aligned corpus in Phonetisaurus format.
 <a class="reference external" href="https://github.com/AdolfVonKleist/Phonetisaurus">https://github.com/AdolfVonKleist/Phonetisaurus</a></p>
+<p>The format of this corpus is:</p>
+<blockquote>
+<div><p>t}t e}ˈɛ s}s t}t</p>
+</div></blockquote>
+<p>Each line contains a single word, with graphemes and phonemes separated by “}”.
+Multiple graphemes are separated by “|”:</p>
+<blockquote>
+<div><p>s|h}ʃ o|w}ˈoʊ</p>
+</div></blockquote>
+<p>The empty phoneme is “_”:</p>
+<blockquote>
+<div><p>w}w h}_ y}ˈaɪ</p>
+</div></blockquote>
+<p>Example:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3 -m gruut.g2p train --corpus g2p.corpus --output model.crf
+</pre></div>
+</div>
+<p>Pre-trained models have the following settings:</p>
+<ul class="simple">
+<li><p>c1 = 0</p></li>
+<li><p>c2 = 1</p></li>
+<li><p>max-iterations = 100</p></li>
+</ul>
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.g2p.GraphemesToPhonemes">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.g2p.</span></span><span class="sig-name descname"><span class="pre">GraphemesToPhonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crf_tagger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps_phoneme</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'_'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phoneme_join</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.g2p.GraphemesToPhonemes" title="Permalink to this definition">¶</a></dt>
@@ -845,6 +868,23 @@ When choosing among several pronunciations for a <a class="reference internal" h
 <span id="gruut-pos-module"></span><h2>gruut.pos module<a class="headerlink" href="#module-gruut.pos" title="Permalink to this headline">¶</a></h2>
 <p>Part of speech tagging using python CRF suite.</p>
 <p>Credit to: <a class="reference external" href="https://towardsdatascience.com/pos-tagging-using-crfs-ea430c5fb78b">https://towardsdatascience.com/pos-tagging-using-crfs-ea430c5fb78b</a></p>
+<p>Training requires conllu package:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install conllu
+</pre></div>
+</div>
+<p>Training data comes from Univeral Dependencies (<a class="reference external" href="https://universaldependencies.org/">https://universaldependencies.org/</a>)</p>
+<p>Example:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3 -m gruut.pos train --conllu train.conllu --output model.crf --label xpos
+</pre></div>
+</div>
+<p>Pre-trained models have the following settings:</p>
+<ul class="simple">
+<li><p>c1 = 0.25</p></li>
+<li><p>c2 = 0.3</p></li>
+<li><p>max-iterations = 100</p></li>
+</ul>
+<p>English model is trained with “xpos” label.
+French model is trained with “upos” label.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.pos.PartOfSpeechTagger">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.pos.</span></span><span class="sig-name descname"><span class="pre">PartOfSpeechTagger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crf_tagger</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.pos.PartOfSpeechTagger" title="Permalink to this definition">¶</a></dt>

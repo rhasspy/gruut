@@ -3,6 +3,29 @@
 Part of speech tagging using python CRF suite.
 
 Credit to: https://towardsdatascience.com/pos-tagging-using-crfs-ea430c5fb78b
+
+Training requires conllu package:
+
+.. code-block:: sh
+
+    pip install conllu
+
+Training data comes from Univeral Dependencies (https://universaldependencies.org/)
+
+Example:
+
+.. code-block:: sh
+
+    python3 -m gruut.pos train --conllu train.conllu --output model.crf --label xpos
+
+Pre-trained models have the following settings:
+
+* c1 = 0.25
+* c2 = 0.3
+* max-iterations = 100
+
+English model is trained with "xpos" label.
+French model is trained with "upos" label.
 """
 import argparse
 import base64

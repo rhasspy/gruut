@@ -66,6 +66,7 @@ read ɹ ˈi d
 . ‖
 </pre></div>
 </div>
+<p>Note that “wound” and “read” have different pronunciations in different contexts (see <a class="reference internal" href="#features"><span class="std std-ref">Features</span></a> for more details).</p>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <p>To install gruut with U.S. English support only:</p>
@@ -95,7 +96,7 @@ read ɹ ˈi d
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
 <p>gruut performs two main functions: tokenization and phonemization.
-The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title="gruut.text_to_phonemes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.text_to_phonemes()</span></code></a> method performs both steps for you. See the <a class="reference internal" href="gruut.html#gruut.TextToPhonemesReturn" title="gruut.TextToPhonemesReturn"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextToPhonemesReturn</span></code></a> enum for ways to adjust the <code class="docutils literal notranslate"><span class="pre">return_format</span></code>.</p>
+The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title="gruut.text_to_phonemes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.text_to_phonemes()</span></code></a> method does everything for you. See the <a class="reference internal" href="gruut.html#gruut.TextToPhonemesReturn" title="gruut.TextToPhonemesReturn"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextToPhonemesReturn</span></code></a> enum for ways to adjust the <code class="docutils literal notranslate"><span class="pre">return_format</span></code>.</p>
 <p>If you need more control, see the language-specific classes in <a class="reference internal" href="gruut.html#module-gruut.lang" title="gruut.lang"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.lang</span></code></a> as well as <a class="reference internal" href="gruut.html#gruut.toksen.RegexTokenizer" title="gruut.toksen.RegexTokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">RegexTokenizer</span></code></a> and <code class="xref py py-class docutils literal notranslate"><span class="pre">SqlitePhonemizer</span></code>.</p>
 <p>Tokenziation operates on text and does the following:</p>
 <ul class="simple">
@@ -121,11 +122,23 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <section id="features">
 <span id="id1"></span><h3>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h3>
 <p>gruut tokens can contain arbitrary features. For now, only part of speech tags are implemented for English and French.</p>
-<p>When determining the “best” pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain “preferred” parts of speech. Words like “wind” may be pronounced different depending on their use as a verb or noun. If a token “wind” is predicted to be a noun during tokenization, then the pronunciation “w ˈɪ n d” is selected instead of “w ˈaɪ n d”.</p>
-<p>French uses part of speech tags differently. During the post-processing phase of phonemization, these features are used instead to add liasons between words. For example, in the sentence “J’ai des petites oreilles.”, “petites” will be pronounced “p ə t i t z” instead of “p ə t i t”.</p>
+<p>When determining the “best” pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain “preferred” parts of speech. Words like “wind” may be pronounced differently depending on their use as a verb or noun. If a token “wind” is predicted to be a noun during tokenization, then the pronunciation “w ˈɪ n d” is selected instead of “w ˈaɪ n d”.</p>
+<p>French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence “J’ai des petites oreilles.”, “petites” will be pronounced “p ə t i t z” instead of “p ə t i t”.</p>
+</section>
+</section>
+<section id="g2p-models">
+<h2>G2P Models<a class="headerlink" href="#g2p-models" title="Permalink to this headline">¶</a></h2>
+<p>Pre-trained g2p (grapheme to phoneme) models are available for all supported languages.
+These models guess pronunciations for unknown words, and are trained on the included lexicon databases using <a class="reference external" href="https://github.com/scrapinghub/python-crfsuite">python-crfsuite</a>.</p>
+<p>See <a class="reference internal" href="gruut.html#module-gruut.g2p" title="gruut.g2p"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.g2p</span></code></a> for more details.</p>
+</section>
+<section id="pos-taggers">
+<h2>POS Taggers<a class="headerlink" href="#pos-taggers" title="Permalink to this headline">¶</a></h2>
+<p>Pre-traned pos (part of speech) taggers are available for English and French.
+These models predict the part of speech for each word during tokenization, and are trained from the <a class="reference external" href="https://universaldependencies.org/">Universal Dependencies</a> using <a class="reference external" href="https://github.com/scrapinghub/python-crfsuite">python-crfsuite</a>.</p>
+<p>See <a class="reference internal" href="gruut.html#module-gruut.pos" title="gruut.pos"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.pos</span></code></a> for more details.</p>
 <div class="toctree-wrapper compound">
 </div>
-</section>
 </section>
 </section>
 <section id="indices-and-tables">
@@ -155,6 +168,8 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <li><a class="reference internal" href="#features">Features</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#g2p-models">G2P Models</a></li>
+<li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>

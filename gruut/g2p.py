@@ -2,8 +2,33 @@
 """
 Grapheme to phoneme prediction using python CRF suite.
 
-For training, requires pre-aligned corpus in Phonetisaurus format.
+Training requires pre-aligned corpus in Phonetisaurus format.
 https://github.com/AdolfVonKleist/Phonetisaurus
+
+The format of this corpus is:
+
+    t}t e}ˈɛ s}s t}t
+
+Each line contains a single word, with graphemes and phonemes separated by "}".
+Multiple graphemes are separated by "|":
+
+    s|h}ʃ o|w}ˈoʊ
+
+The empty phoneme is "_":
+
+    w}w h}_ y}ˈaɪ
+
+Example:
+
+.. code-block:: sh
+
+    python3 -m gruut.g2p train --corpus g2p.corpus --output model.crf
+
+Pre-trained models have the following settings:
+
+* c1 = 0
+* c2 = 1
+* max-iterations = 100
 """
 import argparse
 import base64

@@ -36,6 +36,8 @@ Output::
     . ‖
 
 
+Note that "wound" and "read" have different pronunciations in different contexts (see :ref:`features` for more details).
+
 Installation
 ------------
 
@@ -68,7 +70,7 @@ Usage
 -----
 
 gruut performs two main functions: tokenization and phonemization.
-The :py:meth:`gruut.text_to_phonemes` method performs both steps for you. See the :py:class:`~gruut.TextToPhonemesReturn` enum for ways to adjust the ``return_format``.
+The :py:meth:`gruut.text_to_phonemes` method does everything for you. See the :py:class:`~gruut.TextToPhonemesReturn` enum for ways to adjust the ``return_format``.
 
 If you need more control, see the language-specific classes in :py:mod:`gruut.lang` as well as :py:class:`~gruut.toksen.RegexTokenizer` and :py:class:`~gruut.lang.SqlitePhonemizer`.
 
@@ -101,14 +103,30 @@ Features
 
 gruut tokens can contain arbitrary features. For now, only part of speech tags are implemented for English and French.
 
-When determining the "best" pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain "preferred" parts of speech. Words like "wind" may be pronounced different depending on their use as a verb or noun. If a token "wind" is predicted to be a noun during tokenization, then the pronunciation "w ˈɪ n d" is selected instead of "w ˈaɪ n d".
+When determining the "best" pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain "preferred" parts of speech. Words like "wind" may be pronounced differently depending on their use as a verb or noun. If a token "wind" is predicted to be a noun during tokenization, then the pronunciation "w ˈɪ n d" is selected instead of "w ˈaɪ n d".
 
-French uses part of speech tags differently. During the post-processing phase of phonemization, these features are used instead to add liasons between words. For example, in the sentence "J’ai des petites oreilles.", "petites" will be pronounced "p ə t i t z" instead of "p ə t i t".
+French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence "J’ai des petites oreilles.", "petites" will be pronounced "p ə t i t z" instead of "p ə t i t".
+
+
+G2P Models
+--------------------------
+
+Pre-trained g2p (grapheme to phoneme) models are available for all supported languages.
+These models guess pronunciations for unknown words, and are trained on the included lexicon databases using `python-crfsuite <https://github.com/scrapinghub/python-crfsuite>`_.
+
+See :py:mod:`gruut.g2p` for more details.
+
+POS Taggers
+----------------------
+
+Pre-traned pos (part of speech) taggers are available for English and French.
+These models predict the part of speech for each word during tokenization, and are trained from the `Universal Dependencies <https://universaldependencies.org/>`_ using `python-crfsuite <https://github.com/scrapinghub/python-crfsuite>`_.
+
+See :py:mod:`gruut.pos` for more details.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
 
 
 Indices and tables
