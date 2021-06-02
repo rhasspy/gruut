@@ -37,20 +37,17 @@ Note that "wound" and "read" have different pronunciations when used in differen
 
 See [the documentation](https://rhasspy.github.io/gruut/) for more details.
 
-## Intended Audience
+## Installation
 
-gruut is useful for transforming raw text into phonetic pronunciations, similar to [phonemizer](https://github.com/bootphon/phonemizer). Unlike phonemizer, gruut looks up words in a pre-built lexicon (pronunciation dictionary) or guesses word pronunciations with a pre-trained grapheme-to-phoneme model. Phonemes for each language come from a [carefully chosen inventory](https://en.wikipedia.org/wiki/Template:Language_phonologies).
+```sh
+$ pip install gruut
+```
 
-For each supported language, gruut includes a:
+Additional languages can be added during installation. For example, with French and Italian support:
 
-* A word pronunciation lexicon built from open source data
-    * See [pron_dict](https://github.com/Kyubyong/pron_dictionaries)
-* A pre-trained grapheme-to-phoneme model for guessing word pronunciations
-
-Some languages also include:
-
-* A pre-trained part of speech tagger built from open source data:
-    * See [universal dependencies](https://universaldependencies.org/)
+```sh
+$ pip install gruut[fr,it]
+```
 
 ## Supported Languages
 
@@ -81,17 +78,6 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 * [pycrfsuite](https://github.com/scrapinghub/python-crfsuite)
     * Part of speech tagging and grapheme to phoneme models
 
-## Installation
-
-```sh
-$ pip install gruut
-```
-
-Additional languages can be added during installation. For example, with French and Italian support:
-
-```sh
-$ pip install gruut[fr,it]
-```
 
 ## Command-Line Usage
 
@@ -128,3 +114,18 @@ $ echo 'This, right here, is some RAW text!' \
 ```
 
 See `python3 -m gruut <LANGUAGE> phonemize --help` for more options.
+
+## Intended Audience
+
+gruut is useful for transforming raw text into phonetic pronunciations, similar to [phonemizer](https://github.com/bootphon/phonemizer). Unlike phonemizer, gruut looks up words in a pre-built lexicon (pronunciation dictionary) or guesses word pronunciations with a pre-trained grapheme-to-phoneme model. Phonemes for each language come from a [carefully chosen inventory](https://en.wikipedia.org/wiki/Template:Language_phonologies).
+
+For each supported language, gruut includes a:
+
+* A word pronunciation lexicon built from open source data
+    * See [pron_dict](https://github.com/Kyubyong/pron_dictionaries)
+* A pre-trained grapheme-to-phoneme model for guessing word pronunciations
+
+Some languages also include:
+
+* A pre-trained part of speech tagger built from open source data:
+    * See [universal dependencies](https://universaldependencies.org/)
