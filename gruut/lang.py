@@ -9,6 +9,8 @@ import logging
 import typing
 from pathlib import Path
 
+from gruut_ipa import IPA
+
 from .const import TOKEN_OR_STR, WORD_PHONEMES, Token, TokenFeatures, WordPronunciation
 from .phonemize import Phonemizer, SqlitePhonemizer
 from .toksen import RegexTokenizer, Tokenizer
@@ -234,6 +236,91 @@ def get_phonemizer(
     # Fall back to basic sqlite phonemizer.
     # This will fail if no database_path argument is provided.
     return SqlitePhonemizer(**kwargs)
+
+
+# -----------------------------------------------------------------------------
+
+
+def id_to_phonemes(
+    lang: str,
+    lang_phonemes: typing.Optional[typing.Iterable[str]] = None,
+    pad: str = "_",
+    no_pad: bool = False,
+    no_word_break: bool = False,
+    no_stress: bool = False,
+    no_accents: typing.Optional[bool] = None,
+    tones: typing.Optional[typing.Iterable[str]] = None,
+) -> typing.Sequence[str]:
+    """
+    Create an ordered list of phonemes for a language.
+
+    Useful for transforming phoneme strings into tensors.
+
+    Args:
+        lang: Language name or alias
+        lang_phonemes: Ordered phonemes for a language or None if phonemes from :py:mod:`gruut_ipa` should be used
+        pad: String used for empty first phoneme (index 0)
+        no_pad: If ``True``, don't include pad phoneme
+        no_word_break: If ``True``, don't include IPA word break phoneme
+        no_stress: If ``True``, don't include IPA minor/major break phonemes
+        no_accents: If ``True``, don't include IPA accent phonemes. If ``None``, decide based on ``lang``
+        tones: Optional ordered list of language tones phonemes
+
+    Returns:
+        Ordered sequence of phonemes for language
+    """
+
+    lang = resolve_lang(lang)
+
+    if lang_phonemes is None:
+        # Use gruut-ipa for phonemes list
+        from gruut_ipa import Phonemes
+
+        lang_phonemes = [p.text for p in Phonemes.from_language(lang)]
+
+    assert lang_phonemes is not None
+
+    if no_accents is None:
+        # Only add accents for Swedish
+        no_accents = lang != "sv-se"
+
+    # Acute/grave accents (' and ²)
+    accents = []
+    if not no_accents:
+        # Accents from Swedish, etc.
+        accents = [IPA.ACCENT_ACUTE.value, IPA.ACCENT_GRAVE.value]
+
+    # Primary/secondary stress (ˈ and ˌ)
+    # NOTE: Accute accent (0x0027) != primary stress (0x02C8)
+    stresses = []
+    if not no_stress:
+        stresses = [IPA.STRESS_PRIMARY.value, IPA.STRESS_SECONDARY.value]
+
+    # Tones
+    tones = list(tones) if tones is not None else []
+
+    # Word break
+    word_break = []
+    if not no_word_break:
+        word_break = [IPA.BREAK_WORD.value]
+
+    # Pad symbol must always be first (index 0)
+    phonemes_list = []
+    if not no_pad:
+        phonemes_list.append(pad)
+
+    # Order here is critical
+    phonemes_list = (
+        phonemes_list
+        + [IPA.BREAK_MINOR.value, IPA.BREAK_MAJOR.value]
+        + word_break
+        + accents
+        + stresses
+        + tones
+        + sorted(list(lang_phonemes))
+    )
+
+    return phonemes_list
 
 
 # -----------------------------------------------------------------------------
