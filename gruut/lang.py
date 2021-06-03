@@ -834,6 +834,13 @@ class FrenchPhonemizer(SqlitePhonemizer):
             # Liasons disabled
             yield from token_phonemes
 
+        if self.word_break:
+            # Filter out word breaks
+            token_phonemes = [ps for ps in token_phonemes if ps != [self.word_break]]
+
+            # First word break
+            yield [self.word_break]
+
         for (token1, token1_pron), (token2, token2_pron) in pairwise(
             zip(
                 itertools.chain(tokens, [None]), itertools.chain(token_phonemes, [None])
@@ -901,6 +908,10 @@ class FrenchPhonemizer(SqlitePhonemizer):
             else:
                 # Keep pronunciations the same
                 yield token1_pron
+
+            if self.word_break:
+                # Add word breaks back in
+                yield [self.word_break]
 
     @staticmethod
     def _has_silent_consonant(last_char: str, last_phoneme: str) -> bool:
