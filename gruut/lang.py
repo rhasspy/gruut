@@ -448,7 +448,7 @@ class GermanPhonemizer(SqlitePhonemizer):
 # en-us, en-gb
 # -----------------------------------------------------------------------------
 
-ENGLISH_PUNCTUATIONS = {'"', ",", ";", ":", ".", "?", "!"}
+ENGLISH_PUNCTUATIONS = {'"', ",", ";", ":", ".", "?", "!", "“", "”", "«", "»", "-"}
 ENGLISH_MINOR_BREAKS = {",", ":", ";"}
 ENGLISH_MAJOR_BREAKS = {".", "?", "!"}
 
