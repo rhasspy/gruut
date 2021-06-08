@@ -39,7 +39,7 @@ extras = {
 
 # Create language-specific extras
 for lang in ["cs", "de", "es", "fr", "it", "nl", "pt", "ru", "sv"]:
-    extras[f"gruut_lang_{lang}~=1.0.0"] = [lang]
+    extras[f"gruut_lang_{lang}~=1.1.0"] = [lang]
 
 # Add "all" tag
 for tags in extras.values():
