@@ -9,7 +9,7 @@ import logging
 import typing
 from pathlib import Path
 
-from gruut_ipa import IPA
+from gruut_ipa import IPA, Phonemes
 
 from .const import TOKEN_OR_STR, WORD_PHONEMES, Token, TokenFeatures, WordPronunciation
 from .phonemize import Phonemizer, SqlitePhonemizer
@@ -274,8 +274,6 @@ def id_to_phonemes(
 
     if lang_phonemes is None:
         # Use gruut-ipa for phonemes list
-        from gruut_ipa import Phonemes
-
         lang_phonemes = [p.text for p in Phonemes.from_language(lang)]
 
     assert lang_phonemes is not None
