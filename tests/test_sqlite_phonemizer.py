@@ -349,6 +349,40 @@ class SqlitePhonemizerTestCase(unittest.TestCase):
         phonemizer.preload_prons()
         self.assertGreater(len(phonemizer.lexicon), 0)
 
+    def test_clean_phonemes_stress(self):
+        """Test removal of stress"""
+        # Defaults to with stress
+        phonemizer = get_phonemizer("en-us")
+        actual_phonemes = next(phonemizer.phonemize([Token("test")]))
+        self.assertEqual(actual_phonemes, ["t", "ˈɛ", "s", "t"])
+
+        # Remove stress
+        phonemizer = get_phonemizer("en-us", remove_stress=True)
+        actual_phonemes = next(phonemizer.phonemize([Token("test")]))
+        self.assertEqual(actual_phonemes, ["t", "ɛ", "s", "t"])
+
+    def test_clean_phonemes_accents(self):
+        """Test removal of accents"""
+        # Defaults to with accents
+        phonemizer = SqlitePhonemizer(database_path=":memory:")
+        phonemizer.create_tables()
+
+        accent_pron = ["²'ɑː", "b", "eː"]
+        phonemizer.insert_prons("AB", [WordPronunciation(accent_pron)])
+
+        actual_phonemes = next(phonemizer.phonemize([Token("AB")]))
+        self.assertEqual(actual_phonemes, accent_pron)
+
+        # Disable accents
+        phonemizer = SqlitePhonemizer(database_path=":memory:", remove_accents=True)
+        phonemizer.create_tables()
+
+        accent_pron = ["²'ɑː", "b", "eː"]
+        phonemizer.insert_prons("AB", [WordPronunciation(accent_pron)])
+
+        actual_phonemes = next(phonemizer.phonemize([Token("AB")]))
+        self.assertEqual(actual_phonemes, ["ɑː", "b", "eː"])
+
 
 # -----------------------------------------------------------------------------
 

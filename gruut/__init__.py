@@ -223,3 +223,8 @@ def text_to_phonemes(
 def is_language_supported(lang: str) -> bool:
     """True if gruut supports lang"""
     return resolve_lang(lang) in KNOWN_LANGS
+
+
+def get_supported_languages() -> typing.Set[str]:
+    """Set of supported gruut languages"""
+    return set(KNOWN_LANGS)
