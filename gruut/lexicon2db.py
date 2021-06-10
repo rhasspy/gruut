@@ -60,36 +60,40 @@ def main():
         lexicon_file = open(args.lexicon, "r")
 
     with lexicon_file, phonemizer.db_conn:
-        for line in lexicon_file:
-            line = line.strip()
-            if (not line) or line.startswith(";"):
-                # Skip blank lines and comments
-                continue
+        for i, line in enumerate(lexicon_file):
+            try:
+                line = line.strip()
+                if (not line) or line.startswith(";"):
+                    # Skip blank lines and comments
+                    continue
 
-            if args.pos:
-                # With part of speech
-                word, pos_str, phonemes_str = line.split(maxsplit=2)
-                pos = set(pos_str.split(","))
-                phonemes = phonemes_str.split()
+                if args.pos:
+                    # With part of speech
+                    word, pos_str, phonemes_str = line.split(maxsplit=2)
+                    pos = set(pos_str.split(","))
+                    phonemes = phonemes_str.split()
 
-                word_pron = WordPronunciation(
-                    phonemes, preferred_features={TokenFeatures.PART_OF_SPEECH: pos}
-                )
-            else:
-                # Without part of speech
-                word, phonemes_str = line.split(maxsplit=1)
-                phonemes = phonemes_str.split()
-                word_pron = WordPronunciation(phonemes)
+                    word_pron = WordPronunciation(
+                        phonemes, preferred_features={TokenFeatures.PART_OF_SPEECH: pos}
+                    )
+                else:
+                    # Without part of speech
+                    word, phonemes_str = line.split(maxsplit=1)
+                    phonemes = phonemes_str.split()
+                    word_pron = WordPronunciation(phonemes)
 
-            if word_casing:
-                word = word_casing(word)
+                if word_casing:
+                    word = word_casing(word)
 
-            pron_order = pron_orders.get(word, 0)
+                pron_order = pron_orders.get(word, 0)
 
-            # Don't commit on every word, or it will be terribly slow
-            phonemizer.insert_prons(word, [word_pron], commit=False)
+                # Don't commit on every word, or it will be terribly slow
+                phonemizer.insert_prons(word, [word_pron], commit=False)
 
-            pron_orders[word] = pron_order + 1
+                pron_orders[word] = pron_order + 1
+            except Exception as e:
+                print("Error on line", i + 1, "-", line)
+                raise e
 
 
 # -----------------------------------------------------------------------------

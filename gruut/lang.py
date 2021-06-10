@@ -32,6 +32,7 @@ LANG_ALIASES = {
     "pt-br": "pt",
     "ru": "ru-ru",
     "sv": "sv-se",
+    "sw": "sw",
 }
 
 ENGLISH_LANGS = {"en-us", "en-gb"}
@@ -141,6 +142,10 @@ def get_tokenizer(
         assert lang_dir is not None
         return SwedishTokenizer(lang_dir=lang_dir, **kwargs)
 
+    if lang == "sw":
+        assert lang_dir is not None
+        return SwahiliTokenizer(lang_dir=lang_dir, **kwargs)
+
     # Fall back to basic regex tokenizer
     return RegexTokenizer(**kwargs)
 
@@ -148,6 +153,7 @@ def get_tokenizer(
 def get_phonemizer(
     lang: str,
     lang_dir: typing.Optional[typing.Union[str, Path]] = None,
+    model_prefix: typing.Optional[str] = None,
     no_g2p: bool = False,
     fr_no_liason: bool = False,
     **kwargs,
@@ -158,6 +164,7 @@ def get_phonemizer(
     Args:
         lang: Language name or alias
         lang_dir: Optional path to language files directory (see also :py:meth:`~gruut.utils.find_lang_dir`)
+        model_prefix: Optional directory prefix used for lexicon.db and g2p/model.crf
         no_g2p: If ``True``, disable grapheme to phoneme prediction for unknown words
         fr_no_liason: If ``True``, disable addition of liasons in :py:class:`~gruut.lang.FrenchPhonemizer`
         kwargs: Keyword arguments passed to phonemizer's ``__init__`` method
@@ -175,13 +182,18 @@ def get_phonemizer(
 
     if lang in KNOWN_LANGS:
         assert lang_dir is not None
+        prefix_dir = lang_dir
+
+        if model_prefix:
+            prefix_dir = prefix_dir / model_prefix
+
         if "database_path" not in kwargs:
             # Use database in model directory (required)
-            kwargs["database_path"] = str(lang_dir / "lexicon.db")
+            kwargs["database_path"] = str(prefix_dir / "lexicon.db")
 
         if "g2p_model" not in kwargs:
             # Use grapheme to phoneme model in model directory (optional)
-            g2p_model = lang_dir / "g2p" / "model.crf"
+            g2p_model = prefix_dir / "g2p" / "model.crf"
             if g2p_model.is_file():
                 kwargs["g2p_model"] = g2p_model
 
@@ -232,6 +244,10 @@ def get_phonemizer(
     if lang == "sv-se":
         assert lang_dir is not None
         return SwedishPhonemizer(lang_dir=lang_dir, **kwargs)
+
+    if lang == "sw":
+        assert lang_dir is not None
+        return SwahiliPhonemizer(lang_dir=lang_dir, **kwargs)
 
     # Fall back to basic sqlite phonemizer.
     # This will fail if no database_path argument is provided.
@@ -1237,5 +1253,60 @@ class SwedishPhonemizer(SqlitePhonemizer):
         super().__init__(
             minor_breaks=SWEDISH_MINOR_BREAKS,
             major_breaks=SWEDISH_MAJOR_BREAKS,
+            **kwargs,
+        )
+
+
+# -----------------------------------------------------------------------------
+# sw
+# -----------------------------------------------------------------------------
+
+SWAHILI_MINOR_BREAKS = {",", ":", ";"}
+SWAHILI_MAJOR_BREAKS = {".", "?", "!"}
+
+
+class SwahiliTokenizer(RegexTokenizer):
+    """Tokenizer for Swahili (Kiswahili)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+
+        currency_names = get_currency_names("sw")
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+                ("’", "'"),  # normalize apostrophe
+            ],
+            punctuations={'"', ",", ";", ":", ".", "?", "!", "„", "“", "”", "«", "»"},
+            minor_breaks=SWAHILI_MINOR_BREAKS,
+            major_breaks=SWAHILI_MAJOR_BREAKS,
+            casing_func=str.lower,
+            num2words_lang="sw",
+            babel_locale="sw",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+
+class SwahiliPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Swahili (svenska)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks=SWAHILI_MINOR_BREAKS,
+            major_breaks=SWAHILI_MAJOR_BREAKS,
             **kwargs,
         )
