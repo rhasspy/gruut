@@ -277,7 +277,9 @@ class RegexTokenizer(Tokenizer):
             Match if successful or None
         """
         if number_converters and self.number_converter_pattern:
-            return self.number_converter_pattern.match(text)
+            match = self.number_converter_pattern.match(text)
+            if match is not None:
+                return match
 
         if self.number_pattern:
             return self.number_pattern.match(text)
