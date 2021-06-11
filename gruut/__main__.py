@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import jsonlines
+
 from gruut_ipa import IPA
 
 from .utils import find_lang_dir
@@ -65,7 +66,14 @@ def do_tokenize(args):
     from .commands import tokenize
     from .lang import get_tokenizer
 
-    tokenizer = get_tokenizer(args.language, lang_dir=args.lang_dir, no_pos=args.no_pos)
+    tokenizer = get_tokenizer(
+        args.language,
+        lang_dir=args.lang_dir,
+        no_pos=args.no_pos,
+        use_number_converters=args.number_converters,
+        do_replace_currency=(not args.disable_currency),
+        exclude_non_words=(not args.no_exclude_non_words),
+    )
 
     if args.text:
         # Use arguments
