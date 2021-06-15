@@ -6,9 +6,10 @@ import re
 import typing
 from pathlib import Path
 
+from .const import REGEX_PATTERN
+
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
-
 
 # -----------------------------------------------------------------------------
 
@@ -76,9 +77,11 @@ def find_lang_dir(
 # -----------------------------------------------------------------------------
 
 
-def maybe_compile_regex(str_or_pattern: typing.Union[str, re.Pattern]) -> re.Pattern:
+def maybe_compile_regex(
+    str_or_pattern: typing.Union[str, REGEX_PATTERN]
+) -> REGEX_PATTERN:
     """Compile regex pattern if it's a string"""
-    if isinstance(str_or_pattern, re.Pattern):
+    if isinstance(str_or_pattern, REGEX_PATTERN):
         return str_or_pattern
 
     return re.compile(str_or_pattern)

@@ -8,7 +8,14 @@ from pathlib import Path
 
 from num2words import num2words
 
-from .const import REGEX_TYPE, Sentence, Token, TokenFeatures
+from .const import (
+    REGEX_MATCH,
+    REGEX_PATTERN,
+    REGEX_TYPE,
+    Sentence,
+    Token,
+    TokenFeatures,
+)
 from .pos import PartOfSpeechTagger
 from .utils import maybe_compile_regex
 
@@ -140,7 +147,7 @@ class RegexTokenizer(Tokenizer):
         minor_breaks: typing.Optional[typing.Set[str]] = None,
         major_breaks: typing.Optional[typing.Set[str]] = None,
         abbreviations: typing.Optional[
-            typing.Mapping[typing.Union[str, re.Pattern], str]
+            typing.Mapping[typing.Union[str, REGEX_PATTERN], str]
         ] = None,
         number_pattern: REGEX_TYPE = NUMBER_PATTERN,
         number_converter_pattern: REGEX_TYPE = NUMBER_CONVERTER_PATTERN,
@@ -265,7 +272,7 @@ class RegexTokenizer(Tokenizer):
 
     def match_number(
         self, text: str, number_converters: bool = False
-    ) -> typing.Optional[re.Match]:
+    ) -> typing.Optional[REGEX_MATCH]:
         """
         Tries to determine if text is a number.
 
@@ -485,7 +492,7 @@ class RegexTokenizer(Tokenizer):
 
     def _try_expand_number(
         self,
-        number_match: re.Match,
+        number_match: REGEX_MATCH,
         num2words_lang: str,
         number_converters: bool = False,
         replace_currency: bool = False,
@@ -600,14 +607,14 @@ class RegexTokenizer(Tokenizer):
         return num_str
 
     def _make_abbreviation_patterns(
-        self, abbreviations: typing.Mapping[typing.Union[str, re.Pattern], str]
-    ) -> typing.MutableMapping[re.Pattern, str]:
+        self, abbreviations: typing.Mapping[typing.Union[str, REGEX_PATTERN], str]
+    ) -> typing.MutableMapping[REGEX_PATTERN, str]:
         """Create regex patterns from abbrevations with optional surrounding punctuation"""
         punctuation_class = "[" + re.escape("".join(self.punctuations)) + "]"
 
-        patterns: typing.MutableMapping[re.Pattern, str] = {}
+        patterns: typing.MutableMapping[REGEX_PATTERN, str] = {}
         for from_text, to_text in abbreviations.items():
-            if isinstance(from_text, re.Pattern):
+            if isinstance(from_text, REGEX_PATTERN):
                 # Use literally
                 patterns[from_text] = to_text
             elif self.punctuations:

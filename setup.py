@@ -26,6 +26,9 @@ version_path = module_dir / "VERSION"
 with open(version_path, "r") as version_file:
     version = version_file.read().strip()
 
+# x.y.z -> x.y.0
+base_version = ".".join(version.split(".")[:-1] + ["0"])
+
 # -----------------------------------------------------------------------------
 # extras_require
 # -----------------------------------------------------------------------------
@@ -35,11 +38,13 @@ extras = {
     "hazm~=0.7.0": ["fa"],
     "conllu>=4.4": ["train"],
     "rapidfuzz>=1.4.1": ["train"],
+    "aeneas~=1.7.3.0": ["align"],
+    "pydub~=0.24.1": ["align"],
 }
 
 # Create language-specific extras
 for lang in ["cs", "de", "es", "fr", "it", "nl", "pt", "ru", "sv"]:
-    extras[f"gruut_lang_{lang}~=1.1.0"] = [lang]
+    extras[f"gruut_lang_{lang}~={base_version}"] = [lang]
 
 # Add "all" tag
 for tags in extras.values():
@@ -73,10 +78,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={"gruut": data_files + ["VERSION", "py.typed"]},
     install_requires=requirements,
-    extras_require=extras_require,
+    extras_require={':python_version<"3.7"': "dataclasses", **extras_require},
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

@@ -1,5 +1,5 @@
 Babel~=2.8.0
-gruut-ipa~=0.8.0
+gruut-ipa~=0.9.0
 jsonlines~=1.2.0
 num2words==0.5.10
 python-crfsuite~=0.9.7

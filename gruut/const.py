@@ -4,7 +4,16 @@ import typing
 from dataclasses import dataclass, field
 from enum import Enum
 
-REGEX_TYPE = typing.Union[str, re.Pattern]
+try:
+    # Python >= 3.7
+    REGEX_PATTERN = re.Pattern  # type: ignore
+    REGEX_MATCH = re.Match  # type: ignore
+except AttributeError:
+    # Python 3.6
+    REGEX_PATTERN = typing.re.Pattern  # type: ignore
+    REGEX_MATCH = typing.re.Match  # type: ignore
+
+REGEX_TYPE = typing.Union[str, REGEX_PATTERN]
 
 WORD_PHONEMES = typing.Sequence[str]
 

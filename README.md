@@ -76,7 +76,7 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 
 ## Dependencies
 
-* Python 3.7 or higher
+* Python 3.6 or higher
 * Linux
     * Tested on Debian Buster
 * [Babel](https://pypi.org/project/Babel/) and [num2words](https://pypi.org/project/num2words/)
