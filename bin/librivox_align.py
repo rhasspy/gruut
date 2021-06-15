@@ -54,8 +54,7 @@ def main():
         book = yaml.safe_load(book_file)
 
     # Load gruut language
-    gruut_lang = gruut.Language.load(book["gruut"]["language"])
-    assert gruut_lang, "Unsupported language"
+    gruut_tokenizer = gruut.get_tokenizer(book["gruut"]["language"])
 
     language = book["aeneas"]["language"]
 
@@ -92,7 +91,9 @@ def main():
 
         mp3_text_path = mp3_path.with_suffix(".txt")
         with open(mp3_text_path, mode="w+") as mp3_text_file:
-            start_line, end_line = mp3_info["start_line"], mp3_info["end_line"]
+            start_line = mp3_info.get("start_line", 1)
+            end_line = mp3_info.get("end_line", len(text))
+
             # Clean up newlines in text
             mp3_text = ""
             for line_index in range(start_line - 1, end_line):
@@ -101,7 +102,9 @@ def main():
             # Run through gruut tokenizer to expand abbreviations, numbers, etc.
             raw_text_path = mp3_path.with_suffix(".raw.txt")
             with open(raw_text_path, "w") as raw_text_file:
-                for sentence in gruut_lang.tokenizer.tokenize(mp3_text):
+                for sentence in gruut_tokenizer.tokenize(
+                    mp3_text, return_format="sentences"
+                ):
                     clean_text = " ".join(sentence.clean_words)
 
                     # Each sentence in on a line now
