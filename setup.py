@@ -65,7 +65,7 @@ data_dir = module_dir / "data"
 data_files = [
     str(f.relative_to(module_dir))
     for f in data_dir.rglob("*")
-    if f.is_file() and (f.name in included_files)
+    if f.is_file() and (f.name in include_files)
 ]
 
 setuptools.setup(
