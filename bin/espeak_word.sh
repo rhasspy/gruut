@@ -31,6 +31,9 @@ do
         noun="$(drop_word "${voice}" "a ${word}")"
         past="$(drop_word "${voice}" "had ${word}")"
 
+        # Default form
+        echo "${word} _ ${ipa}"
+
         if [[ "${ipa}" != "${verb}" ]]; then
             # Verb form
             echo "${word} VB ${verb}"
@@ -45,9 +48,6 @@ do
             # Past tense verb form
             echo "${word} VBD ${past}"
         fi
-
-        # Default form
-        echo "${word} _ ${ipa}"
     fi
 done
 

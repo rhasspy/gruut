@@ -84,13 +84,15 @@ read ɹ ˈi d
 <li><p>German (<code class="docutils literal notranslate"><span class="pre">de</span></code>)</p></li>
 <li><p>English (<code class="docutils literal notranslate"><span class="pre">en</span></code>)</p></li>
 <li><p>Spanish (<code class="docutils literal notranslate"><span class="pre">es</span></code>)</p></li>
-<li><p>Farsi/Persian (<code class="docutils literal notranslate"><span class="pre">fa</span></code>)</p></li>
 <li><p>French (<code class="docutils literal notranslate"><span class="pre">fr</span></code>)</p></li>
 <li><p>Italian (<code class="docutils literal notranslate"><span class="pre">it</span></code>)</p></li>
 <li><p>Dutch (<code class="docutils literal notranslate"><span class="pre">nl</span></code>)</p></li>
+<li><p>Portuguese (<code class="docutils literal notranslate"><span class="pre">pt</span></code>)</p></li>
 <li><p>Russian (<code class="docutils literal notranslate"><span class="pre">ru</span></code>)</p></li>
 <li><p>Swedish (<code class="docutils literal notranslate"><span class="pre">sv</span></code>)</p></li>
+<li><p>Swahili (<code class="docutils literal notranslate"><span class="pre">sw</span></code>)</p></li>
 </ul>
+<p>Credit to <a class="reference external" href="https://www.editions-kawa.com/developpement-personnel/244-a-minute-a-day-to-feel-the-sun-even-if-it-doesnt-shine.html">Michelle K. Hansen</a> (translator) for help with German and French language support.</p>
 </section>
 </section>
 <section id="usage">
@@ -119,6 +121,15 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <li><p>Whichever pronunciation has the most compatible <a class="reference internal" href="#features"><span class="std std-ref">Features</span></a>.</p></li>
 <li><p>The first pronunciation</p></li>
 </ul>
+<section id="command-line">
+<h3>Command-Line<a class="headerlink" href="#command-line" title="Permalink to this headline">¶</a></h3>
+<p>gruut tokenization and phonemization can be done externally with a command-line interface.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gruut en-us tokenize <span class="s1">&#39;This is a test.&#39;</span> <span class="p">|</span> gruut en-us phonemize <span class="p">|</span> jq -r .pronunciation_text
+ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+</pre></div>
+</div>
+<p>See <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">&lt;COMMAND&gt;</span> <span class="pre">--help</span></code> for more options.</p>
+</section>
 <section id="features">
 <span id="id1"></span><h3>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h3>
 <p>gruut tokens can contain arbitrary features. For now, only part of speech tags are implemented for English and French.</p>
@@ -137,6 +148,41 @@ These models guess pronunciations for unknown words, and are trained on the incl
 <p>Pre-traned pos (part of speech) taggers are available for English and French.
 These models predict the part of speech for each word during tokenization, and are trained from the <a class="reference external" href="https://universaldependencies.org/">Universal Dependencies</a> using <a class="reference external" href="https://github.com/scrapinghub/python-crfsuite">python-crfsuite</a>.</p>
 <p>See <a class="reference internal" href="gruut.html#module-gruut.pos" title="gruut.pos"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.pos</span></code></a> for more details.</p>
+</section>
+<section id="espeak-phonemes">
+<h2>eSpeak Phonemes<a class="headerlink" href="#espeak-phonemes" title="Permalink to this headline">¶</a></h2>
+<p>Most languages include an additional lexicon and pre-trained grapheme to phoneme model with IPA generated from <a class="reference external" href="https://github.com/espeak-ng/espeak-ng">espeak-ng</a>.</p>
+<p>These additional lexicons can be accessed via the <code class="docutils literal notranslate"><span class="pre">model_prefix</span></code> argument to <code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.get_phonemizer()</span></code> or the <code class="docutils literal notranslate"><span class="pre">--model-prefix</span></code> command-line argument to <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">phonemize</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">text_to_phonemes</span>
+
+<span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;He wound it around the wound, saying &quot;I read it was $10 to read.&quot;&#39;</span>
+
+<span class="k">for</span> <span class="n">sent_idx</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">word_phonemes</span> <span class="ow">in</span> <span class="n">text_to_phonemes</span><span class="p">(</span>
+    <span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">,</span> <span class="n">phonemizer_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;espeak&quot;</span><span class="p">}</span>
+<span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="o">*</span><span class="n">word_phonemes</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>he h ˈiː
+wound w ˈaʊ n d
+it ˈɪ t
+around ɚ ɹ ˈaʊ n d
+the ð ˈə
+wound w ˈuː n d
+, |
+saying s ˈeɪ ɪ ŋ
+i ˈaɪ
+read ɹ ˈɛ d
+it ˈɪ t
+was w ʌ z
+ten t ˈɛ n
+dollars d ˈɑː l ɚ z
+to t ˈuː
+read ɹ ˈiː d
+. ‖
+</pre></div>
+</div>
 <div class="toctree-wrapper compound">
 </div>
 </section>
@@ -165,11 +211,13 @@ These models predict the part of speech for each word during tokenization, and a
 </ul>
 </li>
 <li><a class="reference internal" href="#usage">Usage</a><ul>
+<li><a class="reference internal" href="#command-line">Command-Line</a></li>
 <li><a class="reference internal" href="#features">Features</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#g2p-models">G2P Models</a></li>
 <li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>
+<li><a class="reference internal" href="#espeak-phonemes">eSpeak Phonemes</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>

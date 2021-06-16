@@ -58,12 +58,15 @@ Supported Languages
 * German (``de``)
 * English (``en``)
 * Spanish (``es``)
-* Farsi/Persian (``fa``)
 * French (``fr``)
 * Italian (``it``)
 * Dutch (``nl``)
+* Portuguese (``pt``)
 * Russian (``ru``)
 * Swedish (``sv``)
+* Swahili (``sw``)
+
+Credit to `Michelle K. Hansen <https://www.editions-kawa.com/developpement-personnel/244-a-minute-a-day-to-feel-the-sun-even-if-it-doesnt-shine.html>`_ (translator) for help with German and French language support.
 
 
 Usage
@@ -95,6 +98,17 @@ In cases where more than one pronunciation is possible for a word, the "best" pr
 * Whichever pronunciation has the most compatible :ref:`features`.
 * The first pronunciation
 
+Command-Line
+^^^^^^^^^^^^
+
+gruut tokenization and phonemization can be done externally with a command-line interface.
+
+.. code-block:: bash
+
+   gruut en-us tokenize 'This is a test.' | gruut en-us phonemize | jq -r .pronunciation_text
+   ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+
+See ``gruut <LANG> <COMMAND> --help`` for more options.
 
 .. _features:
 
@@ -123,6 +137,46 @@ Pre-traned pos (part of speech) taggers are available for English and French.
 These models predict the part of speech for each word during tokenization, and are trained from the `Universal Dependencies <https://universaldependencies.org/>`_ using `python-crfsuite <https://github.com/scrapinghub/python-crfsuite>`_.
 
 See :py:mod:`gruut.pos` for more details.
+
+eSpeak Phonemes
+----------------------
+
+Most languages include an additional lexicon and pre-trained grapheme to phoneme model with IPA generated from `espeak-ng <https://github.com/espeak-ng/espeak-ng>`_.
+
+These additional lexicons can be accessed via the ``model_prefix`` argument to :py:meth:`gruut.get_phonemizer` or the ``--model-prefix`` command-line argument to ``gruut <LANG> phonemize``.
+
+.. code-block:: python
+
+    from gruut import text_to_phonemes
+
+    text = 'He wound it around the wound, saying "I read it was $10 to read."'
+
+    for sent_idx, word, word_phonemes in text_to_phonemes(
+        text, lang="en-us", phonemizer_args={"model_prefix": "espeak"}
+    ):
+        print(word, *word_phonemes)
+
+
+Output::
+
+    he h ˈiː
+    wound w ˈaʊ n d
+    it ˈɪ t
+    around ɚ ɹ ˈaʊ n d
+    the ð ˈə
+    wound w ˈuː n d
+    , |
+    saying s ˈeɪ ɪ ŋ
+    i ˈaɪ
+    read ɹ ˈɛ d
+    it ˈɪ t
+    was w ʌ z
+    ten t ˈɛ n
+    dollars d ˈɑː l ɚ z
+    to t ˈuː
+    read ɹ ˈiː d
+    . ‖
+
 
 .. toctree::
    :maxdepth: 2
