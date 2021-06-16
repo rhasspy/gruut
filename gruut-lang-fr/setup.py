@@ -24,7 +24,14 @@ setuptools.setup(
     url="https://github.com/rhasspy/gruut",
     packages=setuptools.find_packages(),
     package_data={
-        "gruut_lang_fr": ["VERSION", "lexicon.db", "g2p/model.crf", "pos/model.crf"]
+        "gruut_lang_fr": [
+            "VERSION",
+            "lexicon.db",
+            "g2p/model.crf",
+            "espeak/lexicon.db",
+            "espeak/g2p/model.crf",
+            "pos/model.crf",
+        ]
     },
     classifiers=[
         "Programming Language :: Python :: 3",
