@@ -108,7 +108,10 @@ def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
             babel.numbers.get_currency_symbol(cn): cn for cn in locale.currency_symbols
         }
     except ImportError:
+        # Expected if babel is not installed
         pass
+    except Exception:
+        _LOGGER.warning("get_currency_names")
 
     return currency_names
 

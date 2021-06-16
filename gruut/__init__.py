@@ -16,9 +16,11 @@ __version__ = (_DIR / "VERSION").read_text().strip()
 # -----------------------------------------------------------------------------
 
 _TOKENIZER_CACHE: typing.Dict[str, Tokenizer] = {}
+_TOKENIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
 _TOKENIZER_CACHE_LOCK = threading.RLock()
 
 _PHONEMIZER_CACHE: typing.Dict[str, Phonemizer] = {}
+_PHONEMIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
 _PHONEMIZER_CACHE_LOCK = threading.RLock()
 
 # -----------------------------------------------------------------------------
@@ -125,32 +127,44 @@ def text_to_phonemes(
             read ɹ ˈi d
             . ‖
     """
+    global _TOKENIZER_CACHE_ARGS, _PHONEMIZER_CACHE_ARGS
+
     lang = resolve_lang(lang)
 
     # Get tokenizer
+    tokenizer_args = tokenizer_args or {}
     if (tokenizer is None) and (not no_cache):
         with _TOKENIZER_CACHE_LOCK:
+            if tokenizer_args != _TOKENIZER_CACHE_ARGS:
+                # Args changed; drop cache
+                _TOKENIZER_CACHE.pop(lang, None)
+
             tokenizer = _TOKENIZER_CACHE.get(lang)
 
     if tokenizer is None:
-        tokenizer_args = tokenizer_args or {}
         tokenizer = get_tokenizer(lang, **tokenizer_args)
 
         if not no_cache:
             with _TOKENIZER_CACHE_LOCK:
                 _TOKENIZER_CACHE[lang] = tokenizer
+                _TOKENIZER_CACHE_ARGS = tokenizer_args
 
     # Get phonemizer
+    phonemizer_args = phonemizer_args or {}
     if (phonemizer is None) and (not no_cache):
         with _PHONEMIZER_CACHE_LOCK:
+            if phonemizer_args != _PHONEMIZER_CACHE_ARGS:
+                # Args changed; drop cache
+                _PHONEMIZER_CACHE.pop(lang, None)
+
             phonemizer = _PHONEMIZER_CACHE.get(lang)
 
     if phonemizer is None:
-        phonemizer_args = phonemizer_args or {}
         phonemizer = get_phonemizer(lang, **phonemizer_args)
 
         if not no_cache:
             _PHONEMIZER_CACHE[lang] = phonemizer
+            _PHONEMIZER_CACHE_ARGS = tokenizer_args
 
     sentences = tokenizer.tokenize(text)
 

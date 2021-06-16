@@ -117,6 +117,7 @@ def do_phonemize(args):
         use_word_indexes=args.word_indexes,
         word_break=word_break,
         no_g2p=args.no_g2p,
+        model_prefix=args.model_prefix,
     )
 
     if os.isatty(sys.stdin.fileno()):
@@ -228,6 +229,10 @@ def get_args() -> argparse.Namespace:
         "--fail-on-unknown-words",
         action="store_true",
         help="Raise an error if there are words whose pronunciations can't be guessed",
+    )
+    phonemize_parser.add_argument(
+        "--model-prefix",
+        help="Directory to use within default language directory with different lexicon/g2p model (e.g., espeak)",
     )
     # phonemize_parser.add_argument(
     #     "--skip-on-unknown-words",
