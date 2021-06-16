@@ -19,6 +19,7 @@ dist:
 
 test:
 	scripts/run-tests.sh
+	scripts/test-lang-dirs.sh
 
 docs:
 	sphinx-apidoc -f -o docs/source gruut
