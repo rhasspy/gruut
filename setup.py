@@ -59,13 +59,13 @@ for dep, tags in extras.items():
 
 # -----------------------------------------------------------------------------
 
-excluded_files = {"g2p.fst", "g2p.corpus", "lexicon.txt"}
+include_files = {"lexicon.db", "model.crf"}
 
 data_dir = module_dir / "data"
 data_files = [
     str(f.relative_to(module_dir))
     for f in data_dir.rglob("*")
-    if f.is_file() and (f.name not in excluded_files)
+    if f.is_file() and (f.name in included_files)
 ]
 
 setuptools.setup(
