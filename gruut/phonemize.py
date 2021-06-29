@@ -2,6 +2,7 @@
 import abc
 import collections
 import logging
+import os
 import re
 import sqlite3
 import threading
@@ -12,6 +13,7 @@ from gruut_ipa import IPA
 
 from .const import REGEX_TYPE, TOKEN_OR_STR, WORD_PHONEMES, Token, WordPronunciation
 from .g2p import GraphemesToPhonemes
+from .g2p_phonetisaurus import PhonetisaurusGraph
 from .utils import maybe_compile_regex
 
 _LOGGER = logging.getLogger("gruut.phonemize")
@@ -210,9 +212,17 @@ class SqlitePhonemizer(Phonemizer):
         ] = lexicon if lexicon is not None else {}
 
         self.g2p_tagger: typing.Optional[GraphemesToPhonemes] = None
+        self.g2p_graph: typing.Optional[PhonetisaurusGraph] = None
+
         if g2p_model is not None:
             # Load g2p model
-            self.g2p_tagger = GraphemesToPhonemes(g2p_model)
+            g2p_ext = os.path.splitext(g2p_model)[1]
+            if g2p_ext == ".npz":
+                # Load Phonetisaurus FST as a numpy graph
+                self.g2p_graph = PhonetisaurusGraph.load(g2p_model)
+            else:
+                # Load CRF tagger
+                self.g2p_tagger = GraphemesToPhonemes(g2p_model)
 
         self.feature_map = feature_map
 
@@ -437,14 +447,22 @@ class SqlitePhonemizer(Phonemizer):
             Zero or more guessed pronunciations
 
         """
+        guessed_phonemes: typing.Sequence[str] = []
+
         if self.g2p_tagger:
+            # CRF model
             _LOGGER.debug("Guessing pronunciations for %s", token)
             guessed_phonemes = self.g2p_tagger(token.text)
-            if guessed_phonemes:
-                guessed_phonemes = self.clean_phonemes(guessed_phonemes)
+        elif self.g2p_graph:
+            # Phonetisaurus FST
+            _LOGGER.debug("Guessing pronunciations for %s", token)
+            _, _, guessed_phonemes = next(self.g2p_graph.g2p([token.text]))
 
-                # Single pronunciation for now
-                return [WordPronunciation(guessed_phonemes)]
+        if guessed_phonemes:
+            guessed_phonemes = self.clean_phonemes(guessed_phonemes)
+
+            # Single pronunciation for now
+            return [WordPronunciation(guessed_phonemes)]
 
         return []
 

@@ -156,6 +156,7 @@ def get_phonemizer(
     model_prefix: typing.Optional[str] = None,
     no_g2p: bool = False,
     fr_no_liason: bool = False,
+    phonetisaurus_g2p: bool = False,
     **kwargs,
 ) -> Phonemizer:
     """
@@ -167,6 +168,7 @@ def get_phonemizer(
         model_prefix: Optional directory prefix used for lexicon.db and g2p/model.crf
         no_g2p: If ``True``, disable grapheme to phoneme prediction for unknown words
         fr_no_liason: If ``True``, disable addition of liasons in :py:class:`~gruut.lang.FrenchPhonemizer`
+        phonetisaurus_g2p: If ``True``, prefer Phonetisaurus graph.npz to model.crf
         kwargs: Keyword arguments passed to phonemizer's ``__init__`` method
 
     Returns:
@@ -193,9 +195,16 @@ def get_phonemizer(
 
         if "g2p_model" not in kwargs:
             # Use grapheme to phoneme model in model directory (optional)
-            g2p_model = prefix_dir / "g2p" / "model.crf"
-            if g2p_model.is_file():
-                kwargs["g2p_model"] = g2p_model
+            g2p_dir = prefix_dir / "g2p"
+            if phonetisaurus_g2p:
+                g2p_models = [g2p_dir / "graph.npz", g2p_dir / "model.crf"]
+            else:
+                g2p_models = [g2p_dir / "model.crf", g2p_dir / "graph.npz"]
+
+            for g2p_model in g2p_models:
+                if g2p_model.is_file():
+                    kwargs["g2p_model"] = g2p_model
+                    break
 
     if no_g2p:
         # Don't use grapheme-to-phoneme model
