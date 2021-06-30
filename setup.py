@@ -43,7 +43,7 @@ extras = {
 }
 
 # Create language-specific extras
-for lang in ["cs", "de", "es", "fr", "it", "nl", "pt", "ru", "sv"]:
+for lang in ["cs", "de", "es", "fa", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
     extras[f"gruut_lang_{lang}~={base_version}"] = [lang]
 
 # Add "all" tag
