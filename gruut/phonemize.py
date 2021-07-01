@@ -219,9 +219,11 @@ class SqlitePhonemizer(Phonemizer):
             g2p_ext = os.path.splitext(g2p_model)[1]
             if g2p_ext == ".npz":
                 # Load Phonetisaurus FST as a numpy graph
+                _LOGGER.debug("Loading Phonetisaurus g2p model from %s", g2p_model)
                 self.g2p_graph = PhonetisaurusGraph.load(g2p_model)
             else:
                 # Load CRF tagger
+                _LOGGER.debug("Loading CRF g2p model from %s", g2p_model)
                 self.g2p_tagger = GraphemesToPhonemes(g2p_model)
 
         self.feature_map = feature_map
@@ -451,11 +453,11 @@ class SqlitePhonemizer(Phonemizer):
 
         if self.g2p_tagger:
             # CRF model
-            _LOGGER.debug("Guessing pronunciations for %s", token)
+            _LOGGER.debug("Guessing pronunciations for %s with CRF", token)
             guessed_phonemes = self.g2p_tagger(token.text)
         elif self.g2p_graph:
             # Phonetisaurus FST
-            _LOGGER.debug("Guessing pronunciations for %s", token)
+            _LOGGER.debug("Guessing pronunciations for %s with Phonetisaurus", token)
             _, _, guessed_phonemes = next(self.g2p_graph.g2p([token.text]))
 
         if guessed_phonemes:

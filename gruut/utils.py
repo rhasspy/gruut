@@ -47,7 +47,7 @@ def find_lang_dir(
 
         return lang_module.get_lang_dir()
     except ImportError:
-        _LOGGER.debug("Failed to import module for %s. Searching manually.", lang)
+        _LOGGER.debug("Tried to import module for %s", lang)
         pass
 
     search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
@@ -65,10 +65,13 @@ def find_lang_dir(
     # Data directory *inside* gruut
     search_dirs.append(_DIR / "data")
 
+    _LOGGER.debug("Searching %s for language file(s)", search_dirs)
+
     for check_dir in search_dirs:
         lang_dir = check_dir / lang
         lexicon_path = lang_dir / "lexicon.db"
         if lexicon_path.is_file():
+            _LOGGER.debug("Found language file(s) in %s", lang_dir)
             return lang_dir
 
     return None

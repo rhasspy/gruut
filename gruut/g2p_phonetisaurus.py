@@ -205,8 +205,7 @@ class PhonetisaurusGraph:
                             final_idx = int(np.searchsorted(self.final_nodes, node))
                             if self.final_nodes[final_idx] == node:
                                 # Cache
-                                final_prob = self.final_probs[final_idx]
-                                assert isinstance(final_prob, float)
+                                final_prob = float(self.final_probs[final_idx])
                                 self.final_node_probs[node] = final_prob
                             else:
                                 # Not a final state

@@ -233,8 +233,7 @@ def get_args() -> argparse.Namespace:
     )
     phonemize_parser.add_argument(
         "--phonetisaurus",
-        action="store_true",
-        help="Prefer Phonetisaurus graph.npz over model.crf for grapheme to phoneme guessing",
+        help="Path to Phonetisaurus graph.npz grapheme to phoneme guessing (see bin/fst2npz.py)",
     )
     phonemize_parser.add_argument(
         "--model-prefix",
