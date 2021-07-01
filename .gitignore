@@ -2,7 +2,8 @@ __pycache__/
 .mypy_cache/
 .ipynb_checkpoints/
 *.egg-info/
-/.venv/
+/.venv*/
+/build/
 /download/
 dist/
 /etc/
@@ -16,3 +17,7 @@ lexicon*.txt
 words.txt
 postagger.model
 model.mkl
+
+/data/
+/gruut-lang-*/**/lexicon.db
+/gruut-lang-*/**/model.crf
