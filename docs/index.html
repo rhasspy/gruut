@@ -80,6 +80,7 @@ read ɹ ˈi d
 <section id="supported-languages">
 <h3>Supported Languages<a class="headerlink" href="#supported-languages" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
+<li><p>Arabic (<code class="docutils literal notranslate"><span class="pre">ar</span></code>)</p></li>
 <li><p>Czech (<code class="docutils literal notranslate"><span class="pre">cs</span></code>)</p></li>
 <li><p>German (<code class="docutils literal notranslate"><span class="pre">de</span></code>)</p></li>
 <li><p>English (<code class="docutils literal notranslate"><span class="pre">en</span></code>)</p></li>
@@ -137,16 +138,85 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <p>French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence “J’ai des petites oreilles.”, “petites” will be pronounced “p ə t i t z” instead of “p ə t i t”.</p>
 </section>
 </section>
+<section id="database">
+<span id="id2"></span><h2>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h2>
+<p>Word pronunciations and other metadata are stored in SQLite databases with the following tables:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>word_phonemes - word pronunciations</dt><dd><ul>
+<li><p>id INTEGER - primary key</p></li>
+<li><p>word TEXT - word text</p></li>
+<li><p>pron_order INTEGER - priority of pronunciation (lowest is first)</p></li>
+<li><p>phonemes TEXT - whitespace-separated phonemes</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>feature_names - names of extra pronunciation features (like part of speech)</dt><dd><ul>
+<li><p>id INTEGER - primary key</p></li>
+<li><p>feature_id INTEGER - id of feature (linked to pron_features)</p></li>
+<li><p>feature TEXT - name of feature (e.g., “pos”)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>pron_features - extra pronunciation features</dt><dd><ul>
+<li><p>id INTEGER - primary key</p></li>
+<li><p>pron_id INTEGER - id from word_phonemes</p></li>
+<li><p>feature_id - feature_id from feature_names</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>You can generate your own lexicon databases from a text file with the format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">word</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="n">word</span> <span class="n">phoneme</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>by simply running:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">lexicon2db</span> <span class="o">--</span><span class="n">casing</span> <span class="n">lower</span> <span class="o">--</span><span class="n">lexicon</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">database</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">db</span>
+</pre></div>
+</div>
+<p>If your lexicon has part of speech (POS) tags, you can add the <code class="docutils literal notranslate"><span class="pre">--pos</span></code> flag. In this case, your lexicon must have the following format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">word</span> <span class="n">POS</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="n">word</span> <span class="n">POS</span> <span class="n">phoneme</span> <span class="n">phoneme</span> <span class="o">...</span>
+</pre></div>
+</div>
+</section>
 <section id="g2p-models">
-<h2>G2P Models<a class="headerlink" href="#g2p-models" title="Permalink to this headline">¶</a></h2>
+<span id="g2p"></span><h2>G2P Models<a class="headerlink" href="#g2p-models" title="Permalink to this headline">¶</a></h2>
 <p>Pre-trained g2p (grapheme to phoneme) models are available for all supported languages.
 These models guess pronunciations for unknown words, and are trained on the included lexicon databases using <a class="reference external" href="https://github.com/scrapinghub/python-crfsuite">python-crfsuite</a>.</p>
+<p>To train your own model, you will need a lexicon with the format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">word</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="n">word</span> <span class="n">phoneme</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>The first step is to use <a class="reference external" href="https://github.com/AdolfVonKleist/Phonetisaurus">Phonetisaurus</a> to generate an alignment corpus. If you use the <a class="reference external" href="https://pypi.org/project/phonetisaurus/">phonetisaurus Python package</a>, this can be generated with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">phonetisaurus</span> <span class="n">train</span> <span class="o">--</span><span class="n">corpus</span> <span class="n">g2p</span><span class="o">.</span><span class="n">corpus</span> <span class="o">--</span><span class="n">model</span> <span class="n">g2p</span><span class="o">.</span><span class="n">fst</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">g2p.corpus</span></code> file contains aligned graphemes and phonemes, and is used to train a g2p CRF model with gruut:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">g2p</span> <span class="n">train</span> <span class="o">--</span><span class="n">corpus</span> <span class="n">g2p</span><span class="o">.</span><span class="n">corpus</span> <span class="o">--</span><span class="n">output</span> <span class="n">g2p</span><span class="o">/</span><span class="n">model</span><span class="o">.</span><span class="n">crf</span>
+</pre></div>
+</div>
 <p>See <a class="reference internal" href="gruut.html#module-gruut.g2p" title="gruut.g2p"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.g2p</span></code></a> for more details.</p>
 </section>
 <section id="pos-taggers">
 <h2>POS Taggers<a class="headerlink" href="#pos-taggers" title="Permalink to this headline">¶</a></h2>
-<p>Pre-traned pos (part of speech) taggers are available for English and French.
+<p>Pre-trained pos (part of speech) taggers are available for English and French.
 These models predict the part of speech for each word during tokenization, and are trained from the <a class="reference external" href="https://universaldependencies.org/">Universal Dependencies</a> using <a class="reference external" href="https://github.com/scrapinghub/python-crfsuite">python-crfsuite</a>.</p>
+<p>To train your own model, first download files in <a class="reference external" href="https://universaldependencies.org/format.html">CoNLL-U format</a> from the <a class="reference external" href="https://universaldependencies.org">Universal Dependencies treebanks</a> and install the <a class="reference external" href="https://pypi.org/project/conllu/">conllu Python package</a>.</p>
+<p>Next, run the training script to generate a CRF model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">pos</span> <span class="n">train</span> <span class="o">--</span><span class="n">conllu</span> <span class="n">treebank</span><span class="o">.</span><span class="n">conllu</span> <span class="o">--</span><span class="n">output</span> <span class="n">pos</span><span class="o">/</span><span class="n">model</span><span class="o">.</span><span class="n">crf</span>
+</pre></div>
+</div>
+<p>You can change the predicted field with <code class="docutils literal notranslate"><span class="pre">--label</span> <span class="pre">&lt;FIELD&gt;</span></code>, which defaults to xpos.</p>
 <p>See <a class="reference internal" href="gruut.html#module-gruut.pos" title="gruut.pos"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.pos</span></code></a> for more details.</p>
 </section>
 <section id="espeak-phonemes">
@@ -183,6 +253,59 @@ read ɹ ˈiː d
 . ‖
 </pre></div>
 </div>
+<p>To generate your own eSpeak lexicon, first gather a list of words in your target language into a text file (one word per line). Next, use the <code class="docutils literal notranslate"><span class="pre">bin/espeak_word.sh</span></code> script to generate the lexicon:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">bin</span><span class="o">/</span><span class="n">espeak_word</span><span class="o">.</span><span class="n">sh</span> <span class="o">&lt;</span><span class="n">VOICE</span><span class="o">&gt;</span> <span class="o">&lt;</span> <span class="n">words</span><span class="o">.</span><span class="n">txt</span> <span class="o">&gt;</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">&lt;VOICE&gt;</span></code> is the voice name you would pass to <code class="docutils literal notranslate"><span class="pre">espeak-ng</span> <span class="pre">-v</span> <span class="pre">&lt;VOICE&gt;</span></code>. After generating the lexicon, see the instructions in <a class="reference internal" href="#database"><span class="std std-ref">Database</span></a> and <a class="reference internal" href="#g2p"><span class="std std-ref">G2P Models</span></a> for creating your own lexicon database and g2p models.</p>
+</section>
+<section id="adding-a-new-language">
+<h2>Adding a New Language<a class="headerlink" href="#adding-a-new-language" title="Permalink to this headline">¶</a></h2>
+<p>If you’d like to add a new language to gruut, please follow these steps:</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>Add an IPA phoneme set to <a class="reference external" href="https://github.com/rhasspy/gruut-ipa">gruut-ipa</a></dt><dd><ul class="simple">
+<li><p>I usually follow <a class="reference external" href="https://en.wikipedia.org/wiki/Template:Language_phonologies">Wikipedia’s phonology pages</a></p></li>
+<li><p>Fewer phonemes is better, as long as you can properly represent word pronunciations</p></li>
+<li><p>Try to find a <a class="reference external" href="https://kaldi-asr.org/">Kaldi</a> speech to text model for your language and match its phonemes to IPA</p></li>
+<li><p>Try running to <code class="docutils literal notranslate"><span class="pre">espeak-ng</span> <span class="pre">-v</span> <span class="pre">&lt;VOICE&gt;</span> <span class="pre">-q</span> <span class="pre">--ipa</span> <span class="pre">&lt;TEXT&gt;</span></code> to see what eSpeak thinks</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Create or adapt an IPA pronunciation lexicon</dt><dd><ul class="simple">
+<li><p>Check for an existing IPA lexicon from <a class="reference external" href="https://github.com/open-dict-data/ipa-dict">ipa-dict</a></p></li>
+<li><p>Try to find a <a class="reference external" href="https://kaldi-asr.org/">Kaldi</a> speech to text model for your language and use the bin/map_lexicon.py script to re-map phonemes to IPA</p></li>
+<li><p>Extend <a class="reference external" href="https://github.com/rhasspy/wiktionary2dict">wiktionary2dict</a> and create a lexicon from <a class="reference external" href="https://www.wiktionary.org/">Wiktionary</a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Convert your text lexicon to a database by following the instructions in <a class="reference internal" href="#database"><span class="std std-ref">Database</span></a></dt><dd><ul class="simple">
+<li><p>Put in data/&lt;language&gt;/lexicon.db</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Create a grapheme to phoneme (g2p) model by following the instructions in <a class="reference internal" href="#g2p"><span class="std std-ref">G2P Models</span></a></dt><dd><ul class="simple">
+<li><p>Put in data/&lt;language&gt;/g2p/model.crf</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Edit <code class="docutils literal notranslate"><span class="pre">lang.py</span></code> and:</dt><dd><ul class="simple">
+<li><p>Add your language to <code class="docutils literal notranslate"><span class="pre">LANG_ALIASES</span></code></p></li>
+<li><p>Add a tokenizer and phonemizer sub-class for your language</p></li>
+<li><p>Return your tokenizer/phonemizer in <code class="docutils literal notranslate"><span class="pre">get_tokenizer</span></code> and <code class="docutils literal notranslate"><span class="pre">get_phonemizer</span></code> respectively</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
 <div class="toctree-wrapper compound">
 </div>
 </section>
@@ -215,9 +338,11 @@ read ɹ ˈiː d
 <li><a class="reference internal" href="#features">Features</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#database">Database</a></li>
 <li><a class="reference internal" href="#g2p-models">G2P Models</a></li>
 <li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>
 <li><a class="reference internal" href="#espeak-phonemes">eSpeak Phonemes</a></li>
+<li><a class="reference internal" href="#adding-a-new-language">Adding a New Language</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>

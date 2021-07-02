@@ -274,11 +274,75 @@ Multiple graphemes are separated by “|”:</p>
 </dd></dl>
 
 </section>
+<section id="module-gruut.g2p_phonetisaurus">
+<span id="gruut-g2p-phonetisaurus-module"></span><h2>gruut.g2p_phonetisaurus module<a class="headerlink" href="#module-gruut.g2p_phonetisaurus" title="Permalink to this headline">¶</a></h2>
+<p>Guess word pronunciations using a Phonetisaurus FST</p>
+<p>See bin/fst2npz.py to convert an FST to a numpy graph.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="gruut.g2p_phonetisaurus.PhonetisaurusGraph">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.g2p_phonetisaurus.</span></span><span class="sig-name descname"><span class="pre">PhonetisaurusGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.g2p_phonetisaurus.PhonetisaurusGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Graph of numpy arrays that represents a Phonetisaurus FST</p>
+<p>Also contains shared cache of edges and final state probabilities.
+These caches are necessary to ensure that the .npz file stays small and fast
+to load.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.g2p_phonetisaurus.PhonetisaurusGraph.g2p">
+<span class="sig-name descname"><span class="pre">g2p</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">words</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'&lt;eps&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_beam</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grapheme_separator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_guesses</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.g2p_phonetisaurus.PhonetisaurusGraph.g2p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guess phonemes for words</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.g2p_phonetisaurus.PhonetisaurusGraph.load">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.g2p_phonetisaurus.PhonetisaurusGraph.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load .npz file with numpy graph</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#gruut.g2p_phonetisaurus.PhonetisaurusGraph" title="gruut.g2p_phonetisaurus.PhonetisaurusGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhonetisaurusGraph</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.g2p_phonetisaurus.main">
+<span class="sig-prename descclassname"><span class="pre">gruut.g2p_phonetisaurus.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.g2p_phonetisaurus.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main entry point</p>
+</dd></dl>
+
+</section>
 <section id="module-gruut.lang">
 <span id="gruut-lang-module"></span><h2>gruut.lang module<a class="headerlink" href="#module-gruut.lang" title="Permalink to this headline">¶</a></h2>
 <p>Language-specific tokenizers and phonemizers for gruut.</p>
 <p>The <a class="reference internal" href="#gruut.lang.get_tokenizer" title="gruut.lang.get_tokenizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_tokenizer()</span></code></a> and <a class="reference internal" href="#gruut.lang.get_phonemizer" title="gruut.lang.get_phonemizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_phonemizer()</span></code></a> methods will get the appropriate tokenizer/phonemizer for a known language.
 See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.lang.resolve_lang"><code class="xref py py-meth docutils literal notranslate"><span class="pre">resolve_lang()</span></code></a> to understand how language aliases are resolved.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="gruut.lang.ArabicPhonemizer">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">ArabicPhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.ArabicPhonemizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gruut.phonemize.SqlitePhonemizer" title="gruut.phonemize.SqlitePhonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.phonemize.SqlitePhonemizer</span></code></a></p>
+<p>Phonemizer for Arabic (اَلْعَرَبِيَّةُ)</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gruut.lang.ArabicTokenizer">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">ArabicTokenizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_number_converters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_replace_currency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.ArabicTokenizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gruut.toksen.RegexTokenizer" title="gruut.toksen.RegexTokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.toksen.RegexTokenizer</span></code></a></p>
+<p>Tokenizer for Arabic (اَلْعَرَبِيَّةُ)</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.lang.ArabicTokenizer.text_to_tokens">
+<span class="sig-name descname"><span class="pre">text_to_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.ArabicTokenizer.text_to_tokens" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process text into words and sentence tokens using hazm.</p>
+<p>Returns: (original_words, sentence_tokens) for each sentence</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#gruut.const.Token" title="gruut.const.Token"><code class="xref py py-class docutils literal notranslate"><span class="pre">Token</span></code></a>]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.lang.CzechPhonemizer">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">CzechPhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.CzechPhonemizer" title="Permalink to this definition">¶</a></dt>
@@ -483,7 +547,7 @@ See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.lang.get_phonemizer">
-<span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">get_phonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_g2p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fr_no_liason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.get_phonemizer" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">get_phonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_g2p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fr_no_liason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonetisaurus_g2p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.get_phonemizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get language-specific phonemizer.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -493,6 +557,7 @@ See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.l
 <li><p><strong>model_prefix</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – Optional directory prefix used for lexicon.db and g2p/model.crf</p></li>
 <li><p><strong>no_g2p</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, disable grapheme to phoneme prediction for unknown words</p></li>
 <li><p><strong>fr_no_liason</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, disable addition of liasons in <a class="reference internal" href="#gruut.lang.FrenchPhonemizer" title="gruut.lang.FrenchPhonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FrenchPhonemizer</span></code></a></p></li>
+<li><p><strong>phonetisaurus_g2p</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]) – Optional path to graph.npz file for g2p (overrides model.crf)</p></li>
 <li><p><strong>kwargs</strong> – Keyword arguments passed to phonemizer’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method</p></li>
 </ul>
 </dd>
@@ -1618,6 +1683,7 @@ read ɹ ˈi d
 <li><a class="reference internal" href="#module-gruut.commands">gruut.commands module</a></li>
 <li><a class="reference internal" href="#module-gruut.const">gruut.const module</a></li>
 <li><a class="reference internal" href="#module-gruut.g2p">gruut.g2p module</a></li>
+<li><a class="reference internal" href="#module-gruut.g2p_phonetisaurus">gruut.g2p_phonetisaurus module</a></li>
 <li><a class="reference internal" href="#module-gruut.lang">gruut.lang module</a></li>
 <li><a class="reference internal" href="#module-gruut.lexicon2db">gruut.lexicon2db module</a></li>
 <li><a class="reference internal" href="#module-gruut.phonemize">gruut.phonemize module</a></li>

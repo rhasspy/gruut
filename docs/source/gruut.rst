@@ -28,6 +28,14 @@ gruut.g2p module
    :undoc-members:
    :show-inheritance:
 
+gruut.g2p\_phonetisaurus module
+-------------------------------
+
+.. automodule:: gruut.g2p_phonetisaurus
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 gruut.lang module
 -----------------
 
