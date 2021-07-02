@@ -21,6 +21,7 @@ _LOGGER = logging.getLogger("gruut.lang")
 # -----------------------------------------------------------------------------
 
 LANG_ALIASES = {
+    "ar": "ar",
     "cs": "cs-cz",
     "de": "de-de",
     "en": "en-us",
@@ -346,6 +347,95 @@ def id_to_phonemes(
     )
 
     return phonemes_list
+
+
+# -----------------------------------------------------------------------------
+# ar
+# -----------------------------------------------------------------------------
+
+
+class ArabicTokenizer(RegexTokenizer):
+    """Tokenizer for Arabic (اَلْعَرَبِيَّةُ)"""
+
+    def __init__(
+        self,
+        lang_dir: typing.Union[str, Path],
+        use_number_converters: bool = False,
+        do_replace_currency: bool = True,
+        **kwargs,
+    ):
+        self.lang_dir = Path(lang_dir)
+        currency_names = get_currency_names("ar")
+
+        super().__init__(
+            replacements=[
+                ("\\B'", '"'),  # replace single quotes
+                ("'\\B", '"'),
+                ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
+            ],
+            punctuations={
+                '"',
+                "„",
+                "“",
+                "”",
+                "«",
+                "»",
+                "’",
+                ",",
+                "،",
+                ":",
+                ";",
+                ".",
+                "?",
+                "؟",
+                "!",
+            },
+            minor_breaks={"،", ":", ";"},
+            major_breaks={".", "؟", "!"},
+            casing_func=str.lower,
+            num2words_lang="ar",
+            babel_locale="ar",
+            currency_names=currency_names,
+            use_number_converters=use_number_converters,
+            do_replace_currency=do_replace_currency,
+            **kwargs,
+        )
+
+    def text_to_tokens(
+        self, text: str
+    ) -> typing.Iterable[typing.Tuple[typing.List[str], typing.List[Token]]]:
+        """
+        Process text into words and sentence tokens using hazm.
+
+        Returns: (original_words, sentence_tokens) for each sentence
+        """
+
+        try:
+            import mishkal.tashkeel
+
+            # Load vocalizer
+            if not hasattr(self, "vocalizer"):
+                vocalizer = mishkal.tashkeel.TashkeelClass()
+                setattr(self, "vocalizer", vocalizer)
+
+            # Add diacritics
+            text = vocalizer.tashkeel(text)
+        except ImportError:
+            _LOGGER.warning("mishkal is highly recommended for language 'ar'")
+            _LOGGER.warning("pip install 'mishkal>=0.15.0'")
+
+        yield from super().text_to_tokens(text)
+
+
+class ArabicPhonemizer(SqlitePhonemizer):
+    """Phonemizer for Arabic (اَلْعَرَبِيَّةُ)"""
+
+    def __init__(self, lang_dir: typing.Union[str, Path], **kwargs):
+        self.lang_dir = lang_dir
+
+        super().__init__(
+            minor_breaks={"،", ":", ";"}, major_breaks={".", "؟", "!"}, **kwargs
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -698,36 +788,36 @@ class FarsiTokenizer(RegexTokenizer):
 
         try:
             import hazm
+
+            # Load normalizer
+            if not hasattr(self, "normalizer"):
+                normalizer = hazm.Normalizer()
+                setattr(self, "normalizer", normalizer)
+
+            # Load tagger
+            if not hasattr(self, "tagger"):
+                # Load part of speech tagger
+                model_path = self.lang_dir / "postagger.model"
+                tagger = hazm.POSTagger(model=str(model_path))
+                setattr(self, "tagger", tagger)
+
+            sentences = hazm.sent_tokenize(normalizer.normalize(text))
+            for sentence in sentences:
+                original_words = []
+                sentence_tokens = []
+                for word, pos in tagger.tag(hazm.word_tokenize(sentence)):
+                    original_words.append(word)
+                    sentence_tokens.append(
+                        Token(text=word, features={TokenFeatures.PART_OF_SPEECH: pos})
+                    )
+
+                yield original_words, sentence_tokens
         except ImportError:
             _LOGGER.warning("hazm is highly recommended for language 'fa'")
             _LOGGER.warning("pip install 'hazm>=0.7.0'")
 
             # Fall back to parent implementation
             yield from super().text_to_tokens(text)
-
-        # Load normalizer
-        if not hasattr(self, "normalizer"):
-            normalizer = hazm.Normalizer()
-            setattr(self, "normalizer", normalizer)
-
-        # Load tagger
-        if not hasattr(self, "tagger"):
-            # Load part of speech tagger
-            model_path = self.lang_dir / "postagger.model"
-            tagger = hazm.POSTagger(model=str(model_path))
-            setattr(self, "tagger", tagger)
-
-        sentences = hazm.sent_tokenize(normalizer.normalize(text))
-        for sentence in sentences:
-            original_words = []
-            sentence_tokens = []
-            for word, pos in tagger.tag(hazm.word_tokenize(sentence)):
-                original_words.append(word)
-                sentence_tokens.append(
-                    Token(text=word, features={TokenFeatures.PART_OF_SPEECH: pos})
-                )
-
-            yield original_words, sentence_tokens
 
 
 class FarsiPhonemizer(SqlitePhonemizer):

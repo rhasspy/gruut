@@ -40,10 +40,11 @@ extras = {
     "rapidfuzz>=1.4.1": ["train"],
     "aeneas~=1.7.3.0": ["align"],
     "pydub~=0.24.1": ["align"],
+    "mishkal~=1.15.0": ["ar"],
 }
 
 # Create language-specific extras
-for lang in ["cs", "de", "es", "fa", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
+for lang in ["ar", "cs", "de", "es", "fa", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
     extras[f"gruut_lang_{lang}~={base_version}"] = [lang]
 
 # Add "all" tag
