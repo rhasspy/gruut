@@ -27,6 +27,7 @@ function gruut {
 # -----------------------------------------------------------------------------
 
 declare -A sentences
+sentences['ar']="لغة واحدة لا تكفي"
 sentences['cs-cz']="Jeden jazyk nikdy nestačí."
 sentences['de-de']="Eine Sprache ist niemals genug."
 sentences['en-us']="One language is never enough."
@@ -59,7 +60,7 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
               continue
           fi
 
-          full_lang="$(cat "${lang_dir}/LANGUAGE")"
+          full_lang="$(awk '{print $1}' "${lang_dir}/LANGUAGE")"
           sentence="${sentences["${full_lang}"]}"
 
           # With gruut phonemes

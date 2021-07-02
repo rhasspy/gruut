@@ -19,7 +19,7 @@ with open(version_path, "r") as version_file:
 
 setuptools.setup(
     name=module_name,
-    description="sv-se language files for gruut tokenizer/phonemizer",
+    description="Swedish language files for gruut tokenizer/phonemizer",
     version=version,
     author="Michael Hansen",
     author_email="mike@rhasspy.org",

@@ -12,11 +12,12 @@ echo "Language data modules"
 find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
     while read -r lang_dir; do
         # Update setup.py
-        full_lang="$(cat "${lang_dir}/LANGUAGE")"
+        full_lang="$(awk '{print $1}' "${lang_dir}/LANGUAGE")"
         IFS='-' read -ra lang_parts <<< "${full_lang}"
         lang_code="${lang_parts[0]}"
+        lang_name="$(awk '{print $2}' "${lang_dir}/LANGUAGE")"
 
-        LANG_NAME="${full_lang}" LANG_CODE="${lang_code}" \
+        LANG_NAME="${lang_name}" LANG_CODE="${lang_code}" \
                  envsubst < "${src_dir}/etc/lang_setup.py.in" \
                  > "${lang_dir}/setup.py"
 
