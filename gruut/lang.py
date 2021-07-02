@@ -99,6 +99,10 @@ def get_tokenizer(
         # Don't use part-of-speech tagger
         kwargs.pop("pos_model", None)
 
+    if lang == "ar":
+        assert lang_dir is not None
+        return ArabicTokenizer(lang_dir=lang_dir, **kwargs)
+
     if lang == "cs-cz":
         assert lang_dir is not None
         return CzechTokenizer(lang_dir=lang_dir, **kwargs)
@@ -212,6 +216,10 @@ def get_phonemizer(
     if no_g2p:
         # Don't use grapheme-to-phoneme model
         kwargs.pop("g2p_model", None)
+
+    if lang == "ar":
+        assert lang_dir is not None
+        return ArabicPhonemizer(lang_dir=lang_dir, **kwargs)
 
     if lang == "cs-cz":
         assert lang_dir is not None
