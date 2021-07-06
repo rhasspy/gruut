@@ -14,7 +14,7 @@ module_dir = this_dir / "gruut"
 long_description: str = ""
 readme_path = this_dir / "README.md"
 if readme_path.is_file():
-    long_description = readme_path.read_text()
+    long_description = readme_path.read_text(encoding="UTF-8")
 
 requirements = []
 requirements_path = this_dir / "requirements.txt"
