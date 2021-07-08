@@ -14,7 +14,7 @@ from gruut_ipa import IPA
 from .const import REGEX_TYPE, TOKEN_OR_STR, WORD_PHONEMES, Token, WordPronunciation
 from .g2p import GraphemesToPhonemes
 from .g2p_phonetisaurus import PhonetisaurusGraph
-from .utils import maybe_compile_regex
+from .utils import decode_inline_pronunciation, maybe_compile_regex
 
 _LOGGER = logging.getLogger("gruut.phonemize")
 
@@ -123,6 +123,7 @@ class SqlitePhonemizer(Phonemizer):
         feature_map: Mapping from feature name (e.g. "pos") to a mapping from raw feature values to normalized values (e.g., "NNS": "NN"). Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
         remove_stress: If `True`, remove stress characters (ˈˌ) when loading/guessing prounciations
         remove_accents: If `True`, remove accent characters ('²) when loading/guessing prounciations. If None, use value of return_stress.
+        inline_pronunciations: True if tokens may continue inline pronunciations encoded as __phonemes_<PHONEMES>__ where <PHONEMES> is the base32 string of whitespace-separated phonemes.
     """
 
     WORD_INDEX_PATTERN = re.compile(r"^(.+)_(\d+)$")
@@ -160,6 +161,7 @@ class SqlitePhonemizer(Phonemizer):
         ] = None,
         remove_stress: bool = False,
         remove_accents: typing.Optional[bool] = None,
+        inline_pronunciations: bool = True,
     ):
         # Thread-local variables
         self.thread_local = threading.local()
@@ -257,6 +259,11 @@ class SqlitePhonemizer(Phonemizer):
         # True if pronunciations have all been loaded from the database
         self.prons_preloaded = False
 
+        # True if tokens may continue inline pronunciations encoded as
+        # __phonemes_<PHONEMES>__ where <PHONEMES> is the base32 string of
+        # whitespace-separated phonemes
+        self.inline_pronunciations = inline_pronunciations
+
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR]
     ) -> typing.Iterable[WORD_PHONEMES]:
@@ -308,6 +315,14 @@ class SqlitePhonemizer(Phonemizer):
             token = Token(token)
 
         word = token.text
+
+        if self.inline_pronunciations:
+            # Detect __phonemes_<PHONEMES>__
+            maybe_inline_pronunciation = decode_inline_pronunciation(word)
+            if maybe_inline_pronunciation is not None:
+                # Replace base32-encoded token text with inline pronunciation
+                token.text = f"[[ {maybe_inline_pronunciation} ]]"
+                return WordPronunciation(phonemes=maybe_inline_pronunciation.split())
 
         # Word with all "non-word" characters removed.
         # Skip if lookup_with_only_words_chars is False.

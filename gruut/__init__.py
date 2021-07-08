@@ -4,10 +4,13 @@ import typing
 from enum import Enum
 from pathlib import Path
 
+import gruut_ipa
+
 from .const import WORD_PHONEMES, Sentence, Token, TokenFeatures, WordPronunciation
 from .lang import KNOWN_LANGS, get_phonemizer, get_tokenizer, resolve_lang
 from .phonemize import Phonemizer, SqlitePhonemizer, UnknownWordError
 from .toksen import RegexTokenizer, Tokenizer
+from .utils import encode_inline_pronunciations
 
 _DIR = Path(__file__).parent
 
@@ -15,13 +18,15 @@ __version__ = (_DIR / "VERSION").read_text().strip()
 
 # -----------------------------------------------------------------------------
 
+_CACHE_LOCK = threading.RLock()
+
 _TOKENIZER_CACHE: typing.Dict[str, Tokenizer] = {}
 _TOKENIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
-_TOKENIZER_CACHE_LOCK = threading.RLock()
 
 _PHONEMIZER_CACHE: typing.Dict[str, Phonemizer] = {}
 _PHONEMIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
-_PHONEMIZER_CACHE_LOCK = threading.RLock()
+
+_PHONEMES_CACHE: typing.Dict[str, gruut_ipa.Phonemes] = {}
 
 # -----------------------------------------------------------------------------
 
@@ -76,6 +81,7 @@ def text_to_phonemes(
     lang: str = "en-us",
     return_format: typing.Union[str, TextToPhonemesReturn] = "word_tuples",
     no_cache: bool = False,
+    inline_pronunciations: bool = True,
     tokenizer: typing.Optional[Tokenizer] = None,
     tokenizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
     phonemizer: typing.Optional[Phonemizer] = None,
@@ -89,6 +95,7 @@ def text_to_phonemes(
         lang: Language of the text
         return_format: Format of return value
         no_cache: If True, tokenizer/phonemizer cache are not used
+        inline_pronunciations: If True, allow inline [[ p h o n e m e s ]] in text
         tokenizer: Optional tokenizer to use instead of creating one
         tokenizer_args: Optional keyword arguments used when creating tokenizer
         phonemizer: Optional phonemizer to use instead of creating one
@@ -131,10 +138,25 @@ def text_to_phonemes(
 
     lang = resolve_lang(lang)
 
+    if inline_pronunciations:
+        with _CACHE_LOCK:
+            # Load phonemes for language
+            lang_phonemes = _PHONEMES_CACHE.get(lang)
+
+            if lang_phonemes is None:
+                lang_phonemes = gruut_ipa.Phonemes.from_language(lang)
+                assert lang_phonemes is not None, f"Unsupported language: {lang}"
+                _PHONEMES_CACHE[lang] = lang_phonemes
+
+        assert lang_phonemes is not None
+
+        # Replace [[ p h o n e m e s ]] with __phonemes_<base32-phonemes>__
+        text = encode_inline_pronunciations(text, lang_phonemes)
+
     # Get tokenizer
     tokenizer_args = tokenizer_args or {}
     if (tokenizer is None) and (not no_cache):
-        with _TOKENIZER_CACHE_LOCK:
+        with _CACHE_LOCK:
             if tokenizer_args != _TOKENIZER_CACHE_ARGS:
                 # Args changed; drop cache
                 _TOKENIZER_CACHE.pop(lang, None)
@@ -145,14 +167,14 @@ def text_to_phonemes(
         tokenizer = get_tokenizer(lang, **tokenizer_args)
 
         if not no_cache:
-            with _TOKENIZER_CACHE_LOCK:
+            with _CACHE_LOCK:
                 _TOKENIZER_CACHE[lang] = tokenizer
                 _TOKENIZER_CACHE_ARGS = tokenizer_args
 
     # Get phonemizer
     phonemizer_args = phonemizer_args or {}
     if (phonemizer is None) and (not no_cache):
-        with _PHONEMIZER_CACHE_LOCK:
+        with _CACHE_LOCK:
             if phonemizer_args != _PHONEMIZER_CACHE_ARGS:
                 # Args changed; drop cache
                 _PHONEMIZER_CACHE.pop(lang, None)
@@ -222,9 +244,9 @@ def text_to_phonemes(
 
     for sentence_idx, sentence in enumerate(sentences):
         return_tuples.extend(
-            (sentence_idx, word, word_phonemes)
-            for word, word_phonemes in zip(
-                sentence.clean_words, phonemizer.phonemize(sentence.tokens)
+            (sentence_idx, token.text, token_phonemes)
+            for token, token_phonemes in zip(
+                sentence.tokens, phonemizer.phonemize(sentence.tokens)
             )
         )
 

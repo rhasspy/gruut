@@ -1,10 +1,13 @@
 """Utility methods for gruut"""
+import base64
 import itertools
 import logging
 import os
 import re
 import typing
 from pathlib import Path
+
+import gruut_ipa
 
 from .const import REGEX_PATTERN
 
@@ -117,6 +120,54 @@ def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
         _LOGGER.warning("get_currency_names")
 
     return currency_names
+
+
+# -----------------------------------------------------------------------------
+
+INLINE_PHONEMES_PATTERN = re.compile(r"\B\[\[([^\]]+)\]\]\B")
+ENCODED_PHONEMES_PATTERN = re.compile(r"^__phonemes_([^_]+)__$")
+
+# Allow ' for primary stress and , for secondary stress
+# Allow : for elongation
+IPA_TRANSLATE = str.maketrans(
+    "',:",
+    "".join(
+        [
+            gruut_ipa.IPA.STRESS_PRIMARY.value,
+            gruut_ipa.IPA.STRESS_SECONDARY.value,
+            gruut_ipa.IPA.LONG,
+        ]
+    ),
+)
+
+
+def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str:
+    """Encode inline phonemes in text using __phonemes_<base32-phonemes>__ format"""
+
+    def replace_phonemes(match: re.Match) -> str:
+        ipa = match.group(1)
+        ipa = ipa.translate(IPA_TRANSLATE)
+
+        # Normalize and separate with whitespace
+        norm_ipa = " ".join(p.text for p in phonemes.split(ipa))
+
+        # Base32 is used here because it's insensitive to case transformations
+        b32_ipa = base64.b32encode(norm_ipa.encode()).decode()
+
+        inline_key = f"__phonemes_{b32_ipa}__"
+
+        return inline_key
+
+    return INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
+
+
+def decode_inline_pronunciation(word: str) -> typing.Optional[str]:
+    """Return encoded inline phonemes from word encoded as __phonemes_<base32-phonemes>__"""
+    match = ENCODED_PHONEMES_PATTERN.match(word)
+    if match:
+        return base64.b32decode(match.group(1).upper().encode()).decode()
+
+    return None
 
 
 # -----------------------------------------------------------------------------

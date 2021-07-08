@@ -3,9 +3,12 @@ import dataclasses
 import logging
 import typing
 
+import gruut_ipa
+
 from .const import Token
 from .phonemize import Phonemizer, UnknownWordError
 from .toksen import Tokenizer
+from .utils import encode_inline_pronunciations
 
 _LOGGER = logging.getLogger("gruut.commands")
 
@@ -15,14 +18,27 @@ _LOGGER = logging.getLogger("gruut.commands")
 def tokenize(
     tokenizer: Tokenizer,
     lines: typing.Iterable[str],
+    language: typing.Optional[str] = None,
     is_csv: bool = False,
     csv_delimiter: str = "|",
     split_sentences: bool = False,
+    inline_pronunciations: bool = True,
 ) -> typing.Iterable[typing.Dict[str, typing.Any]]:
     """Tokenize sentences into JSONL"""
     # String used to join tokens.
     # See RegexTokenizer
     join_str: str = getattr(tokenizer, "join_str", " ")
+
+    if inline_pronunciations:
+        assert language is not None
+        lang_phonemes = gruut_ipa.Phonemes.from_language(language)
+        assert lang_phonemes is not None, f"Unsupported language {language}"
+
+        def process_lines(lines):
+            for line in lines:
+                yield encode_inline_pronunciations(line, lang_phonemes)
+
+        lines = process_lines(lines)
 
     for line in lines:
         line = line.strip()
@@ -98,6 +114,10 @@ def phonemize(
         try:
             sentence_pron = list(phonemizer.phonemize(tokens))
             sentence_obj["pronunciation"] = sentence_pron
+
+            # Tokens may be modified by phonemize
+            sentence_obj["clean_words"] = [t.text for t in tokens]
+            sentence_obj["tokens"] = [dataclasses.asdict(t) for t in tokens]
 
             # Create string of first pronunciation
             sentence_obj["pronunciation_text"] = word_separator.join(

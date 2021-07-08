@@ -11,6 +11,7 @@ import jsonlines
 
 from gruut_ipa import IPA
 
+from .lang import resolve_lang
 from .utils import find_lang_dir
 
 # -----------------------------------------------------------------------------
@@ -45,6 +46,8 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     _LOGGER.debug(args)
+
+    args.language = resolve_lang(args.language)
 
     if args.lang_dir:
         args.lang_dir = Path(args.lang_dir)
@@ -89,9 +92,11 @@ def do_tokenize(args):
     for sent_json in tokenize(
         tokenizer,
         lines,
+        language=args.language,
         is_csv=args.csv,
         csv_delimiter=args.csv_delimiter,
         split_sentences=args.split_sentences,
+        inline_pronunciations=(not args.no_inline_pronunciations),
     ):
         writer.write(sent_json)
 
@@ -183,6 +188,11 @@ def get_args() -> argparse.Namespace:
         "--no-pos",
         action="store_true",
         help="Don't load part of speech tagger if available",
+    )
+    tokenize_parser.add_argument(
+        "--no-inline-pronunciations",
+        action="store_true",
+        help="Disable inline phonemes in text",
     )
     tokenize_parser.add_argument(
         "--csv", action="store_true", help="Input format is id|text"
