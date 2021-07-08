@@ -79,8 +79,9 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 * Python 3.6 or higher
 * Linux
     * Tested on Debian Buster
-* [Babel](https://pypi.org/project/Babel/) and [num2words](https://pypi.org/project/num2words/)
+* [num2words fork](https://github.com/rhasspy/num2words) and [Babel](https://pypi.org/project/Babel/)
     * Currency/number handling
+    * num2words fork includes additional language support (Arabic, Farsi, Swedish, Swahili)
 * gruut-ipa
     * [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) pronunciation manipulation
 * [pycrfsuite](https://github.com/scrapinghub/python-crfsuite)
