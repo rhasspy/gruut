@@ -63,7 +63,7 @@ def main():
                 (word, alignment),
             )
 
-    print("Added", len(g2p_alignments), "to", args.database)
+    print("Added", len(g2p_alignments), "alignments to", args.database)
 
 
 # -----------------------------------------------------------------------------

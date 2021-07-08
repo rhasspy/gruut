@@ -47,8 +47,23 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
 
 # -----------------------------------------------------------------------------
 
-echo ""
-echo "g2p data modules"
+# English
+data_dir="${src_dir}/data/en-us"
+module_dir="${src_dir}/gruut/data/en-us"
+
+cp "${data_dir}/lexicon.db" \
+   "${module_dir}/"
+
+cp "${data_dir}/g2p/model.crf" \
+   "${module_dir}/g2p/"
+
+cp "${data_dir}/espeak/lexicon.db" \
+   "${module_dir}/espeak/"
+
+cp "${data_dir}/espeak/g2p/model.crf" \
+   "${module_dir}/espeak/g2p/"
+
+echo "en-us en-us ${module_dir}"
 
 # -----------------------------------------------------------------------------
 
