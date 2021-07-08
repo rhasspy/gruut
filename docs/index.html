@@ -137,6 +137,22 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <p>When determining the “best” pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain “preferred” parts of speech. Words like “wind” may be pronounced differently depending on their use as a verb or noun. If a token “wind” is predicted to be a noun during tokenization, then the pronunciation “w ˈɪ n d” is selected instead of “w ˈaɪ n d”.</p>
 <p>French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence “J’ai des petites oreilles.”, “petites” will be pronounced “p ə t i t z” instead of “p ə t i t”.</p>
 </section>
+<section id="inline-pronunciations">
+<h3>Inline Pronunciations<a class="headerlink" href="#inline-pronunciations" title="Permalink to this headline">¶</a></h3>
+<p>If you want more control over a word’s pronunciation, you can include inline pronunciations in your sentences. There are two different syntaxes, with different purposes:</p>
+<ul class="simple">
+<li><p>Brackets - <code class="docutils literal notranslate"><span class="pre">[[</span> <span class="pre">p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s</span> <span class="pre">]]</span></code></p></li>
+<li><p>Curly Braces - <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">words</span> <span class="pre">with</span> <span class="pre">s{eg}m{ent}s</span> <span class="pre">}}</span></code></p></li>
+</ul>
+<p>The “brackets” syntax allows you to directly insert phonemes for a word. See <a class="reference external" href="https://github.com/rhasspy/gruut-ipa">gruut-ipa</a> for the list of phonemes in your desired language. Some substitutions are automatically made for you:</p>
+<ol class="arabic simple">
+<li><p>Primary and secondary stress can be given with the apostrophe (<code class="docutils literal notranslate"><span class="pre">'</span></code>) and comma (<code class="docutils literal notranslate"><span class="pre">,</span></code>)</p></li>
+<li><p>Elongation can be given with a colon (<code class="docutils literal notranslate"><span class="pre">:</span></code>)</p></li>
+<li><p>Ties will be added, if necessary (e.g., <code class="docutils literal notranslate"><span class="pre">tʃ</span></code> becomes <code class="docutils literal notranslate"><span class="pre">t͡ʃ</span></code>)</p></li>
+</ol>
+<p>The “curly brackets” syntax lets you sound out a word using other words (or segments of other words). For example, “Beyoncé” could be written as <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">bee</span> <span class="pre">yawn</span> <span class="pre">say</span> <span class="pre">}}</span></code>. From the curly brackets, gruut will look up each word’s pronunciation in the lexicon (or guess it), and combine all of the resulting phonemes. You may include phonemes inside the curly brackets as well with the syntax <code class="docutils literal notranslate"><span class="pre">/p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s/</span></code> alongside other words.</p>
+<p>An even more useful aspect of the “curly brackets” syntax is using <strong>word segments</strong>. For most words in the lexicon, gruut has an alignment between its graphemes and phonemes. This enables you do insert <em>partial</em> pronunciations of words, such as the “zure” in “azure”, with <code class="docutils literal notranslate"><span class="pre">a{zure}</span></code>. You can even have multiple segments from a single word! For example, <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">{mic}roph{one}</span> <span class="pre">}}</span></code> will produce phonemes sounding like “mike own”.</p>
+</section>
 </section>
 <section id="database">
 <span id="id2"></span><h2>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h2>
@@ -165,7 +181,16 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 <dt>pron_features - extra pronunciation features</dt><dd><ul>
 <li><p>id INTEGER - primary key</p></li>
 <li><p>pron_id INTEGER - id from word_phonemes</p></li>
-<li><p>feature_id - feature_id from feature_names</p></li>
+<li><p>feature_id INTEGER - feature_id from feature_names</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>g2p_alignments - grapheme/phoneme alignments from Phonetisaurus</dt><dd><ul>
+<li><p>id INTEGER - primary key</p></li>
+<li><p>word TEXT - word from lexicon</p></li>
+<li><p>alignment TEXT - grapheme/phoneme alignment string</p></li>
 </ul>
 </dd>
 </dl>
@@ -205,6 +230,10 @@ These models guess pronunciations for unknown words, and are trained on the incl
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">g2p</span> <span class="n">train</span> <span class="o">--</span><span class="n">corpus</span> <span class="n">g2p</span><span class="o">.</span><span class="n">corpus</span> <span class="o">--</span><span class="n">output</span> <span class="n">g2p</span><span class="o">/</span><span class="n">model</span><span class="o">.</span><span class="n">crf</span>
 </pre></div>
 </div>
+<p>You can add the grapheme/phoneme alignments from <code class="docutils literal notranslate"><span class="pre">g2p.corpus</span></code> to your lexicon database with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">corpus2db</span> <span class="o">--</span><span class="n">corpus</span> <span class="n">g2p</span><span class="o">.</span><span class="n">corpus</span> <span class="o">--</span><span class="n">output</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">db</span>
+</pre></div>
+</div>
 <p>See <a class="reference internal" href="gruut.html#module-gruut.g2p" title="gruut.g2p"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.g2p</span></code></a> for more details.</p>
 </section>
 <section id="pos-taggers">
@@ -225,7 +254,7 @@ These models predict the part of speech for each word during tokenization, and a
 <p>These additional lexicons can be accessed via the <code class="docutils literal notranslate"><span class="pre">model_prefix</span></code> argument to <code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.get_phonemizer()</span></code> or the <code class="docutils literal notranslate"><span class="pre">--model-prefix</span></code> command-line argument to <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">phonemize</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">text_to_phonemes</span>
 
-<span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;He wound it around the wound, saying &quot;I read it was $10 to read.&quot;&#39;</span>
+<span class="n">text</span> <span class="o">=</span> <span class="n">uHe</span> <span class="n">wound</span> <span class="n">it</span> <span class="n">around</span> <span class="n">the</span> <span class="n">wound</span><span class="p">,</span> <span class="n">saying</span> <span class="s2">&quot;I read it was $10 to read.&quot;</span><span class="n">u</span>
 
 <span class="k">for</span> <span class="n">sent_idx</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">word_phonemes</span> <span class="ow">in</span> <span class="n">text_to_phonemes</span><span class="p">(</span>
     <span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">,</span> <span class="n">phonemizer_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;espeak&quot;</span><span class="p">}</span>
@@ -336,6 +365,7 @@ read ɹ ˈiː d
 <li><a class="reference internal" href="#usage">Usage</a><ul>
 <li><a class="reference internal" href="#command-line">Command-Line</a></li>
 <li><a class="reference internal" href="#features">Features</a></li>
+<li><a class="reference internal" href="#inline-pronunciations">Inline Pronunciations</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#database">Database</a></li>

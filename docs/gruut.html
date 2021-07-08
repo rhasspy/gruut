@@ -56,7 +56,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.commands.tokenize">
-<span class="sig-prename descclassname"><span class="pre">gruut.commands.</span></span><span class="sig-name descname"><span class="pre">tokenize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_csv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv_delimiter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_sentences</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.commands.tokenize" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">gruut.commands.</span></span><span class="sig-name descname"><span class="pre">tokenize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_csv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv_delimiter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_sentences</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_pronunciations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.commands.tokenize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Tokenize sentences into JSONL</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
@@ -166,6 +166,16 @@
 When choosing among several pronunciations for a <a class="reference internal" href="#gruut.const.Token" title="gruut.const.Token"><code class="xref py py-class docutils literal notranslate"><span class="pre">Token</span></code></a>, the one with more compatible features will be chosen.</p>
 </dd></dl>
 
+</dd></dl>
+
+</section>
+<section id="module-gruut.corpus2db">
+<span id="gruut-corpus2db-module"></span><h2>gruut.corpus2db module<a class="headerlink" href="#module-gruut.corpus2db" title="Permalink to this headline">¶</a></h2>
+<p>Converts a Phonetisaurus G2P corpus to an sqlite database</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.corpus2db.main">
+<span class="sig-prename descclassname"><span class="pre">gruut.corpus2db.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.corpus2db.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main entry point</p>
 </dd></dl>
 
 </section>
@@ -730,7 +740,7 @@ See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.l
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.phonemize.</span></span><span class="sig-name descname"><span class="pre">SqlitePhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_word_indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_index_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">re.compile('^(.+)_(\\\\d+)$')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ipa_minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ipa_major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lookup_with_only_words_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">non_word_chars_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">re.compile('\\\\W')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_on_unknown_words</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_pronunciations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lexicon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g2p_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_stress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_accents</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.phonemize.</span></span><span class="sig-name descname"><span class="pre">SqlitePhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_word_indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_index_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">re.compile('^(.+)_(\\\\d+)$')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ipa_minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ipa_major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lookup_with_only_words_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">non_word_chars_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">re.compile('\\\\W')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_on_unknown_words</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_pronunciations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lexicon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g2p_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_stress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_accents</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_pronunciations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gruut.phonemize.Phonemizer" title="gruut.phonemize.Phonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.phonemize.Phonemizer</span></code></a></p>
 <p>Full-featured phonemizer with sqlite database lexicon backend.</p>
 <p>Pipeline is (roughly):</p>
@@ -862,6 +872,12 @@ See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.l
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer.inline_pronunciations">
+<span class="sig-name descname"><span class="pre">inline_pronunciations</span></span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer.inline_pronunciations" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if tokens may continue inline pronunciations encoded as __phonemes_&lt;PHONEMES&gt;__ where &lt;PHONEMES&gt; is the base32 string of whitespace-separated phonemes.</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer.NON_WORD_CHARS_PATTERN">
 <span class="sig-name descname"><span class="pre">NON_WORD_CHARS_PATTERN</span></span><em class="property"> <span class="pre">=</span> <span class="pre">re.compile('\\W')</span></em><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer.NON_WORD_CHARS_PATTERN" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pattern to match non-word characters</p>
@@ -905,6 +921,17 @@ See <a class="reference internal" href="#gruut.lang.resolve_lang" title="gruut.l
 <dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer.delete_prons">
 <span class="sig-name descname"><span class="pre">delete_prons</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer.delete_prons" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all pronuncations of a word from the database</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer.get_aligned_phonemes">
+<span class="sig-name descname"><span class="pre">get_aligned_phonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer.get_aligned_phonemes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get pronunciation for segements of a word using g2p alignments in database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#gruut.const.WordPronunciation" title="gruut.const.WordPronunciation"><code class="xref py py-class docutils literal notranslate"><span class="pre">WordPronunciation</span></code></a>]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1479,6 +1506,47 @@ First group must be number text (“3.14”).</p>
 <section id="module-gruut.utils">
 <span id="gruut-utils-module"></span><h2>gruut.utils module<a class="headerlink" href="#module-gruut.utils" title="Permalink to this headline">¶</a></h2>
 <p>Utility methods for gruut</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="gruut.utils.InlinePronunciationType">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">InlinePronunciationType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.InlinePronunciationType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Types of inline pronunciations in text</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.utils.InlinePronunciationType.PHONEMES">
+<span class="sig-name descname"><span class="pre">PHONEMES</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'phonemes'</span></em><a class="headerlink" href="#gruut.utils.InlinePronunciationType.PHONEMES" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whitespace-separated [[ p h o n e m e s ]]</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.utils.InlinePronunciationType.SOUNDS_LIKE">
+<span class="sig-name descname"><span class="pre">SOUNDS_LIKE</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'sounds_like'</span></em><a class="headerlink" href="#gruut.utils.InlinePronunciationType.SOUNDS_LIKE" title="Permalink to this definition">¶</a></dt>
+<dd><p>{{ Words with optional s{eg}m{ent}s }}</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.utils.decode_inline_pronunciation">
+<span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">decode_inline_pronunciation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.decode_inline_pronunciation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return encoded inline phonemes from word encoded as __phonemes_&lt;base32-phonemes&gt;__</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code>[<a class="reference internal" href="#gruut.utils.InlinePronunciationType" title="gruut.utils.InlinePronunciationType"><code class="xref py py-class docutils literal notranslate"><span class="pre">InlinePronunciationType</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.utils.encode_inline_pronunciations">
+<span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">encode_inline_pronunciations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.encode_inline_pronunciations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encode inline phonemes in text using __phonemes_&lt;base32-phonemes&gt;__ format</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.utils.find_lang_dir">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">find_lang_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_dirs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.find_lang_dir" title="Permalink to this definition">¶</a></dt>
@@ -1526,6 +1594,17 @@ First group must be number text (“3.14”).</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="gruut.utils.get_sounds_like_segments">
+<span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">get_sounds_like_segments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.get_sounds_like_segments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get start/end indexes for s{eg}m{ent}s of words</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="gruut.utils.maybe_compile_regex">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">maybe_compile_regex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str_or_pattern</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.maybe_compile_regex" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compile regex pattern if it’s a string</p>
@@ -1540,6 +1619,17 @@ First group must be number text (“3.14”).</p>
 <dt class="sig sig-object py" id="gruut.utils.pairwise">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">pairwise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.pairwise" title="Permalink to this definition">¶</a></dt>
 <dd><p>s -&gt; (s0,s1), (s1,s2), (s2, s3), …</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.utils.strip_sounds_like_segments">
+<span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">strip_sounds_like_segments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.strip_sounds_like_segments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove { } markers from sounds-like word</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -1613,7 +1703,7 @@ First group must be number text (“3.14”).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.text_to_phonemes">
-<span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">text_to_phonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'en-us'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'word_tuples'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemizer_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.text_to_phonemes" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">text_to_phonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'en-us'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'word_tuples'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_pronunciations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemizer_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.text_to_phonemes" title="Permalink to this definition">¶</a></dt>
 <dd><p>High-level text to phonemes interface.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1622,6 +1712,7 @@ First group must be number text (“3.14”).</p>
 <li><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – Language of the text</p></li>
 <li><p><strong>return_format</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <a class="reference internal" href="#gruut.TextToPhonemesReturn" title="gruut.TextToPhonemesReturn"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextToPhonemesReturn</span></code></a>]) – Format of return value</p></li>
 <li><p><strong>no_cache</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If True, tokenizer/phonemizer cache are not used</p></li>
+<li><p><strong>inline_pronunciations</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – If True, allow inline [[ p h o n e m e s ]] in text</p></li>
 <li><p><strong>tokenizer</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#gruut.toksen.Tokenizer" title="gruut.toksen.Tokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code></a>]) – Optional tokenizer to use instead of creating one</p></li>
 <li><p><strong>tokenizer_args</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]) – Optional keyword arguments used when creating tokenizer</p></li>
 <li><p><strong>phonemizer</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#gruut.phonemize.Phonemizer" title="gruut.phonemize.Phonemizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Phonemizer</span></code></a>]) – Optional phonemizer to use instead of creating one</p></li>
@@ -1682,6 +1773,7 @@ read ɹ ˈi d
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#module-gruut.commands">gruut.commands module</a></li>
 <li><a class="reference internal" href="#module-gruut.const">gruut.const module</a></li>
+<li><a class="reference internal" href="#module-gruut.corpus2db">gruut.corpus2db module</a></li>
 <li><a class="reference internal" href="#module-gruut.g2p">gruut.g2p module</a></li>
 <li><a class="reference internal" href="#module-gruut.g2p_phonetisaurus">gruut.g2p_phonetisaurus module</a></li>
 <li><a class="reference internal" href="#module-gruut.lang">gruut.lang module</a></li>

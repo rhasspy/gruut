@@ -122,6 +122,24 @@ When determining the "best" pronunciation for a word, a phonemizer may consult t
 
 French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence "J’ai des petites oreilles.", "petites" will be pronounced "p ə t i t z" instead of "p ə t i t".
 
+Inline Pronunciations
+^^^^^^^^^^^^^^^^^^^^^
+
+If you want more control over a word's pronunciation, you can include inline pronunciations in your sentences. There are two different syntaxes, with different purposes:
+
+* Brackets - ``[[ p h o n e m e s ]]``
+* Curly Braces - ``{{ words with s{eg}m{ent}s }}``
+
+The "brackets" syntax allows you to directly insert phonemes for a word. See `gruut-ipa <https://github.com/rhasspy/gruut-ipa>`_ for the list of phonemes in your desired language. Some substitutions are automatically made for you:
+
+#. Primary and secondary stress can be given with the apostrophe (``'``) and comma (``,``)
+#. Elongation can be given with a colon (``:``)
+#. Ties will be added, if necessary (e.g., ``tʃ`` becomes ``t͡ʃ``)
+
+The "curly brackets" syntax lets you sound out a word using other words (or segments of other words). For example, "Beyoncé" could be written as ``{{ bee yawn say }}``. From the curly brackets, gruut will look up each word's pronunciation in the lexicon (or guess it), and combine all of the resulting phonemes. You may include phonemes inside the curly brackets as well with the syntax ``/p h o n e m e s/`` alongside other words.
+
+An even more useful aspect of the "curly brackets" syntax is using **word segments**. For most words in the lexicon, gruut has an alignment between its graphemes and phonemes. This enables you do insert *partial* pronunciations of words, such as the "zure" in "azure", with ``a{zure}``. You can even have multiple segments from a single word! For example, ``{{ {mic}roph{one} }}`` will produce phonemes sounding like "mike own".
+
 .. _database:
 
 Database
@@ -141,7 +159,11 @@ Word pronunciations and other metadata are stored in SQLite databases with the f
 * pron_features - extra pronunciation features
     * id INTEGER - primary key
     * pron_id INTEGER - id from word_phonemes
-    * feature_id - feature_id from feature_names
+    * feature_id INTEGER - feature_id from feature_names
+* g2p_alignments - grapheme/phoneme alignments from Phonetisaurus
+    * id INTEGER - primary key
+    * word TEXT - word from lexicon
+    * alignment TEXT - grapheme/phoneme alignment string
 
 You can generate your own lexicon databases from a text file with the format::
 
@@ -180,6 +202,10 @@ The ``g2p.corpus`` file contains aligned graphemes and phonemes, and is used to 
 
     python3 -m gruut.g2p train --corpus g2p.corpus --output g2p/model.crf
 
+You can add the grapheme/phoneme alignments from ``g2p.corpus`` to your lexicon database with::
+
+    python3 -m gruut.corpus2db --corpus g2p.corpus --output lexicon.db
+
 See :py:mod:`gruut.g2p` for more details.
 
 POS Taggers
@@ -209,7 +235,7 @@ These additional lexicons can be accessed via the ``model_prefix`` argument to :
 
     from gruut import text_to_phonemes
 
-    text = 'He wound it around the wound, saying "I read it was $10 to read."'
+    text = uHe wound it around the wound, saying "I read it was $10 to read."u
 
     for sent_idx, word, word_phonemes in text_to_phonemes(
         text, lang="en-us", phonemizer_args={"model_prefix": "espeak"}

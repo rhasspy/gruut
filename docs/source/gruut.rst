@@ -20,6 +20,14 @@ gruut.const module
    :undoc-members:
    :show-inheritance:
 
+gruut.corpus2db module
+----------------------
+
+.. automodule:: gruut.corpus2db
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 gruut.g2p module
 ----------------
 
