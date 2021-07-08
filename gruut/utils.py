@@ -131,7 +131,7 @@ ENCODED_PHONEMES_PATTERN = re.compile(r"^__phonemes_([^_]+)__$")
 INLINE_SOUNDSLIKE_PATTERN = re.compile(r"\B{{(.+)}}\B")
 ENCODED_SOUNDSLIKE_PATTERN = re.compile(r"^__soundslike_([^_]+)__$")
 
-SOUNDSLIKE_SEGMENTS_PATTERN = re.compile(r"^[^{]*({[^}]+)}.*$")
+SOUNDSLIKE_SEGMENTS_PATTERN = re.compile(r"({[^}]+)}")
 SOUNDSLIKE_SEGMENTS_TRANSLATE = str.maketrans({"{": None, "}": None})
 
 

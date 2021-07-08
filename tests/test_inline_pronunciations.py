@@ -47,7 +47,7 @@ class InlinePronunciationsTestCase(unittest.TestCase):
 
     def test_text_to_phonemes_sounds_like(self):
         """Test inline sounds-like pronunciations in text_to_phonemes"""
-        text = "{{ racks uh core {i}t {co}de {fall}ible {i}t {pu}n tore s{ee} us }}"
+        text = "{{ racks uh core {i}t {co}de {fall}{i}ble {pu}n tore s{ee} us }}"
         words_phonemes = list(text_to_phonemes(text, inline_pronunciations=True))
         _, last_word, last_phonemes = words_phonemes[-1]
 
@@ -71,7 +71,7 @@ class InlinePronunciationsTestCase(unittest.TestCase):
                 "l",
                 "ˈɪ",
                 "p",
-                "ˈʌ",
+                "ə",
                 "t",
                 "ˈɔ",
                 "ɹ",
