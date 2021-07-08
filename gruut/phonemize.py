@@ -14,7 +14,13 @@ from gruut_ipa import IPA
 from .const import REGEX_TYPE, TOKEN_OR_STR, WORD_PHONEMES, Token, WordPronunciation
 from .g2p import GraphemesToPhonemes
 from .g2p_phonetisaurus import PhonetisaurusGraph
-from .utils import decode_inline_pronunciation, maybe_compile_regex
+from .utils import (
+    InlinePronunciationType,
+    decode_inline_pronunciation,
+    get_sounds_like_segments,
+    maybe_compile_regex,
+    strip_sounds_like_segments,
+)
 
 _LOGGER = logging.getLogger("gruut.phonemize")
 
@@ -321,8 +327,88 @@ class SqlitePhonemizer(Phonemizer):
             maybe_inline_pronunciation = decode_inline_pronunciation(word)
             if maybe_inline_pronunciation is not None:
                 # Replace base32-encoded token text with inline pronunciation
-                token.text = f"[[ {maybe_inline_pronunciation} ]]"
-                return WordPronunciation(phonemes=maybe_inline_pronunciation.split())
+                inline_type, inline_value = maybe_inline_pronunciation
+                if inline_type == InlinePronunciationType.SOUNDS_LIKE:
+                    token.text = f"{{{{ {inline_value} }}}}"
+                    cached_prons = self.lexicon.get(word)
+
+                    if cached_prons is None:
+                        phonemes: typing.List[str] = []
+
+                        # [(word, is_phonemes)]
+                        inline_words: typing.List[typing.Tuple[str, bool]] = []
+                        phonemes_word = ""
+
+                        # Split by whitespace, recombine inline phonemes
+                        for maybe_word in inline_value.split():
+                            end_slash = maybe_word.endswith("/")
+
+                            if phonemes_word:
+                                phonemes_word += f" {maybe_word}"
+
+                                # Check for end of /p h o n e m e s/
+                                if end_slash:
+                                    # Exclude ending "/"
+                                    inline_words.append((phonemes_word[:-1], True))
+                                    phonemes_word = ""
+
+                                continue
+
+                            if maybe_word.startswith("/"):
+                                if end_slash:
+                                    # Single /phoneme/
+                                    # Exclude start "/" and end "/"
+                                    inline_words.append((maybe_word[1:-1], True))
+                                else:
+                                    # Multiple /phon emes/
+                                    # Exclude start "/"
+                                    phonemes_word = maybe_word[1:]
+
+                                continue
+
+                            inline_words.append((maybe_word, False))
+
+                        # Gather phonemes for inline words
+                        for inline_word, is_phonemes in inline_words:
+                            if is_phonemes:
+                                # Inline /p h o n e m e s/ (separated by whitespace)
+                                phonemes.extend(inline_word.split())
+                                continue
+
+                            segments = list(get_sounds_like_segments(inline_word))
+                            if segments:
+                                # One or more s{eg}m{ent}s of a word
+                                inline_word = strip_sounds_like_segments(inline_word)
+                                inline_word_pron = self.get_aligned_phonemes(
+                                    inline_word, segments
+                                )
+                            else:
+                                # Entire word
+                                inline_word_pron = self.get_pronunciation(inline_word)
+
+                            if inline_word_pron is not None:
+                                phonemes.extend(inline_word_pron.phonemes)
+
+                        cached_prons = [WordPronunciation(phonemes=phonemes)]
+                        with self.lexicon_lock:
+                            self.lexicon[word] = cached_prons
+
+                    assert cached_prons
+
+                    return cached_prons[0]
+
+                # Phonemes
+                token.text = f"[[ {inline_value} ]]"
+                cached_prons = self.lexicon.get(word)
+
+                if cached_prons is None:
+                    cached_prons = [WordPronunciation(phonemes=inline_value.split())]
+                    with self.lexicon_lock:
+                        self.lexicon[word] = cached_prons
+
+                assert cached_prons
+
+                return cached_prons[0]
 
         # Word with all "non-word" characters removed.
         # Skip if lookup_with_only_words_chars is False.
@@ -492,6 +578,69 @@ class SqlitePhonemizer(Phonemizer):
 
         return phonemes
 
+    def get_aligned_phonemes(
+        self, word: str, segments: typing.Iterable[typing.Tuple[int, int]]
+    ) -> typing.Optional[WordPronunciation]:
+        """Get pronunciation for segements of a word using g2p alignments in database"""
+        self._connect()
+        assert self.db_conn is not None
+
+        phonemes: typing.List[str] = []
+
+        try:
+            # Try to find alignment in database
+            cursor = self.db_conn.execute(
+                "SELECT alignment FROM g2p_alignments WHERE word = ?", (word,)
+            )
+
+            # Example for "beet" - b}b e}ˈi e}_ t}t
+            alignment_str: str = next(cursor)[0]
+
+            # index -> (graphemes, phonemes)
+            alignment: typing.Dict[
+                int, typing.Tuple[typing.List[str], typing.List[str]]
+            ] = {}
+
+            align_idx = 0
+            for g2p_part in alignment_str.split():
+                # Assume default delimiters:
+                # } separates input/output
+                # | separates input/output tokens
+                # _ indicates empty output
+                g_str, p_str = g2p_part.split("}", maxsplit=1)
+                gs = [g for g in g_str.split("|") if g != "_"]
+                ps = [p for p in p_str.split("|") if p != "_"]
+                if gs and ps:
+                    alignment[align_idx] = (gs, ps)
+
+                align_idx += len(gs)
+
+            # Gather phonemes for word segments
+            for start_idx, end_idx in segments:
+                current_idx = start_idx
+                while current_idx < end_idx:
+                    # Look for a graphemes/phonemes pair at this exact index
+                    maybe_align = alignment.get(current_idx)
+                    if maybe_align is not None:
+                        # Alignment exists; add phonemes and move index forward
+                        gs, ps = maybe_align
+                        phonemes.extend(ps)
+                        current_idx += len(gs)
+                    else:
+                        # No alignment. Move index forward 1 and try again.
+                        current_idx += 1
+
+            return WordPronunciation(phonemes=phonemes)
+        except Exception:
+            # Try to pronounce segments of word directly instead, possible using
+            # g2p model to guess.
+            for start_idx, end_idx in segments:
+                segment_pron = self.get_pronunciation(word[start_idx:end_idx])
+                if segment_pron is not None:
+                    phonemes.extend(segment_pron.phonemes)
+
+            return WordPronunciation(phonemes=phonemes)
+
     # -------------------------------------------------------------------------
 
     @property
@@ -548,13 +697,13 @@ class SqlitePhonemizer(Phonemizer):
 
             # Word/phoneme pairs with explicit ordering
             self.db_conn.execute(
-                "CREATE TABLE word_phonemes "
+                "CREATE TABLE IF NOT EXISTS word_phonemes "
                 + "(id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT, pron_order INTEGER, phonemes TEXT);"
             )
 
             # Names of all features (token_features)
             self.db_conn.execute(
-                "CREATE TABLE feature_names "
+                "CREATE TABLE IF NOT EXISTS feature_names "
                 + "(id INTEGER PRIMARY KEY AUTOINCREMENT, feature_id INTEGER, feature TEXT);"
             )
 
@@ -567,7 +716,7 @@ class SqlitePhonemizer(Phonemizer):
 
             # Feature values for each pronunciation
             self.db_conn.execute(
-                "CREATE TABLE pron_features "
+                "CREATE TABLE IF NOT EXISTS pron_features "
                 + "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + "pron_id INTEGER, "
                 + "feature_id INTEGER, "

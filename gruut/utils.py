@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import typing
+from enum import Enum
 from pathlib import Path
 
 import gruut_ipa
@@ -127,6 +128,23 @@ def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
 INLINE_PHONEMES_PATTERN = re.compile(r"\B\[\[([^\]]+)\]\]\B")
 ENCODED_PHONEMES_PATTERN = re.compile(r"^__phonemes_([^_]+)__$")
 
+INLINE_SOUNDSLIKE_PATTERN = re.compile(r"\B{{(.+)}}\B")
+ENCODED_SOUNDSLIKE_PATTERN = re.compile(r"^__soundslike_([^_]+)__$")
+
+SOUNDSLIKE_SEGMENTS_PATTERN = re.compile(r"^[^{]*({[^}]+)}.*$")
+SOUNDSLIKE_SEGMENTS_TRANSLATE = str.maketrans({"{": None, "}": None})
+
+
+class InlinePronunciationType(str, Enum):
+    """Types of inline pronunciations in text"""
+
+    PHONEMES = "phonemes"
+    """Whitespace-separated [[ p h o n e m e s ]]"""
+
+    SOUNDS_LIKE = "sounds_like"
+    """{{ Words with optional s{eg}m{ent}s }}"""
+
+
 # Allow ' for primary stress and , for secondary stress
 # Allow : for elongation
 IPA_TRANSLATE = str.maketrans(
@@ -145,7 +163,7 @@ def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str
     """Encode inline phonemes in text using __phonemes_<base32-phonemes>__ format"""
 
     def replace_phonemes(match: re.Match) -> str:
-        ipa = match.group(1)
+        ipa = match.group(1).strip()
         ipa = ipa.translate(IPA_TRANSLATE)
 
         # Normalize and separate with whitespace
@@ -158,16 +176,50 @@ def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str
 
         return inline_key
 
-    return INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
+    def replace_soundslike(match: re.Match) -> str:
+        words = match.group(1).strip()
+
+        # Base32 is used here because it's insensitive to case transformations
+        b32_words = base64.b32encode(words.encode()).decode()
+
+        inline_key = f"__soundslike_{b32_words}__"
+
+        return inline_key
+
+    text = INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
+    text = INLINE_SOUNDSLIKE_PATTERN.sub(replace_soundslike, text)
+
+    return text
 
 
-def decode_inline_pronunciation(word: str) -> typing.Optional[str]:
+def decode_inline_pronunciation(
+    word: str,
+) -> typing.Optional[typing.Tuple[InlinePronunciationType, str]]:
     """Return encoded inline phonemes from word encoded as __phonemes_<base32-phonemes>__"""
     match = ENCODED_PHONEMES_PATTERN.match(word)
     if match:
-        return base64.b32decode(match.group(1).upper().encode()).decode()
+        phonemes = base64.b32decode(match.group(1).upper().encode()).decode()
+        return (InlinePronunciationType.PHONEMES, phonemes)
+
+    match = ENCODED_SOUNDSLIKE_PATTERN.match(word)
+    if match:
+        sounds_like = base64.b32decode(match.group(1).upper().encode()).decode()
+        return (InlinePronunciationType.SOUNDS_LIKE, sounds_like)
 
     return None
+
+
+def get_sounds_like_segments(word: str) -> typing.Iterable[typing.Tuple[int, int]]:
+    """Get start/end indexes for s{eg}m{ent}s of words"""
+    offset = 0
+    for match in SOUNDSLIKE_SEGMENTS_PATTERN.finditer(word):
+        yield (match.start(1) - offset, match.end(1) - offset - 1)
+        offset += 2  # for { and }
+
+
+def strip_sounds_like_segments(word: str) -> str:
+    """Remove { } markers from sounds-like word"""
+    return word.translate(SOUNDSLIKE_SEGMENTS_TRANSLATE)
 
 
 # -----------------------------------------------------------------------------
