@@ -21,6 +21,10 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
                  envsubst < "${src_dir}/etc/lang_setup.py.in" \
                  > "${lang_dir}/setup.py"
 
+        LANG_NAME="${lang_name}" LANG_CODE="${lang_code}" \
+                 envsubst < "${src_dir}/etc/lang_README.md.in" \
+                 > "${lang_dir}/README.md"
+
         module_dir="${lang_dir}/gruut_lang_${lang_code}"
 
         # Update version
