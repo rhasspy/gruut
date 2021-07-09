@@ -19,5 +19,3 @@ postagger.model
 model.mkl
 
 /data/
-/gruut-lang-*/**/lexicon.db
-/gruut-lang-*/**/model.crf
