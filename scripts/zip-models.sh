@@ -28,7 +28,7 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
 
         # Create standalone distribution
         lang_dir_name="$(basename "${lang_dir}" | sed 's/-/_/g')"
-        full_lang="$(cat LANGUAGE)"
+        full_lang="$(awk '{print $1}' "${lang_dir}/LANGUAGE")"
         tar -czf "${dist_dir}/data/${full_lang}.tar.gz" \
             --transform "s/${lang_dir_name}/${full_lang}/" "${lang_dir_name}"
 

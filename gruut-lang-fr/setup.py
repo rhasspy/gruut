@@ -4,8 +4,10 @@ from pathlib import Path
 
 import setuptools
 
+module_name = "gruut_lang_fr"
+
 this_dir = Path(__file__).parent
-module_dir = this_dir / "gruut_lang_fr"
+module_dir = this_dir / module_name
 
 # -----------------------------------------------------------------------------
 
@@ -16,7 +18,7 @@ with open(version_path, "r") as version_file:
 # -----------------------------------------------------------------------------
 
 setuptools.setup(
-    name="gruut_lang_fr",
+    name=module_name,
     description="French language files for gruut tokenizer/phonemizer",
     version=version,
     author="Michael Hansen",
@@ -24,13 +26,12 @@ setuptools.setup(
     url="https://github.com/rhasspy/gruut",
     packages=setuptools.find_packages(),
     package_data={
-        "gruut_lang_fr": [
+        module_name: [
             "VERSION",
             "lexicon.db",
             "g2p/model.crf",
             "espeak/lexicon.db",
             "espeak/g2p/model.crf",
-            "pos/model.crf",
         ]
     },
     classifiers=[

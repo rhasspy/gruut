@@ -35,7 +35,6 @@ base_version = ".".join(version.split(".")[:-1] + ["0"])
 
 # dependency => [tags]
 extras = {
-    "hazm~=0.7.0": ["fa"],
     "conllu>=4.4": ["train"],
     "rapidfuzz>=1.4.1": ["train"],
     "aeneas~=1.7.3.0": ["align"],
@@ -43,7 +42,7 @@ extras = {
 }
 
 # Create language-specific extras
-for lang in ["cs", "de", "es", "fa", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
+for lang in ["cs", "de", "es", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
     extras[f"gruut_lang_{lang}~={base_version}"] = [lang]
 
 # Add "all" tag
