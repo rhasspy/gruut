@@ -12,6 +12,8 @@ fi
 
 # -----------------------------------------------------------------------------
 
+export PYTHONPATH="${src_dir}"
+
 coverage run "--source=${src_dir}/gruut" -m pytest
 coverage report -m
 coverage xml
