@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import typing
 from pathlib import Path
 
 import jsonlines
@@ -153,7 +154,7 @@ def do_text2phonemes(args):
 
     Prints a line of JSON for each input line.
     """
-    from . import text_to_phonemes
+    from . import text_to_phonemes, Token
 
     word_break = IPA.BREAK_WORD if args.word_breaks else None
 
@@ -167,6 +168,12 @@ def do_text2phonemes(args):
 
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for line in lines:
+        utt_id = ""
+
+        if args.csv:
+            # Input format is id|text
+            utt_id, line = line.split(args.csv_delimiter, maxsplit=1)
+
         sentences = text_to_phonemes(
             line,
             lang=args.language,
@@ -182,13 +189,39 @@ def do_text2phonemes(args):
                 "model_prefix": args.model_prefix,
             },
         )
-        output = [dataclasses.asdict(sent) for sent in sentences]
-        for sent_obj in output:
+
+        raw_words: typing.List[str] = []
+        clean_words: typing.List[str] = []
+        tokens: typing.List[Token] = []
+
+        for sentence in sentences:
+            raw_words.extend(sentence.raw_words)
+            clean_words.extend(sentence.clean_words)
+            tokens.extend(sentence.tokens)
+
+        output = {
+            "id": utt_id,
+            "raw_text": line,
+            "raw_words": raw_words,
+            "clean_words": clean_words,
+            "tokens": [dataclasses.asdict(t) for t in tokens],
+            "clean_text": args.word_separator.join(clean_words),
+            "sentences": [dataclasses.asdict(s) for s in sentences],
+        }
+
+        pronunciation = []
+        for sent_obj in output["sentences"]:
+            sent_phonemes = sent_obj["phonemes"]
             sent_obj["pronunciation_text"] = args.phoneme_separator.join(
-                phoneme
-                for word_phonemes in sent_obj["phonemes"]
-                for phoneme in word_phonemes
+                phoneme for word_phonemes in sent_phonemes for phoneme in word_phonemes
             )
+
+            pronunciation.extend(sent_phonemes)
+
+        output["pronunciation"] = pronunciation
+        output["pronunciation_text"] = args.phoneme_separator.join(
+            phoneme for word_phonemes in pronunciation for phoneme in word_phonemes
+        )
 
         writer.write(output)
         sys.stdout.flush()
@@ -346,9 +379,22 @@ def get_args() -> argparse.Namespace:
         help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
     )
     text2phonemes_parser.add_argument(
+        "--word-separator",
+        default=" ",
+        help="Separator to add between words in output pronunciation (default: space)",
+    )
+    text2phonemes_parser.add_argument(
         "--phoneme-separator",
         default=" ",
         help="Separator to add between words in output pronunciation (default: space)",
+    )
+    text2phonemes_parser.add_argument(
+        "--csv", action="store_true", help="Input format is id|text"
+    )
+    text2phonemes_parser.add_argument(
+        "--csv-delimiter",
+        default="|",
+        help="Delimiter between id and text (default: |, requires --csv)",
     )
 
     # ----------------

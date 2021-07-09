@@ -129,6 +129,11 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
 </pre></div>
 </div>
+<p>The combined <code class="docutils literal notranslate"><span class="pre">text2phonemes</span></code> command will perform tokenization/phonemization in one step:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gruut en-us text2phonemes &#39;This is a test.&#39; | jq -r .pronunciation_text
+ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+</pre></div>
+</div>
 <p>See <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">&lt;COMMAND&gt;</span> <span class="pre">--help</span></code> for more options.</p>
 </section>
 <section id="features">
@@ -139,7 +144,7 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 </section>
 <section id="inline-pronunciations">
 <h3>Inline Pronunciations<a class="headerlink" href="#inline-pronunciations" title="Permalink to this headline">¶</a></h3>
-<p>If you want more control over a word’s pronunciation, you can include inline pronunciations in your sentences. There are two different syntaxes, with different purposes:</p>
+<p>If you want more control over a word’s pronunciation, you can include inline pronunciations in your sentences (enable with <code class="docutils literal notranslate"><span class="pre">inline_pronunciations=True</span></code> or <code class="docutils literal notranslate"><span class="pre">--inline</span></code> on the command-line). There are two different syntaxes, with different purposes:</p>
 <ul class="simple">
 <li><p>Brackets - <code class="docutils literal notranslate"><span class="pre">[[</span> <span class="pre">p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s</span> <span class="pre">]]</span></code></p></li>
 <li><p>Curly Braces - <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">words</span> <span class="pre">with</span> <span class="pre">s{eg}m{ent}s</span> <span class="pre">}}</span></code></p></li>
@@ -152,6 +157,12 @@ The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title
 </ol>
 <p>The “curly brackets” syntax lets you sound out a word using other words (or segments of other words). For example, “Beyoncé” could be written as <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">bee</span> <span class="pre">yawn</span> <span class="pre">say</span> <span class="pre">}}</span></code>. From the curly brackets, gruut will look up each word’s pronunciation in the lexicon (or guess it), and combine all of the resulting phonemes. You may include phonemes inside the curly brackets as well with the syntax <code class="docutils literal notranslate"><span class="pre">/p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s/</span></code> alongside other words.</p>
 <p>An even more useful aspect of the “curly brackets” syntax is using <strong>word segments</strong>. For most words in the lexicon, gruut has an alignment between its graphemes and phonemes. This enables you do insert <em>partial</em> pronunciations of words, such as the “zure” in “azure”, with <code class="docutils literal notranslate"><span class="pre">a{zure}</span></code>. You can even have multiple segments from a single word! For example, <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">{mic}roph{one}</span> <span class="pre">}}</span></code> will produce phonemes sounding like “mike own”.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># raxacoricofallipatorius</span>
+gruut en-us text2phonemes --inline <span class="se">\</span>
+  <span class="s1">&#39;{{ racks uh core {i}t {co}de {fall}{i}ble {pu}n tore s{ee} us }}&#39;</span> <span class="p">|</span> jq -r .pronunciation_text
+ɹ ˈæ k s ˈʌ k ˈɔ ɹ ˈɪ k ˈoʊ f ˈæ l ə p ˈʌ t ˈɔ ɹ ˈi ˈʌ s
+</pre></div>
+</div>
 </section>
 </section>
 <section id="database">
