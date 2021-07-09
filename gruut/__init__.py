@@ -81,7 +81,7 @@ def text_to_phonemes(
     lang: str = "en-us",
     return_format: typing.Union[str, TextToPhonemesReturn] = "word_tuples",
     no_cache: bool = False,
-    inline_pronunciations: bool = True,
+    inline_pronunciations: typing.Optional[bool] = None,
     tokenizer: typing.Optional[Tokenizer] = None,
     tokenizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
     phonemizer: typing.Optional[Phonemizer] = None,
@@ -95,7 +95,7 @@ def text_to_phonemes(
         lang: Language of the text
         return_format: Format of return value
         no_cache: If True, tokenizer/phonemizer cache are not used
-        inline_pronunciations: If True, allow inline [[ p h o n e m e s ]] in text
+        inline_pronunciations: If True, allow inline [[ p h o n e m e s ]] and {{ w{or}ds }} in text
         tokenizer: Optional tokenizer to use instead of creating one
         tokenizer_args: Optional keyword arguments used when creating tokenizer
         phonemizer: Optional phonemizer to use instead of creating one
@@ -188,12 +188,19 @@ def text_to_phonemes(
             _PHONEMIZER_CACHE[lang] = phonemizer
             _PHONEMIZER_CACHE_ARGS = tokenizer_args
 
+    # phonemize(**kwargs)
+    phonemize_kwargs = {}
+    if inline_pronunciations is not None:
+        phonemize_kwargs["inline_pronunciations"] = inline_pronunciations
+
     sentences = tokenizer.tokenize(text)
 
     if return_format == TextToPhonemesReturn.SENTENCES:
         return_sentences: SENTENCES_TYPE = []
         for sentence in sentences:
-            sentence.phonemes = list(phonemizer.phonemize(sentence.tokens))
+            sentence.phonemes = list(
+                phonemizer.phonemize(sentence.tokens, **phonemize_kwargs)
+            )
             return_sentences.append(sentence)
 
         return return_sentences
@@ -203,7 +210,9 @@ def text_to_phonemes(
 
         for sentence in sentences:
             # Return phonemes grouped by word
-            return_word_phonemes.extend(phonemizer.phonemize(sentence.tokens))
+            return_word_phonemes.extend(
+                phonemizer.phonemize(sentence.tokens, **phonemize_kwargs)
+            )
 
         return return_word_phonemes
 
@@ -215,7 +224,9 @@ def text_to_phonemes(
             return_sentence_phonemes.append(
                 [
                     phoneme
-                    for word_phonemes in phonemizer.phonemize(sentence.tokens)
+                    for word_phonemes in phonemizer.phonemize(
+                        sentence.tokens, **phonemize_kwargs
+                    )
                     for phoneme in word_phonemes
                 ]
             )
@@ -224,7 +235,10 @@ def text_to_phonemes(
 
     if return_format == TextToPhonemesReturn.SENTENCE_WORD_PHONEMES:
         # Return phonemes grouped by sentence and word
-        return [list(phonemizer.phonemize(sentence.tokens)) for sentence in sentences]
+        return [
+            list(phonemizer.phonemize(sentence.tokens, **phonemize_kwargs))
+            for sentence in sentences
+        ]
 
     if return_format == TextToPhonemesReturn.FLAT_PHONEMES:
         # Return flat list of phonemes
@@ -232,7 +246,9 @@ def text_to_phonemes(
         for sentence in sentences:
             return_flat_phonemes.extend(
                 phoneme
-                for word_phonemes in phonemizer.phonemize(sentence.tokens)
+                for word_phonemes in phonemizer.phonemize(
+                    sentence.tokens, **phonemize_kwargs
+                )
                 for phoneme in word_phonemes
             )
 
@@ -246,7 +262,8 @@ def text_to_phonemes(
         return_tuples.extend(
             (sentence_idx, token.text, token_phonemes)
             for token, token_phonemes in zip(
-                sentence.tokens, phonemizer.phonemize(sentence.tokens)
+                sentence.tokens,
+                phonemizer.phonemize(sentence.tokens, **phonemize_kwargs),
             )
         )
 

@@ -45,13 +45,14 @@ class Phonemizer(abc.ABC):
 
     @abc.abstractmethod
     def phonemize(
-        self, tokens: typing.Sequence[TOKEN_OR_STR]
+        self, tokens: typing.Sequence[TOKEN_OR_STR], **kwargs
     ) -> typing.Iterable[WORD_PHONEMES]:
         """
         Generate phonetic pronunciation for each token.
 
         Args:
             tokens: Tokens to generate pronunciations for
+            kwargs: Keyword arguments passed to subclass phonemize()
 
         Returns:
             List of phonemes for each token
@@ -76,13 +77,14 @@ class Phonemizer(abc.ABC):
 
     @abc.abstractmethod
     def get_pronunciation(
-        self, token: TOKEN_OR_STR
+        self, token: TOKEN_OR_STR, **kwargs
     ) -> typing.Optional[WordPronunciation]:
         """
         Gets the best pronunciation for a token (or None).
 
         Args:
             token: Token to get phonetic pronunciation for
+            kwargs: Keyword arguments passed to subclass get_pronunciation()
 
         Returns:
             Phonetic pronunciation or None (if not available or cannot be guessed)
@@ -129,7 +131,7 @@ class SqlitePhonemizer(Phonemizer):
         feature_map: Mapping from feature name (e.g. "pos") to a mapping from raw feature values to normalized values (e.g., "NNS": "NN"). Used to simplify the feature values needed in the lexicon to disambiguate pronunciations.
         remove_stress: If `True`, remove stress characters (ˈˌ) when loading/guessing prounciations
         remove_accents: If `True`, remove accent characters ('²) when loading/guessing prounciations. If None, use value of return_stress.
-        inline_pronunciations: True if tokens may continue inline pronunciations encoded as __phonemes_<PHONEMES>__ where <PHONEMES> is the base32 string of whitespace-separated phonemes.
+        inline_pronunciations: True if tokens may contain inline pronunciations encoded as __phonemes_<PHONEMES>__ or __soundslike__<WORDS>__
     """
 
     WORD_INDEX_PATTERN = re.compile(r"^(.+)_(\d+)$")
@@ -167,7 +169,7 @@ class SqlitePhonemizer(Phonemizer):
         ] = None,
         remove_stress: bool = False,
         remove_accents: typing.Optional[bool] = None,
-        inline_pronunciations: bool = True,
+        inline_pronunciations: bool = False,
     ):
         # Thread-local variables
         self.thread_local = threading.local()
@@ -271,8 +273,13 @@ class SqlitePhonemizer(Phonemizer):
         self.inline_pronunciations = inline_pronunciations
 
     def phonemize(
-        self, tokens: typing.Sequence[TOKEN_OR_STR]
+        self, tokens: typing.Sequence[TOKEN_OR_STR], **kwargs
     ) -> typing.Iterable[WORD_PHONEMES]:
+        # Extract keyword arguments
+        inline_pronunciations = kwargs.get(
+            "inline_pronunciations", self.inline_pronunciations
+        )
+
         # Convert strings to tokens
         tokens = typing.cast(
             typing.List[Token], [Token(t) if isinstance(t, str) else t for t in tokens]
@@ -293,7 +300,10 @@ class SqlitePhonemizer(Phonemizer):
                 yield [self.major_breaks[token.text]]
             else:
                 # Word
-                token_pron = self.get_pronunciation(token)
+                token_pron = self.get_pronunciation(
+                    token, inline_pronunciations=inline_pronunciations
+                )
+
                 if token_pron:
                     # Has a pronunciation
                     yield self.post_phonemize(token, token_pron)
@@ -313,16 +323,21 @@ class SqlitePhonemizer(Phonemizer):
                         yield [self.word_break]
 
     def get_pronunciation(
-        self, token: TOKEN_OR_STR
+        self, token: TOKEN_OR_STR, **kwargs
     ) -> typing.Optional[WordPronunciation]:
         """Get a single pronunciation for a token or None"""
+        # Extract keyword arguments
+        inline_pronunciations = kwargs.get(
+            "inline_pronunciations", self.inline_pronunciations
+        )
+
         if isinstance(token, str):
             # Wrap text
             token = Token(token)
 
         word = token.text
 
-        if self.inline_pronunciations:
+        if inline_pronunciations:
             # Detect __phonemes_<PHONEMES>__
             maybe_inline_pronunciation = decode_inline_pronunciation(word)
             if maybe_inline_pronunciation is not None:
@@ -384,7 +399,9 @@ class SqlitePhonemizer(Phonemizer):
                                 )
                             else:
                                 # Entire word
-                                inline_word_pron = self.get_pronunciation(inline_word)
+                                inline_word_pron = self.get_pronunciation(
+                                    inline_word, **kwargs
+                                )
 
                             if inline_word_pron is not None:
                                 phonemes.extend(inline_word_pron.phonemes)
@@ -635,7 +652,9 @@ class SqlitePhonemizer(Phonemizer):
             # Try to pronounce segments of word directly instead, possible using
             # g2p model to guess.
             for start_idx, end_idx in segments:
-                segment_pron = self.get_pronunciation(word[start_idx:end_idx])
+                segment_pron = self.get_pronunciation(
+                    word[start_idx:end_idx], inline_pronunciations=False
+                )
                 if segment_pron is not None:
                     phonemes.extend(segment_pron.phonemes)
 

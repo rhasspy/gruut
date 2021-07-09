@@ -948,10 +948,10 @@ class FrenchPhonemizer(SqlitePhonemizer):
         )
 
     def phonemize(
-        self, tokens: typing.Sequence[TOKEN_OR_STR]
+        self, tokens: typing.Sequence[TOKEN_OR_STR], **kwargs
     ) -> typing.Iterable[WORD_PHONEMES]:
         """Add liasons to a sentence by examining word texts, parts of speech, and phonemes."""
-        token_phonemes = super().phonemize(tokens)
+        token_phonemes = super().phonemize(tokens, **kwargs)
 
         if self.no_liason:
             # Liasons disabled

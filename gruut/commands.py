@@ -22,7 +22,7 @@ def tokenize(
     is_csv: bool = False,
     csv_delimiter: str = "|",
     split_sentences: bool = False,
-    inline_pronunciations: bool = True,
+    inline_pronunciations: bool = False,
 ) -> typing.Iterable[typing.Dict[str, typing.Any]]:
     """Tokenize sentences into JSONL"""
     # String used to join tokens.
@@ -116,6 +116,7 @@ def phonemize(
             sentence_obj["pronunciation"] = sentence_pron
 
             # Tokens may be modified by phonemize
+            sentence_obj["clean_text"] = word_separator.join(t.text for t in tokens)
             sentence_obj["clean_words"] = [t.text for t in tokens]
             sentence_obj["tokens"] = [dataclasses.asdict(t) for t in tokens]
 

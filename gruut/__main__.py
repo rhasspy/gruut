@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Command-line interface to gruut"""
 import argparse
+import dataclasses
 import json
 import logging
 import os
@@ -96,7 +97,7 @@ def do_tokenize(args):
         is_csv=args.csv,
         csv_delimiter=args.csv_delimiter,
         split_sentences=args.split_sentences,
-        inline_pronunciations=(not args.no_inline_pronunciations),
+        inline_pronunciations=args.inline,
     ):
         writer.write(sent_json)
 
@@ -124,6 +125,7 @@ def do_phonemize(args):
         no_g2p=args.no_g2p,
         phonetisaurus_g2p=args.phonetisaurus,
         model_prefix=args.model_prefix,
+        inline_pronunciations=args.inline,
     )
 
     if os.isatty(sys.stdin.fileno()):
@@ -140,6 +142,56 @@ def do_phonemize(args):
     writer = jsonlines.Writer(sys.stdout, flush=True)
     for utt_json in phonemize(phonemizer, sentence_generator()):
         writer.write(utt_json)
+
+
+# -----------------------------------------------------------------------------
+
+
+def do_text2phonemes(args):
+    """
+    Reads text from stdin, outputs JSONL with phonemes.
+
+    Prints a line of JSON for each input line.
+    """
+    from . import text_to_phonemes
+
+    word_break = IPA.BREAK_WORD if args.word_breaks else None
+
+    if args.text:
+        lines = args.text
+    else:
+        lines = sys.stdin
+
+        if os.isatty(sys.stdin.fileno()):
+            print("Reading text from stdin...", file=sys.stderr)
+
+    writer = jsonlines.Writer(sys.stdout, flush=True)
+    for line in lines:
+        sentences = text_to_phonemes(
+            line,
+            lang=args.language,
+            inline_pronunciations=args.inline,
+            return_format="sentences",
+            tokenizer_args={
+                "do_replace_currency": (not args.disable_currency),
+                "use_number_converters": args.number_converters,
+            },
+            phonemizer_args={
+                "word_break": word_break,
+                "use_word_indexes": args.word_indexes,
+                "model_prefix": args.model_prefix,
+            },
+        )
+        output = [dataclasses.asdict(sent) for sent in sentences]
+        for sent_obj in output:
+            sent_obj["pronunciation_text"] = args.phoneme_separator.join(
+                phoneme
+                for word_phonemes in sent_obj["phonemes"]
+                for phoneme in word_phonemes
+            )
+
+        writer.write(output)
+        sys.stdout.flush()
 
 
 # -----------------------------------------------------------------------------
@@ -190,9 +242,7 @@ def get_args() -> argparse.Namespace:
         help="Don't load part of speech tagger if available",
     )
     tokenize_parser.add_argument(
-        "--no-inline-pronunciations",
-        action="store_true",
-        help="Disable inline phonemes in text",
+        "--inline", action="store_true", help="Enable inline phonemes/words in text"
     )
     tokenize_parser.add_argument(
         "--csv", action="store_true", help="Input format is id|text"
@@ -249,16 +299,62 @@ def get_args() -> argparse.Namespace:
         "--model-prefix",
         help="Directory to use within default language directory with different lexicon/g2p model (e.g., espeak)",
     )
+    phonemize_parser.add_argument(
+        "--inline", action="store_true", help="Enable inline phonemes/words in text"
+    )
     # phonemize_parser.add_argument(
     #     "--skip-on-unknown-words",
     #     action="store_true",
     #     help="Skip sentences with words whose pronunciations can't be guessed",
     # )
 
+    # -------------
+    # text2phonemes
+    # -------------
+    text2phonemes_parser = sub_parsers.add_parser(
+        "text2phonemes", help="Convert text to phonemes"
+    )
+    text2phonemes_parser.set_defaults(func=do_text2phonemes)
+    text2phonemes_parser.add_argument(
+        "text", nargs="*", help="Text to tokenize/phonemize (default: stdin)"
+    )
+    text2phonemes_parser.add_argument(
+        "--word-indexes",
+        action="store_true",
+        help="Allow word_n form for specifying nth pronunciation of word from lexicon",
+    )
+    text2phonemes_parser.add_argument(
+        "--word-breaks",
+        action="store_true",
+        help="Add the IPA word break symbol (#) between each word",
+    )
+    text2phonemes_parser.add_argument(
+        "--model-prefix",
+        help="Directory to use within default language directory with different lexicon/g2p model (e.g., espeak)",
+    )
+    text2phonemes_parser.add_argument(
+        "--inline", action="store_true", help="Enable inline phonemes/words in text"
+    )
+    text2phonemes_parser.add_argument(
+        "--disable-currency",
+        action="store_true",
+        help="Disable automatic replacement of currency with words (e.g., $1 -> one dollar)",
+    )
+    text2phonemes_parser.add_argument(
+        "--number-converters",
+        action="store_true",
+        help="Allow number_conv form for specifying num2words converter (cardinal, ordinal, ordinal_num, year, currency)",
+    )
+    text2phonemes_parser.add_argument(
+        "--phoneme-separator",
+        default=" ",
+        help="Separator to add between words in output pronunciation (default: space)",
+    )
+
     # ----------------
     # Shared arguments
     # ----------------
-    for sub_parser in [tokenize_parser, phonemize_parser]:
+    for sub_parser in [tokenize_parser, phonemize_parser, text2phonemes_parser]:
         sub_parser.add_argument(
             "--lang-dir", help="Directory with language-specific data files"
         )
