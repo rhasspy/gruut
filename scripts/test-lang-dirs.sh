@@ -12,6 +12,11 @@ fi
 
 export PYTHONPATH="${src_dir}"
 
+while read -r lang_dir;
+do
+    export PYTHONPATH="${lang_dir}:${PYTHONPATH}"
+done < <(find "${src_dir}" -maxdepth 1 -type d -name 'gruut-lang-*')
+
 # -----------------------------------------------------------------------------
 
 function gruut {
