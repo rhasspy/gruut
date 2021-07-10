@@ -6,7 +6,6 @@ __pycache__/
 /build/
 /download/
 dist/
-/etc/
 
 coverage.xml
 .coverage
