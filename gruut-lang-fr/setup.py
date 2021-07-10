@@ -15,6 +15,13 @@ version_path = module_dir / "VERSION"
 with open(version_path, "r") as version_file:
     version = version_file.read().strip()
 
+
+extra_files = []
+
+pos_model = module_dir / "pos" / "model.crf"
+if pos_model.is_file():
+    extra_files.append(str(pos_model.relative_to(module_dir)))
+
 # -----------------------------------------------------------------------------
 
 setuptools.setup(
@@ -33,6 +40,7 @@ setuptools.setup(
             "espeak/lexicon.db",
             "espeak/g2p/model.crf",
         ]
+        + extra_files
     },
     classifiers=[
         "Programming Language :: Python :: 3",
