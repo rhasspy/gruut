@@ -130,6 +130,88 @@ class GruutLangTestCase(unittest.TestCase):
             ],
         )
 
+    def test_id_to_phonemes_en_nl(self):
+        """Test id_to_phonemes for U.S. English and Dutch"""
+        phonemes = id_to_phonemes(["en-us", "nl"])
+        self.assertEqual(
+            phonemes,
+            [
+                "_",  # pad
+                "|",  # minor break
+                "‖",  # major break
+                "#",  # word break
+                "ˈ",  # primary stress
+                "ˌ",  # secondary stress
+                # English
+                "aɪ",
+                "aʊ",
+                "b",
+                "d",
+                "d͡ʒ",
+                "eɪ",
+                "f",
+                "h",
+                "i",
+                "j",
+                "k",
+                "l",
+                "m",
+                "n",
+                "oʊ",
+                "p",
+                "s",
+                "t",
+                "t͡ʃ",
+                "u",
+                "v",
+                "w",
+                "z",
+                "æ",
+                "ð",
+                "ŋ",
+                "ɑ",
+                "ɔ",
+                "ɔɪ",
+                "ə",
+                "ɚ",
+                "ɛ",
+                "ɡ",
+                "ɪ",
+                "ɹ",
+                "ʃ",
+                "ʊ",
+                "ʌ",
+                "ʒ",
+                "θ",
+                # Dutch
+                "a",
+                "aː",
+                "c",
+                "e",
+                "eː",
+                "iː",
+                "o",
+                "oː",
+                "uː",
+                "x",
+                "y",
+                "yː",
+                "ø",
+                "œy",
+                "œː",
+                "ɑu",
+                "ɑː",
+                "ɔː",
+                "ɛi",
+                "ɛː",
+                "ɣ",
+                "ɱ",
+                "ʏ",
+                "ʏː",
+                "ʔ",
+            ],
+        )
+
 
 # -----------------------------------------------------------------------------
 

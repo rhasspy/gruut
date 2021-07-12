@@ -3,17 +3,36 @@
 
 See: https://github.com/rhasspy/kaldi-align
 """
+import argparse
 import json
+import os
 import sys
 
 from gruut.lang import id_to_phonemes
 from gruut_ipa import IPA
 
-if len(sys.argv) < 2:
-    print("Usage: align2phonemeids.py <lang> < JSONL > CSV")
+# -----------------------------------------------------------------------------
 
-lang = sys.argv[1]
-lang_phonemes = id_to_phonemes(lang)
+parser = argparse.ArgumentParser(prog="align2phonemesids.py")
+parser.add_argument("language", help="Language code")
+parser.add_argument(
+    "--no-stress", action="store_true", help="Don't include stress symbols"
+)
+parser.add_argument(
+    "--has-speaker", action="store_true", help="CSV input has format id|speaker|text"
+)
+parser.add_argument(
+    "--id-languages", nargs="+", help="Ordered list of languages for phoneme ids"
+)
+
+if os.isatty(sys.stdin.fileno()):
+    print("Reading JSONL data from stdin...", file=sys.stderr)
+
+args = parser.parse_args()
+
+# -----------------------------------------------------------------------------
+
+lang_phonemes = id_to_phonemes(args.id_languages or args.language)
 phonemes_to_id = {p: i for i, p in enumerate(lang_phonemes)}
 
 skip_phones = {"SIL", "SPN", "NSN"}

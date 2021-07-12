@@ -12,12 +12,15 @@ from gruut_ipa import IPA
 # -----------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser(prog="csv2phonemeids.py")
-parser.add_argument("lang", help="Language code")
+parser.add_argument("language", help="Language code")
 parser.add_argument(
     "--no-stress", action="store_true", help="Don't include stress symbols"
 )
 parser.add_argument(
     "--has-speaker", action="store_true", help="CSV input has format id|speaker|text"
+)
+parser.add_argument(
+    "--id-languages", nargs="+", help="Ordered list of languages for phoneme ids"
 )
 
 if os.isatty(sys.stdin.fileno()):
@@ -27,7 +30,9 @@ args = parser.parse_args()
 
 # -----------------------------------------------------------------------------
 
-lang_phonemes = id_to_phonemes(args.lang, no_stress=args.no_stress)
+lang_phonemes = id_to_phonemes(
+    args.id_languages or args.language, no_stress=args.no_stress
+)
 phonemes_to_id = {p: i for i, p in enumerate(lang_phonemes)}
 
 writer = csv.writer(sys.stdout, delimiter="|")
@@ -41,7 +46,7 @@ for row in csv.reader(sys.stdin, delimiter="|"):
 
     for phoneme in text_to_phonemes(
         text,
-        lang=args.lang,
+        lang=args.language,
         return_format="flat_phonemes",
         phonemizer_args={"word_break": IPA.BREAK_WORD},
     ):

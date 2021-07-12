@@ -278,7 +278,7 @@ def get_phonemizer(
 
 
 def id_to_phonemes(
-    lang: str,
+    lang: typing.Union[str, typing.Iterable[str]],
     lang_phonemes: typing.Optional[typing.Iterable[str]] = None,
     pad: str = "_",
     no_pad: bool = False,
@@ -293,7 +293,7 @@ def id_to_phonemes(
     Useful for transforming phoneme strings into tensors.
 
     Args:
-        lang: Language name or alias
+        lang: Language name or alias, or iterable of language names/aliases
         lang_phonemes: Ordered phonemes for a language or None if phonemes from :py:mod:`gruut_ipa` should be used
         pad: String used for empty first phoneme (index 0)
         no_pad: If ``True``, don't include pad phoneme
@@ -305,56 +305,77 @@ def id_to_phonemes(
     Returns:
         Ordered sequence of phonemes for language
     """
+    if isinstance(lang, str):
+        lang = [lang]
+    else:
+        lang = list(lang)
 
-    lang = resolve_lang(lang)
+    if len(lang) > 1:
+        assert lang_phonemes is None, "Cannot use lang_phonemes with multiple languages"
 
-    if lang_phonemes is None:
-        # Use gruut-ipa for phonemes list
-        lang_phonemes = [p.text for p in Phonemes.from_language(lang)]
+    all_phonemes_list: typing.List[str] = []
+    all_phonemes_set: typing.Set[str] = set()
 
-    assert lang_phonemes is not None
+    for lang_str in lang:
+        lang_str = resolve_lang(lang_str)
 
-    if no_accents is None:
-        # Only add accents for Swedish
-        no_accents = lang != "sv-se"
+        if lang_phonemes is None:
+            # Use gruut-ipa for phonemes list
+            lang_phonemes = [p.text for p in Phonemes.from_language(lang_str)]
 
-    # Acute/grave accents (' and ²)
-    accents = []
-    if not no_accents:
-        # Accents from Swedish, etc.
-        accents = [IPA.ACCENT_ACUTE.value, IPA.ACCENT_GRAVE.value]
+        assert lang_phonemes is not None
 
-    # Primary/secondary stress (ˈ and ˌ)
-    # NOTE: Accute accent (0x0027) != primary stress (0x02C8)
-    stresses = []
-    if not no_stress:
-        stresses = [IPA.STRESS_PRIMARY.value, IPA.STRESS_SECONDARY.value]
+        if no_accents is None:
+            # Only add accents for Swedish
+            no_accents = lang_str != "sv-se"
 
-    # Tones
-    tones = list(tones) if tones is not None else []
+        # Acute/grave accents (' and ²)
+        accents = []
+        if not no_accents:
+            # Accents from Swedish, etc.
+            accents = [IPA.ACCENT_ACUTE.value, IPA.ACCENT_GRAVE.value]
 
-    # Word break
-    word_break = []
-    if not no_word_break:
-        word_break = [IPA.BREAK_WORD.value]
+        # Primary/secondary stress (ˈ and ˌ)
+        # NOTE: Accute accent (0x0027) != primary stress (0x02C8)
+        stresses = []
+        if not no_stress:
+            stresses = [IPA.STRESS_PRIMARY.value, IPA.STRESS_SECONDARY.value]
 
-    # Pad symbol must always be first (index 0)
-    phonemes_list = []
-    if not no_pad:
-        phonemes_list.append(pad)
+        # Tones
+        tones = list(tones) if tones is not None else []
 
-    # Order here is critical
-    phonemes_list = (
-        phonemes_list
-        + [IPA.BREAK_MINOR.value, IPA.BREAK_MAJOR.value]
-        + word_break
-        + accents
-        + stresses
-        + tones
-        + sorted(list(lang_phonemes))
-    )
+        # Word break
+        word_break = []
+        if not no_word_break:
+            word_break = [IPA.BREAK_WORD.value]
 
-    return phonemes_list
+        # Pad symbol must always be first (index 0)
+        phonemes_list = []
+        if not no_pad:
+            phonemes_list.append(pad)
+
+        # Order here is critical
+        phonemes_list = (
+            phonemes_list
+            + [IPA.BREAK_MINOR.value, IPA.BREAK_MAJOR.value]
+            + word_break
+            + accents
+            + stresses
+            + tones
+            + sorted(list(lang_phonemes))
+        )
+
+        # Add to list of all phonemes
+        for phoneme in phonemes_list:
+            if phoneme in all_phonemes_set:
+                continue
+
+            all_phonemes_list.append(phoneme)
+            all_phonemes_set.add(phoneme)
+
+        lang_phonemes = None
+
+    return all_phonemes_list
 
 
 # -----------------------------------------------------------------------------

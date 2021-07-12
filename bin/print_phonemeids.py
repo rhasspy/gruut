@@ -5,7 +5,7 @@ import argparse
 from gruut.lang import id_to_phonemes
 
 parser = argparse.ArgumentParser(prog="print_phonemeids.py")
-parser.add_argument("language", help="Gruut language")
+parser.add_argument("language", nargs="+", help="Gruut language")
 parser.add_argument(
     "--no-stress", action="store_true", help="Don't include stress symbols"
 )
