@@ -10,7 +10,7 @@ if [[ -d "${venv}" ]]; then
     source "${venv}/bin/activate"
 fi
 
-python_files=("${src_dir}/gruut/"*.py)
+python_files=("${src_dir}/gruut/"*.py "${src_dir}/bin/"*.py)
 
 # Add language data modules
 while read -r lang_module_dir; do

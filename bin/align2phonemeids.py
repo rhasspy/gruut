@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""Converts JSONL alignment file to CSV phoneme ids
+
+See: https://github.com/rhasspy/kaldi-align
+"""
 import json
 import sys
 

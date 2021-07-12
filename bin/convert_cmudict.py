@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Converts CMUDict lexicon to gruut IPA phonemes"""
 import argparse
 import os
 import sys
@@ -130,7 +131,7 @@ def main():
             continue
 
         # Remove line comment
-        line, *comment = line.split("#", maxsplit=1)
+        line, *_comment = line.split("#", maxsplit=1)
 
         # Split word/phonemes
         word, *phonemes = line.split()

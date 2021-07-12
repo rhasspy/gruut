@@ -2,9 +2,7 @@
 """Convert a Phonetisaurus FST (printed with fstprint) to numpy arrays"""
 import argparse
 import logging
-import pickle
 import typing
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -52,7 +50,7 @@ def fst2graph(fst_path: typing.Union[str, Path]) -> typing.Dict[str, np.ndarray]
     final_probs = []
 
     # str -> int
-    symbols = {}
+    symbols: typing.Dict[str, int] = {}
 
     to_nodes = set()
 

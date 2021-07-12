@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Map lexicon from one phoneme set to another"""
 import argparse
 import re
 import sys
@@ -7,6 +8,7 @@ _WHITESPACE = re.compile(r"[\t ]+")
 
 
 def main():
+    """Main entry point"""
     parser = argparse.ArgumentParser(prog="map_lexicon.py")
     parser.add_argument("map", help="Path to mapping file with <from> <to> lines")
     parser.add_argument("--drop", default="_", help="Drop <to> (default: _)")

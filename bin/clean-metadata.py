@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+"""Expands/normalizes text in CSV metadata"""
 import argparse
 import csv
 import sys
+import typing
 
 from gruut.lang import get_tokenizer
+from gruut.toksen import RegexTokenizer
 
 parser = argparse.ArgumentParser(prog="clean_metadata.py")
 parser.add_argument("lang", help="Language code")
@@ -13,6 +16,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 tokenizer = get_tokenizer(args.lang)
+assert isinstance(tokenizer, RegexTokenizer)
 
 writer = csv.writer(sys.stdout, delimiter="|")
 for row in csv.reader(sys.stdin, delimiter="|"):
@@ -23,7 +27,7 @@ for row in csv.reader(sys.stdin, delimiter="|"):
     else:
         utt_id, text = row[0], row[1]
 
-    words = []
+    words: typing.List[str] = []
     for sentence in tokenizer.tokenize(text):
         words.extend(word for word in sentence.clean_words if tokenizer.is_word(word))
 

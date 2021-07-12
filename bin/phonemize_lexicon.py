@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+"""Normalizes lexicon using gruut phonemes"""
 import logging
 import os
 import sys
+import typing
 from collections import Counter
 
 from gruut_ipa import Phonemes
@@ -12,6 +14,8 @@ if len(sys.argv) < 2:
     print("Usage: phonemize_lexicon.py LANG < LEXICON > LEXICON")
     sys.exit(1)
 
+# -----------------------------------------------------------------------------
+
 logging.basicConfig()
 
 lang = sys.argv[1]
@@ -20,7 +24,7 @@ phonemes = Phonemes.from_language(lang)
 if os.isatty(sys.stdin.fileno()):
     print("Reading lexicon from stdin...")
 
-unknown_counts = Counter()
+unknown_counts: typing.Counter[str] = Counter()
 
 for line in sys.stdin:
     line = line.strip()
@@ -34,7 +38,7 @@ for line in sys.stdin:
 
     if not pron_phonemes_str:
         # Don't print words with empty phonemic pronunciations
-        _LOGGER.warning("No pronunciation for '%s': %s", word, word_pron)
+        _LOGGER.warning("No pronunciation for '%s': %s", word, word_pron_str)
         continue
 
     # Drop words with unknown phonemes

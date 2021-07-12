@@ -2,8 +2,8 @@
 """Splits Librivox MP3 audio book files into WAV/text fragments according to an Aeneas sync map."""
 import argparse
 import io
-import logging
 import json
+import logging
 from pathlib import Path
 
 import yaml
@@ -47,7 +47,7 @@ def main():
     with open(args.book_yml, "r") as book_file:
         book = yaml.safe_load(book_file)
 
-    for mp3_name, mp3_info in book["audio"].items():
+    for mp3_name, _mp3_info in book["audio"].items():
         # Load MP3
         mp3_path = input_dir / mp3_name
         audio = AudioSegment.from_mp3(mp3_path)

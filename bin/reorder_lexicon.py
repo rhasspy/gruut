@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
+"""Re-orders lexicon entries based on pronunciation frequencies found in a JSONL alignment file.
+
+See: https://github.com/rhasspy/kaldi-align
+"""
 import json
 import sys
+import typing
 from collections import Counter, defaultdict
 
 SKIP_WORDS = {"<eps>", "<unk>"}
@@ -18,11 +23,13 @@ if len(sys.argv) > 2:
     phoneme_col = int(sys.argv[2])
 
 
-lexicon = defaultdict(dict)
-num_prons = Counter()
+lexicon: typing.Dict[str, typing.Dict[typing.Tuple[str, ...], str]] = defaultdict(dict)
+num_prons: typing.Counter[str] = Counter()
 
 # word -> pron counts
-pron_counts = defaultdict(Counter)
+pron_counts: typing.Dict[str, typing.Counter[typing.Tuple[str, ...]]] = defaultdict(
+    Counter
+)
 
 # Load lexicon
 print("Loading lexicon...", file=sys.stderr)
@@ -60,6 +67,7 @@ with open(aligned_path, "r") as aligned_file:
 
 print("Re-ordering lexicon...", file=sys.stderr)
 for word in sorted(lexicon.keys()):
+    # pylint: disable=cell-var-from-loop
     word_pron_counts = pron_counts[word]
     phonemes_lines = sorted(
         lexicon[word].items(),
