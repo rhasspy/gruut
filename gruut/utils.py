@@ -10,7 +10,7 @@ from pathlib import Path
 
 import gruut_ipa
 
-from .const import REGEX_PATTERN
+from .const import REGEX_MATCH, REGEX_PATTERN
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
@@ -162,7 +162,7 @@ IPA_TRANSLATE = str.maketrans(
 def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str:
     """Encode inline phonemes in text using __phonemes_<base32-phonemes>__ format"""
 
-    def replace_phonemes(match: re.Match) -> str:
+    def replace_phonemes(match: REGEX_MATCH) -> str:
         ipa = match.group(1).strip()
         ipa = ipa.translate(IPA_TRANSLATE)
 
@@ -176,7 +176,7 @@ def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str
 
         return inline_key
 
-    def replace_soundslike(match: re.Match) -> str:
+    def replace_soundslike(match: REGEX_MATCH) -> str:
         words = match.group(1).strip()
 
         # Base32 is used here because it's insensitive to case transformations

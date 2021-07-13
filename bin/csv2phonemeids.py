@@ -5,9 +5,10 @@ import csv
 import os
 import sys
 
+from gruut_ipa import IPA
+
 from gruut import text_to_phonemes
 from gruut.lang import id_to_phonemes
-from gruut_ipa import IPA
 
 # -----------------------------------------------------------------------------
 

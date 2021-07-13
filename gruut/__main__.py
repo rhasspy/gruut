@@ -10,7 +10,6 @@ import typing
 from pathlib import Path
 
 import jsonlines
-
 from gruut_ipa import IPA
 
 from .lang import resolve_lang

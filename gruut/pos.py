@@ -45,7 +45,7 @@ _LOGGER = logging.getLogger("gruut.pos")
 # -----------------------------------------------------------------------------
 
 FEATURES_TYPE = typing.Dict[
-    str, typing.Union[str, bool, int, float, typing.Collection[str]]
+    str, typing.Union[str, bool, int, float, typing.Sequence[str]]
 ]
 
 

@@ -8,8 +8,9 @@ import json
 import os
 import sys
 
-from gruut.lang import id_to_phonemes
 from gruut_ipa import IPA
+
+from gruut.lang import id_to_phonemes
 
 # -----------------------------------------------------------------------------
 

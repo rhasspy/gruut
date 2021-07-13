@@ -10,7 +10,13 @@ if [[ -d "${venv}" ]]; then
     source "${venv}/bin/activate"
 fi
 
-python_files=("${src_dir}/gruut/"*.py "${src_dir}/bin/"*.py)
+python_files=("${src_dir}/gruut/"*.py)
+
+bin_scripts=('align2phonemeids' 'clean-metadata' 'csv2phonemeids' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'print_phonemeids' 'reorder_lexicon')
+
+for script_name in "${bin_scripts[@]}"; do
+    python_files+=("${src_dir}/bin/${script_name}.py")
+done
 
 # -----------------------------------------------------------------------------
 

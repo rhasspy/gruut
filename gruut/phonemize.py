@@ -149,11 +149,11 @@ class SqlitePhonemizer(Phonemizer):
         word_break: typing.Optional[str] = None,
         ipa_minor_breaks: bool = True,
         minor_breaks: typing.Optional[
-            typing.Union[typing.Collection[str], typing.Mapping[str, str]]
+            typing.Union[typing.Iterable[str], typing.Mapping[str, str]]
         ] = None,
         ipa_major_breaks: bool = True,
         major_breaks: typing.Optional[
-            typing.Union[typing.Collection[str], typing.Mapping[str, str]]
+            typing.Union[typing.Iterable[str], typing.Mapping[str, str]]
         ] = None,
         lookup_with_only_words_chars: bool = False,
         non_word_chars_pattern: REGEX_TYPE = NON_WORD_CHARS_PATTERN,
