@@ -1,0 +1,21 @@
+## [1.3.0] - Unreleased
+
+### Added
+
+- Arabic (ar) and Farsi (fa) languages
+- Inline pronunciations with [[ phonemes ]] or {{ word s{eg}m{ents} }} (--inline)
+- text2phonemes command for CLI (combined tokenize/phonemize)
+- Support for Phonetisaurus grapheme-to-phoneme FSTs converted with fst2npz.py (--phonetisaurus)
+
+### Fixed
+
+- bin scripts support speaker column in CSV
+- Tests properly extend PYTHONPATH
+- setup.py specifies README encoding
+- Code formatting/linting includes bin scripts
+
+## Changed
+
+- Require num2words fork for additional language support (https://github.com/rhasspy/num2words)
+- Lexicons and CRF models added to git repo
+
