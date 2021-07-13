@@ -8,12 +8,12 @@ try:
     # Python >= 3.7
     REGEX_PATTERN = re.Pattern  # type: ignore
     REGEX_MATCH = re.Match  # type: ignore
+    REGEX_TYPE = typing.Union[str, re.Pattern]  # type: ignore
 except AttributeError:
     # Python 3.6
-    REGEX_PATTERN = typing.re.Pattern  # type: ignore
-    REGEX_MATCH = typing.re.Match  # type: ignore
-
-REGEX_TYPE = typing.Union[str, REGEX_PATTERN]
+    REGEX_PATTERN = typing.Pattern  # type: ignore
+    REGEX_MATCH = typing.Match  # type: ignore
+    REGEX_TYPE = typing.Union[str, typing.Pattern]  # type: ignore
 
 WORD_PHONEMES = typing.Sequence[str]
 

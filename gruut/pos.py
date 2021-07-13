@@ -179,8 +179,8 @@ def train_model(
     try:
         import conllu
     except ImportError as e:
-        _LOGGER.fatal("conllu package is required for training")
-        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        _LOGGER.critical("conllu package is required for training")
+        _LOGGER.critical("pip install 'conllu>=4.4'")
         raise e
 
     conllu_path = Path(conllu_path)
@@ -257,8 +257,8 @@ def do_print_labels(args):
     try:
         import conllu
     except ImportError as e:
-        _LOGGER.fatal("conllu package is required for training")
-        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        _LOGGER.critical("conllu package is required for training")
+        _LOGGER.critical("pip install 'conllu>=4.4'")
         raise e
 
     labels = set()
@@ -304,8 +304,8 @@ def do_test(args):
     try:
         import conllu
     except ImportError as e:
-        _LOGGER.fatal("conllu package is required for training")
-        _LOGGER.fatal("pip install 'conllu>=4.4'")
+        _LOGGER.critical("conllu package is required for training")
+        _LOGGER.critical("pip install 'conllu>=4.4'")
         raise e
 
     tagger = PartOfSpeechTagger(args.model)

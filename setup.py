@@ -79,7 +79,10 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={"gruut": data_files + ["VERSION", "py.typed"]},
     install_requires=requirements,
-    extras_require={':python_version<"3.7"': "dataclasses", **extras_require},
+    extras_require={
+        ':python_version<"3.7"': ["dataclasses", "types-dataclasses"],
+        **extras_require,
+    },
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",

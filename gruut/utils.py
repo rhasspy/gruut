@@ -91,6 +91,8 @@ def maybe_compile_regex(
     if isinstance(str_or_pattern, REGEX_PATTERN):
         return str_or_pattern
 
+    assert isinstance(str_or_pattern, str)
+
     return re.compile(str_or_pattern)
 
 
