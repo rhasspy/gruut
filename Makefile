@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: check clean reformat dist venv test docs
+.PHONY: check clean reformat dist install test docs
 
 all: dist
 
@@ -10,7 +10,7 @@ check:
 reformat:
 	scripts/format-code.sh
 
-venv:
+install:
 	scripts/create-venv.sh
 
 dist:
