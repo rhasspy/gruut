@@ -272,6 +272,10 @@ class SqlitePhonemizer(Phonemizer):
         # whitespace-separated phonemes
         self.inline_pronunciations = inline_pronunciations
 
+        # Set of distinct phonemes in the database.
+        # Dynamically loaded with self.phonemes property.
+        self._phonemes: typing.Optional[typing.Set[str]] = None
+
     def phonemize(
         self, tokens: typing.Sequence[TOKEN_OR_STR], **kwargs
     ) -> typing.Iterable[WORD_PHONEMES]:
@@ -934,6 +938,27 @@ class SqlitePhonemizer(Phonemizer):
                     feature_values.add(feature_value)
 
         self.prons_preloaded = True
+
+    @property
+    def phonemes(self) -> typing.Set[str]:
+        """Get set of distinct phonemes from lexicon database"""
+        if self._phonemes is not None:
+            return self._phonemes
+
+        self._connect()
+        assert self.db_conn is not None
+
+        # Load phonemes from all pronunciations
+        phonemes: typing.Set[str] = set()
+        cursor = self.db_conn.execute("SELECT phonemes FROM WORD_PHONEMES")
+        for row in cursor:
+            phonemes_str = row[0]
+            phonemes.update(phonemes_str.split())
+
+        # Cache for next time
+        self._phonemes = phonemes
+
+        return self._phonemes
 
 
 # -----------------------------------------------------------------------------

@@ -229,6 +229,30 @@ def do_text2phonemes(args):
 # -----------------------------------------------------------------------------
 
 
+def do_phonemes(args):
+    """
+    Prints phonemes for a given language.
+    """
+    from .lang import get_phonemizer
+
+    phonemizer = get_phonemizer(
+        args.language, args.lang_dir, model_prefix=args.model_prefix
+    )
+
+    phonemes = set()
+
+    # Remove stress
+    for phoneme in phonemizer.phonemes:
+        phonemes.add(IPA.without_stress(phoneme))
+
+    # Print in sorted order
+    for phoneme in sorted(phonemes):
+        print(phoneme)
+
+
+# -----------------------------------------------------------------------------
+
+
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(prog="gruut")
@@ -396,10 +420,27 @@ def get_args() -> argparse.Namespace:
         help="Delimiter between id and text (default: |, requires --csv)",
     )
 
+    # --------
+    # phonemes
+    # --------
+    phonemes_parser = sub_parsers.add_parser(
+        "phonemes", help="Print phonemes for a language"
+    )
+    phonemes_parser.set_defaults(func=do_phonemes)
+    phonemes_parser.add_argument(
+        "--model-prefix",
+        help="Directory to use within default language directory with different lexicon (e.g., espeak)",
+    )
+
     # ----------------
     # Shared arguments
     # ----------------
-    for sub_parser in [tokenize_parser, phonemize_parser, text2phonemes_parser]:
+    for sub_parser in [
+        tokenize_parser,
+        phonemize_parser,
+        text2phonemes_parser,
+        phonemes_parser,
+    ]:
         sub_parser.add_argument(
             "--lang-dir", help="Directory with language-specific data files"
         )

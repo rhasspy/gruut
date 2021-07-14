@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 import yaml
+
 from pydub import AudioSegment
 
 _LOGGER = logging.getLogger("librivox_split")
