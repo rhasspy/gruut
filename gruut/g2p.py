@@ -309,6 +309,7 @@ def do_test(args):
 
     tagger = GraphemesToPhonemes(args.model)
 
+    # Load lexicon
     if args.texts:
         lines = args.texts
     else:
@@ -317,17 +318,33 @@ def do_test(args):
         if os.isatty(sys.stdin.fileno()):
             print("Reading lexicon lines from stdin...", file=sys.stderr)
 
+    lexicon = {}
+    for line in lines:
+        line = line.strip()
+        if (not line) or (" " not in line):
+            continue
+
+        word, actual_phonemes = line.split(maxsplit=1)
+        lexicon[word] = actual_phonemes
+
+    # Predict phonemes
+    predicted_phonemes = {}
+
+    start_time = time.perf_counter()
+
+    for word in lexicon:
+        phonemes = tagger(word)
+        predicted_phonemes[word] = " ".join(phonemes)
+
+    end_time = time.perf_counter()
+
+    # Calculate PER
     num_errors = 0
     num_missing = 0
     num_phonemes = 0
 
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-
-        word, actual_phonemes = line.split(maxsplit=1)
-        expected_phonemes = "".join(tagger(word))
+    for word, actual_phonemes in lexicon.items():
+        expected_phonemes = predicted_phonemes.get(word, "")
 
         if expected_phonemes:
             distance = levenshtein(expected_phonemes, actual_phonemes)
@@ -337,9 +354,12 @@ def do_test(args):
             num_missing += 1
             _LOGGER.warning("No pronunciation for %s", word)
 
+    assert num_phonemes > 0, "No phonemes were read"
+
     # Calculate results
     per = round(num_errors / num_phonemes, 2)
-    print("PER:", per, "Errors:", num_errors)
+    wps = round(len(predicted_phonemes) / (end_time - start_time), 2)
+    print("PER:", per, "Errors:", num_errors, "words/sec:", wps)
 
     if num_missing > 0:
         print("Total missing:", num_missing)
