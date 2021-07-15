@@ -61,7 +61,7 @@ def phonemize_word(word: str, voice: str, pos: bool = False) -> WORD_AND_PRONS:
     word_prons: WORD_PRONS = []
 
     ipa_str = subprocess.check_output(
-        ["espeak-ng", "-q", "--ipa", "-v", voice, word], universal_newlines=True
+        ["espeak-ng", "-q", "--ipa", "-v", voice, "--", word], universal_newlines=True
     ).strip()
 
     ipa_pron = [p.text for p in Pronunciation.from_string(ipa_str)]
@@ -76,7 +76,15 @@ def phonemize_word(word: str, voice: str, pos: bool = False) -> WORD_AND_PRONS:
             # Only keep last word's IPA
             pos_ipa_str = (
                 subprocess.check_output(
-                    ["espeak-ng", "-q", "--ipa", "-v", voice, f"{pos_word} {word}"],
+                    [
+                        "espeak-ng",
+                        "-q",
+                        "--ipa",
+                        "-v",
+                        voice,
+                        "--",
+                        f"{pos_word} {word}",
+                    ],
                     universal_newlines=True,
                 )
                 .strip()
