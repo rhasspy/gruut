@@ -580,7 +580,9 @@ class SqlitePhonemizer(Phonemizer):
         elif self.g2p_graph:
             # Phonetisaurus FST
             _LOGGER.debug("Guessing pronunciations for %s with Phonetisaurus", token)
-            _, _, guessed_phonemes = next(self.g2p_graph.g2p([token.text]))
+            _, _, guessed_phonemes = next(  # type: ignore
+                self.g2p_graph.g2p([token.text])
+            )
 
         if guessed_phonemes:
             guessed_phonemes = self.clean_phonemes(guessed_phonemes)
