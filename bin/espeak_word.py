@@ -56,16 +56,16 @@ def main():
 
                 if args.pos:
                     # word pos phonemes
-                    print(word, pos_tag or args.empty_pos_tag, word_pron)
+                    print(word, pos_tag or args.empty_pos_tag, *word_pron)
                 else:
                     # word phonemes
-                    print(word, word_pron)
+                    print(word, *word_pron)
 
 
 # -----------------------------------------------------------------------------
 
 WORD = str
-WORD_PRON = str
+WORD_PRON = typing.List[str]
 POS_TAG = typing.Optional[str]
 
 
@@ -120,7 +120,7 @@ def phonemize_words(
         ipa_prons = map(Pronunciation.from_string, ipa_strs)
 
         for (_prompt, word, pos_tag), ipa_pron in zip(words_and_prompts, ipa_prons):
-            yield word, ipa_pron.text, pos_tag
+            yield word, [p.text for p in ipa_pron], pos_tag
     else:
         # Fall back to word-by-word
         _LOGGER.warning(
@@ -144,7 +144,7 @@ def phonemize_words(
 
             ipa_pron = Pronunciation.from_string(ipa_str)
 
-            yield word, ipa_pron.text, pos_tag
+            yield word, [p.text for p in ipa_pron], pos_tag
 
 
 # -----------------------------------------------------------------------------
