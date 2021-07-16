@@ -2,7 +2,7 @@
 set -e
 
 if [[ -z "$1" ]]; then
-    echo "Usage: build_espeak_db.sh <LANG>"
+    echo "Usage: build-espeak-db.sh <LANG>"
     exit 0
 fi
 

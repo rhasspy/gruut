@@ -433,6 +433,8 @@ class PhonetisaurusGraph:
 
                         # Cache
                         self.out_edges[node] = edge_idxs
+                    else:
+                        edge_idxs = maybe_edge_idxs
 
                 for edge_idx in edge_idxs:
                     _, to_node, ilabel_idx, olabel_idx = self.edges[edge_idx]
