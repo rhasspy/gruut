@@ -40,7 +40,7 @@ extras = {
     "rapidfuzz>=1.4.1": ["train"],
     "aeneas~=1.7.3.0": ["align"],
     "pydub~=0.24.1": ["align"],
-    "mishkal~=1.15.0": ["ar"],
+    "mishkal~=0.4.0": ["ar"],
 }
 
 # Create language-specific extras
