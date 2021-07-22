@@ -41,6 +41,7 @@ extras = {
     "aeneas~=1.7.3.0": ["align"],
     "pydub~=0.24.1": ["align"],
     "mishkal~=0.4.0": ["ar"],
+    "codernitydb3~=0.6.0": ["ar"],
 }
 
 # Create language-specific extras

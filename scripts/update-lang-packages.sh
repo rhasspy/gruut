@@ -46,6 +46,20 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
         cp "${data_dir}/espeak/g2p/model.crf" \
            "${module_dir}/espeak/g2p/"
 
+        if [[ -d "${data_dir}/pos" ]]; then
+            mkdir -p "${module_dir}/pos"
+            if [[ -f "${data_dir}/pos/model.crf" ]]; then
+                cp "${data_dir}/pos/model.crf" \
+                   "${module_dir}/pos/"
+            elif [[ -f "${data_dir}/pos/postagger.model" ]]; then
+                cp "${data_dir}/pos/postagger.model" \
+                   "${module_dir}/pos/"
+            else
+                echo "No POS model in ${data_dir}/pos"
+                exit 1
+            fi
+        fi
+
         echo "${full_lang} ${lang_code} ${lang_dir}"
     done
 

@@ -826,7 +826,7 @@ class FarsiTokenizer(RegexTokenizer):
             # Load tagger
             if not hasattr(self, "tagger"):
                 # Load part of speech tagger
-                model_path = self.lang_dir / "postagger.model"
+                model_path = self.lang_dir / "pos" / "postagger.model"
                 tagger = hazm.POSTagger(model=str(model_path))
                 setattr(self, "tagger", tagger)
 

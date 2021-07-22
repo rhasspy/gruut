@@ -23,7 +23,7 @@ with open(version_path, "r") as version_file:
 
 # Extra package data files
 extra_files = []
-maybe_extra_files = ["pos/model.crf"]
+maybe_extra_files = ["pos/model.crf", "pos/postagger.model"]
 for maybe_extra_str in maybe_extra_files:
     extra_path = module_dir / maybe_extra_str
     if extra_path.is_file():
