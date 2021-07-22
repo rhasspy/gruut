@@ -451,7 +451,7 @@ class ArabicTokenizer(RegexTokenizer):
             text = vocalizer.tashkeel(text)
         except ImportError:
             _LOGGER.warning("mishkal is highly recommended for language 'ar'")
-            _LOGGER.warning("pip install 'mishkal>=0.15.0'")
+            _LOGGER.warning("pip install 'mishkal>=0.4.0'")
 
         yield from super().text_to_tokens(text)
 
