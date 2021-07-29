@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """Generate IPA lexicon for a list of words using espeak-ng"""
 import argparse
-import functools
-import itertools
+import ctypes
 import logging
 import os
-import subprocess
+import re
 import sys
 import typing
-from concurrent.futures import ThreadPoolExecutor
 
 from gruut_ipa import Pronunciation
 
 _LOGGER = logging.getLogger("espeak_word")
+
+VOICE_ALIASES = {
+    "cs-cz": "cs",
+    "de-de": "de",
+    "es-es": "es",
+    "fr-fr": "fr",
+    "it-it": "it",
+    "ru-ru": "ru",
+    "sv-se": "sv",
+}
 
 
 def main():
@@ -43,118 +51,158 @@ def main():
         print("Reading words from stdin...", file=sys.stderr)
 
     words = filter(None, map(str.strip, sys.stdin))
-    word_groups = grouper(words, args.batch_size)
-
-    with ThreadPoolExecutor() as executor:
-        for results in executor.map(
-            functools.partial(phonemize_words, voice=args.language, pos=args.pos),
-            word_groups,
-        ):
-            for word, word_pron, pos_tag in results:
-                if not word_pron:
-                    continue
-
-                if args.pos:
-                    # word pos phonemes
-                    print(word, pos_tag or args.empty_pos_tag, *word_pron)
-                else:
-                    # word phonemes
-                    print(word, *word_pron)
-
-
-# -----------------------------------------------------------------------------
-
-WORD = str
-WORD_PRON = typing.List[str]
-POS_TAG = typing.Optional[str]
-
-
-def phonemize_words(
-    words: typing.Iterable[str], voice: str, pos: bool = False
-) -> typing.Iterable[typing.Tuple[WORD, WORD_PRON, POS_TAG]]:
-    """Get IPA from espeak-ng for a given word/voice"""
-    # Drop empty words
-    words = filter(None, words)
 
     # prompt, POS tag
-    prompt_pos: typing.List[typing.Tuple[str, POS_TAG]] = [("", None)]
+    prompt_pos: typing.List[typing.Tuple[str, typing.Optional[str]]] = [("", None)]
 
-    if pos:
+    if args.pos:
         # Use an initial word to prime eSpeak to change pronunciation for part of speech.
         # Obviously, this only works for English.
         prompt_pos.extend([("preferably", "VB"), ("a", "NN"), ("had", "VBD")])
 
-    words_and_prompts = []
+    voice = VOICE_ALIASES.get(args.language, args.language)
+    phonemizer = Phonemizer(default_voice=voice)
     for word in words:
+        default_pron: typing.Optional[typing.List[str]] = None
+
         for prompt, pos_tag in prompt_pos:
-            words_and_prompts.append((prompt, word, pos_tag))
+            if prompt:
+                text = f"{prompt}|{word}|{word}"
+                ipa_strs = phonemizer.phonemize(text).split()
+                if len(ipa_strs) < 3:
+                    # eSpeak combined words
+                    _LOGGER.warning("Words were combined: %s -> %s", text, ipa_strs)
+                    continue
 
-    def espeak_input(item):
-        prompt, word, _pos_tag = item
-        if prompt:
-            return f"{prompt} {word}"
+                ipa_str = ipa_strs[1]
+            else:
+                text = f"{word}|{word}"
+                ipa_strs = phonemizer.phonemize(text).split()
+                if len(ipa_strs) < 2:
+                    # eSpeak combined words
+                    _LOGGER.warning("Words were combined: %s -> %s", text, ipa_strs)
+                    continue
 
-        return word
+                ipa_str = ipa_strs[0]
 
-    def espeak_output(line):
-        # Return last pronunciation
-        line = line.strip()
-        if line:
-            return line.split()[-1]
+            ipa_pron = Pronunciation.from_string(ipa_str, keep_stress=True)
+            word_pron = [p.text for p in ipa_pron]
 
-        return line
-
-    # Process words in batch
-    ipa_strs = [
-        espeak_output(ipa_str)
-        for ipa_str in subprocess.run(
-            ["espeak-ng", "-q", "--ipa", "-v", voice],
-            input="\n".join(map(espeak_input, words_and_prompts)),
-            capture_output=True,
-            universal_newlines=True,
-            check=True,
-        ).stdout.splitlines()
-    ]
-
-    if len(words_and_prompts) == len(ipa_strs):
-        ipa_prons = map(Pronunciation.from_string, ipa_strs)
-
-        for (_prompt, word, pos_tag), ipa_pron in zip(words_and_prompts, ipa_prons):
-            yield word, [p.text for p in ipa_pron], pos_tag
-    else:
-        # Fall back to word-by-word
-        _LOGGER.warning(
-            "Missing pronunciations from eSpeak. Falling back to slower word-by-word method."
-        )
-
-        for item in words_and_prompts:
-            input_line = espeak_input(item)
-            prompt, word, pos_tag = item
-
-            ipa_str = espeak_output(
-                subprocess.check_output(
-                    ["espeak-ng", "-q", "--ipa", "-v", voice, "--", input_line],
-                    universal_newlines=True,
-                )
-            )
-
-            if not ipa_str:
-                _LOGGER.warning("No pronunciation for %s", word)
+            if not word_pron:
                 continue
 
-            ipa_pron = Pronunciation.from_string(ipa_str)
+            if args.pos:
+                if not prompt:
+                    default_pron = word_pron
+                elif word_pron == default_pron:
+                    # Skip duplicate pronunciation
+                    continue
 
-            yield word, [p.text for p in ipa_pron], pos_tag
+            if args.pos:
+                # word pos phonemes
+                print(word, pos_tag or args.empty_pos_tag, *word_pron)
+            else:
+                # word phonemes
+                print(word, *word_pron)
 
 
 # -----------------------------------------------------------------------------
 
 
-def grouper(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    zip_args = [iter(iterable)] * n
-    return itertools.zip_longest(*zip_args, fillvalue=fillvalue)
+class Phonemizer:
+    """Use ctypes and libespeak-ng to get IPA phonemes from text"""
+
+    SEEK_SET = 0
+
+    EE_OK = 0
+
+    AUDIO_OUTPUT_SYNCHRONOUS = 0x02
+    espeakPHONEMES_IPA = 0x02
+    espeakCHARS_AUTO = 0
+    espeakPHONEMES = 0x100
+
+    LANG_SWITCH_FLAG = re.compile(r"\([^)]+\)")
+
+    def __init__(
+        self,
+        default_voice: typing.Optional[str] = None,
+        clause_breakers: typing.Optional[typing.Collection[str]] = None,
+    ):
+        self.default_voice = default_voice
+        self.clause_breakers = clause_breakers or {",", ";", ":", ".", "!", "?"}
+
+        self.libc = ctypes.cdll.LoadLibrary("libc.so.6")
+        self.libc.open_memstream.restype = ctypes.POINTER(ctypes.c_char)
+
+        self.lib_espeak = ctypes.cdll.LoadLibrary("libespeak-ng.so")
+        sample_rate = self.lib_espeak.espeak_Initialize(
+            Phonemizer.AUDIO_OUTPUT_SYNCHRONOUS, 0, None, 0
+        )
+        assert sample_rate > 0, "Failed to initialize libespeak-ng"
+
+    def phonemize(
+        self,
+        text: str,
+        voice: typing.Optional[str] = None,
+        keep_clause_breakers: bool = False,
+    ) -> str:
+        """Return IPA string for text"""
+        voice = voice or self.default_voice
+
+        if voice is not None:
+            voice_bytes = voice.encode("utf-8")
+            result = self.lib_espeak.espeak_SetVoiceByName(voice_bytes)
+            assert result == Phonemizer.EE_OK, f"Failed to set voice to {voice}"
+
+        missing_breakers = []
+        if keep_clause_breakers and self.clause_breakers:
+            missing_breakers = [c for c in text if c in self.clause_breakers]
+
+        # Create in-memory file for phoneme trace.
+        # espeak_TextToPhonemes segfaults no matter what I do, so this is the back.
+        phonemes_buffer = ctypes.c_char_p()
+        phonemes_size = ctypes.c_size_t()
+        phonemes_file = self.libc.open_memstream(
+            ctypes.byref(phonemes_buffer), ctypes.byref(phonemes_size)
+        )
+
+        try:
+            self.lib_espeak.espeak_SetPhonemeTrace(
+                Phonemizer.espeakPHONEMES_IPA, phonemes_file
+            )
+
+            identifier = ctypes.c_uint()
+            user_data = ctypes.c_void_p()
+            text_bytes = text.encode("utf-8")
+            self.lib_espeak.espeak_Synth(
+                text_bytes,
+                0,  # buflength
+                0,  # position
+                0,  # position_type
+                0,  # end_position
+                Phonemizer.espeakCHARS_AUTO | Phonemizer.espeakPHONEMES,
+                identifier,
+                user_data,
+            )
+            self.libc.fflush(phonemes_file)
+
+            phoneme_lines = ctypes.string_at(phonemes_buffer).decode().splitlines()
+
+            # Remove language switching flags, e.g. (en)
+            phoneme_lines = [
+                Phonemizer.LANG_SWITCH_FLAG.sub("", line) for line in phoneme_lines
+            ]
+
+            # Re-insert clause breakers
+            if missing_breakers:
+                # pylint: disable=consider-using-enumerate
+                for line_idx in range(len(phoneme_lines)):
+                    if line_idx < len(missing_breakers):
+                        phoneme_lines[line_idx] += missing_breakers[line_idx]
+
+            return " ".join(line.strip() for line in phoneme_lines)
+        finally:
+            self.libc.fclose(phonemes_file)
 
 
 # -----------------------------------------------------------------------------

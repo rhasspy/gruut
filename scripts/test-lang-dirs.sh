@@ -35,6 +35,28 @@ function gruut {
         jq -r .pronunciation_text
 }
 
+function espeak {
+    lang="$1"
+    text="$2"
+    shift 2
+
+    echo "${text}" | espeak-ng -v "${lang}" -q --ipa
+}
+
+function normalize {
+    echo "$1" | sed -e 's/[ |‖]//g'
+}
+
+function check_espeak {
+    expected="$(normalize "$1")"
+    actual="$(normalize "$2")"
+
+    if [[ "${expected}" != "${actual}" ]]; then
+        echo "Expected ${expected} but got ${actual}"
+        exit 1
+    fi
+}
+
 # -----------------------------------------------------------------------------
 
 declare -A sentences
@@ -52,37 +74,56 @@ sentences['ru-ru']="Одного языка никогда недостаточ�
 sentences['sv-se']="Ett språk är aldrig nog."
 sentences['sw']="Lugha moja haitoshi."
 
+declare -A voices
+voices['ar']='ar'
+voices['cs-cz']='cs'
+voices['de-de']='de'
+voices['en-us']='en-us'
+voices['es-es']='es'
+voices['fa']='fa'
+voices['fr-fr']='fr'
+voices['it-it']='it'
+voices['nl']='nl'
+voices['pt']='pt'
+voices['ru-ru']='ru'
+voices['sv-se']='sv'
+voices['sw']='sw'
+
+# -----------------------------------------------------------------------------
+
 # English
 full_lang='en-us'
 sentence="${sentences["${full_lang}"]}"
 
 # With gruut phonemes
-phonemes="$(gruut "${full_lang}" "${sentence}")"
-echo "${full_lang}: ${phonemes}"
+# phonemes="$(gruut "${full_lang}" "${sentence}")"
+# echo "${full_lang}: ${phonemes}"
 
 # With espeak phonemes
 espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
 echo "${full_lang}: ${espeak_phonemes}"
 
+expected_espeak_phonemes="$(espeak "${voices["${full_lang}"]}" "${sentence}")"
+check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
 
-find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
-    while read -r lang_dir; do
-          if [[ ! -f "${lang_dir}/setup.py" ]]; then
-              # Skip
-              continue
-          fi
+# find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
+#     while read -r lang_dir; do
+#           if [[ ! -f "${lang_dir}/setup.py" ]]; then
+#               # Skip
+#               continue
+#           fi
 
-          full_lang="$(awk '{print $1}' "${lang_dir}/LANGUAGE")"
-          sentence="${sentences["${full_lang}"]}"
+#           full_lang="$(awk '{print $1}' "${lang_dir}/LANGUAGE")"
+#           sentence="${sentences["${full_lang}"]}"
 
-          # With gruut phonemes
-          phonemes="$(gruut "${full_lang}" "${sentence}")"
-          echo "${full_lang}: ${phonemes}"
+#           # With gruut phonemes
+#           phonemes="$(gruut "${full_lang}" "${sentence}")"
+#           echo "${full_lang}: ${phonemes}"
 
-          # With espeak phonemes
-          espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
-          echo "${full_lang}: ${espeak_phonemes}"
-    done
+#           # With espeak phonemes
+#           espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
+#           echo "${full_lang}: ${espeak_phonemes}"
+#     done
 
 # -----------------------------------------------------------------------------
 

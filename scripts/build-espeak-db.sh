@@ -33,6 +33,11 @@ fi
 lexicon_text="${espeak_dir}/lexicon.txt"
 lexicon_args=()
 
+if [[ -n "${pos}" ]]; then
+    # Use part of speech with English
+    lexicon_args+=('--pos')
+fi
+
 if [[ ! -s "${lexicon_text}" ]]; then
     words="${espeak_dir}/words.txt"
     if [[ ! -f "${words}" ]]; then
@@ -41,11 +46,6 @@ if [[ ! -s "${lexicon_text}" ]]; then
     fi
 
     echo "Creating lexicon (${lexicon_text})"
-
-    if [[ -n "${pos}" ]]; then
-        # Use part of speech with English
-        lexicon_args+=('--pos')
-    fi
 
     python3 "${bin_dir}/espeak_word.py" "${lang}" "${lexicon_args[@]}" \
             < "${words}" > "${lexicon_text}"

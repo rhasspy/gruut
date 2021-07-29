@@ -63,7 +63,7 @@ def main():
         for i, line in enumerate(lexicon_file):
             try:
                 line = line.strip()
-                if (not line) or line.startswith(";") or (" " in line):
+                if (not line) or line.startswith(";") or (" " not in line):
                     # Skip blank lines and comments.
                     # Also skip lines without a pronunciation.
                     continue
