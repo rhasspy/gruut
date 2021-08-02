@@ -22,7 +22,7 @@ python_files=("${src_dir}/gruut/"*.py)
 bin_scripts=('align2phonemeids' 'clean-metadata' 'csv2phonemeids' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'print_phonemeids' 'reorder_lexicon' 'espeak_word')
 
 while read -r python_lib; do
-    if [ "$(echo "${python_lib}" | grep 'numpy')" ]; then
+    if [ "$(echo "${python_lib}" | grep 'phonetisaurus')" ]; then
         bin_scripts+=('phonetisaurus_per')
     elif [ "$(echo "${python_lib}" | grep 'aeneas')" ]; then
         bin_scripts+=('librivox_align')
