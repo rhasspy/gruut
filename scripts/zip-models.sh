@@ -8,7 +8,7 @@ src_dir="$(realpath "${this_dir}/..")"
 dist_dir="${src_dir}/dist"
 mkdir -p "${dist_dir}"
 
-rm -rf *.egg-info/
+rm -rf -- *.egg-info/
 
 find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
     while read -r lang_dir;
@@ -21,7 +21,7 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
         pushd "${lang_dir}" > /dev/null
 
         # Create Python package distribution
-        rm -rf dist/ *.egg-info/
+        rm -rf dist/ -- *.egg-info/
         python3 setup.py sdist
         mv dist/* "${dist_dir}/"
         rm -rf dist/

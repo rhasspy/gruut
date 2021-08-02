@@ -11,8 +11,10 @@ src_dir="$(realpath "${this_dir}/..")"
 
 # -----------------------------------------------------------------------------
 
-venv="${src_dir}/.venv"
+# Path to virtual environment
+: "${venv:=${src_dir}/.venv}"
 
+# Python binary to use
 : "${PYTHON=python3}"
 
 python_version="$(${PYTHON} --version)"
@@ -28,7 +30,7 @@ echo "Installing Python dependencies"
 pip3 ${PIP_INSTALL} --upgrade pip
 pip3 ${PIP_INSTALL} --upgrade wheel setuptools
 
-pip3 ${PIP_INSTALL} -f 'https://synesthesiam.github.io/prebuilt-apps/' "${src_dir}"
+pip3 ${PIP_INSTALL} -f 'https://synesthesiam.github.io/prebuilt-apps/' "${src_dir}[all]"
 
 # Development dependencies
 if [[ -f requirements_dev.txt ]]; then

@@ -42,6 +42,7 @@ extras = {
     "pydub~=0.24.1": ["align"],
     "mishkal~=0.4.0": ["ar"],
     "codernitydb3~=0.6.0": ["ar"],
+    "phonetisaurus~=0.3.0": ["g2p"],
 }
 
 # Create language-specific extras

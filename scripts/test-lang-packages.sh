@@ -37,7 +37,7 @@ function gruut {
 
 function espeak {
     lang="$1"
-    text="$(echo $2 | sed -e 's/[ ]\+/|/g')"
+    text="$(echo "$2" | sed -e 's/[ ]\+/|/g')"
     shift 2
 
     echo "${text}" | espeak-ng -v "${lang}" -q --ipa
