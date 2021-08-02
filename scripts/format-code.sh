@@ -16,7 +16,24 @@ if [[ -z "${no_venv}" ]]; then
     fi
 fi
 
-python_files=("${src_dir}/gruut/"*.py "${src_dir}/bin/"*.py)
+python_files=("${src_dir}/gruut/"*.py)
+
+# Add bin scripts selectively
+bin_scripts=('align2phonemeids' 'clean-metadata' 'csv2phonemeids' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'print_phonemeids' 'reorder_lexicon' 'espeak_word')
+
+while read -r python_lib; do
+    if [ "$(echo "${python_lib}" | grep 'numpy')" ]; then
+        bin_scripts+=('phonetisaurus_per')
+    elif [ "$(echo "${python_lib}" | grep 'aeneas')" ]; then
+        bin_scripts+=('librivox_align')
+    fi
+done < <(pip3 freeze)
+
+for script_name in "${bin_scripts[@]}"; do
+    python_files+=("${src_dir}/bin/${script_name}.py")
+done
+
+# -----------------------------------------------------------------------------
 
 # Add language data modules
 while read -r lang_module_dir; do

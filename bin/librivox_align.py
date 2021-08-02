@@ -28,10 +28,10 @@ import logging
 from pathlib import Path
 
 import yaml
-
-import gruut
 from aeneas.executetask import ExecuteTask
 from aeneas.task import Task
+
+import gruut
 
 _LOGGER = logging.getLogger("librivox_align")
 

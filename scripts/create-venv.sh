@@ -30,12 +30,7 @@ echo "Installing Python dependencies"
 pip3 ${PIP_INSTALL} --upgrade pip
 pip3 ${PIP_INSTALL} --upgrade wheel setuptools
 
-# aeneas requires numpy just to install for some reason
-while read -r req; do
-    pip3 ${PIP_INSTALL} "${req}"
-done < <(grep '^numpy' "${src_dir}/requirements.txt")
-
-pip3 ${PIP_INSTALL} -f 'https://synesthesiam.github.io/prebuilt-apps/' "${src_dir}[all]"
+pip3 ${PIP_INSTALL} -f 'https://synesthesiam.github.io/prebuilt-apps/' "${src_dir}"
 
 # Development dependencies
 if [[ -f requirements_dev.txt ]]; then

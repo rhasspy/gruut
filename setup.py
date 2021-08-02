@@ -17,15 +17,10 @@ if readme_path.is_file():
     long_description = readme_path.read_text(encoding="UTF-8")
 
 requirements = []
-setup_requires = []
 requirements_path = this_dir / "requirements.txt"
 if requirements_path.is_file():
     with open(requirements_path, "r") as requirements_file:
         requirements = requirements_file.read().splitlines()
-
-    for req in requirements:
-        if req.startswith("numpy"):
-            setup_requires.append(req)
 
 version_path = module_dir / "VERSION"
 with open(version_path, "r") as version_file:
@@ -85,7 +80,6 @@ setuptools.setup(
     url="https://github.com/rhasspy/gruut",
     packages=setuptools.find_packages(),
     package_data={"gruut": data_files + ["VERSION", "py.typed"]},
-    setup_requires=setup_requires,
     install_requires=requirements,
     extras_require={
         ':python_version<"3.7"': ["dataclasses", "types-dataclasses"],
