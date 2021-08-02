@@ -110,7 +110,7 @@ check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
 
 echo ''
 
-find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
+find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | sort | \
     while read -r lang_dir; do
           if [[ ! -f "${lang_dir}/setup.py" ]]; then
               # Skip

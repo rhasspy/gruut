@@ -8,7 +8,7 @@ fi
 
 lang="$1"
 
-if [[ "$2" == '--pos' ]]; then
+if [ "${lang}" == 'en-us' ] || [ "$2" == '--pos' ]; then
     pos='1'
 fi
 

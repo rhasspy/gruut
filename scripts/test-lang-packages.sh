@@ -35,6 +35,29 @@ function gruut {
         jq -r .pronunciation_text
 }
 
+function espeak {
+    lang="$1"
+    text="$(echo $2 | sed -e 's/[ ]\+/|/g')"
+    shift 2
+
+    echo "${text}" | espeak-ng -v "${lang}" -q --ipa
+}
+
+function normalize {
+    # Ignore whitespace, IPA breaks, and stress
+    echo "$1" | sed -e 's/[ |‖ˈˌ]//g'
+}
+
+function check_espeak {
+    expected="$(normalize "$1")"
+    actual="$(normalize "$2")"
+
+    if [[ "${expected}" != "${actual}" ]]; then
+        echo "Expected ${expected} but got ${actual}" >&2
+        # exit 1
+    fi
+}
+
 # -----------------------------------------------------------------------------
 
 declare -A sentences
@@ -52,6 +75,23 @@ sentences['ru-ru']="Одного языка никогда недостаточ�
 sentences['sv-se']="Ett språk är aldrig nog."
 sentences['sw']="Lugha moja haitoshi."
 
+declare -A voices
+voices['ar']='ar'
+voices['cs-cz']='cs'
+voices['de-de']='de'
+voices['en-us']='en-us'
+voices['es-es']='es'
+voices['fa']='fa'
+voices['fr-fr']='fr'
+voices['it-it']='it'
+voices['nl']='nl'
+voices['pt']='pt'
+voices['ru-ru']='ru'
+voices['sv-se']='sv'
+voices['sw']='sw'
+
+# -----------------------------------------------------------------------------
+
 for full_lang in "${!sentences[@]}"; do
     sentence="${sentences["${full_lang}"]}"
 
@@ -62,6 +102,12 @@ for full_lang in "${!sentences[@]}"; do
     # With espeak phonemes
     espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
     echo "${full_lang}: ${espeak_phonemes}"
+
+    # Check against espeak
+    expected_espeak_phonemes="$(espeak "${voices["${full_lang}"]}" "${sentence}")"
+    check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
+
+    echo ''
 done
 
 # -----------------------------------------------------------------------------
