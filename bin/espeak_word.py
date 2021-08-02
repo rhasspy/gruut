@@ -126,7 +126,7 @@ class Phonemizer:
     def __init__(
         self,
         default_voice: typing.Optional[str] = None,
-        clause_breakers: typing.Optional[typing.Collection[str]] = None,
+        clause_breakers: typing.Optional[typing.Collection] = None,
     ):
         self.default_voice = default_voice
         self.clause_breakers = clause_breakers or {",", ";", ":", ".", "!", "?"}
