@@ -161,7 +161,9 @@ IPA_TRANSLATE = str.maketrans(
 )
 
 
-def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str:
+def encode_inline_pronunciations(
+    text: str, phonemes: typing.Optional[gruut_ipa.Phonemes] = None
+) -> str:
     """Encode inline phonemes in text using __phonemes_<base32-phonemes>__ format"""
 
     def replace_phonemes(match: REGEX_MATCH) -> str:
@@ -188,7 +190,9 @@ def encode_inline_pronunciations(text: str, phonemes: gruut_ipa.Phonemes) -> str
 
         return inline_key
 
-    text = INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
+    if phonemes is not None:
+        text = INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
+
     text = INLINE_SOUNDSLIKE_PATTERN.sub(replace_soundslike, text)
 
     return text
