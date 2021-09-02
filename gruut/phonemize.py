@@ -930,6 +930,9 @@ class SqlitePhonemizer(Phonemizer):
                     last_pron.preferred_features = last_pron.preferred_features or {}
 
                     feature_id, feature_value = row[3], row[4]
+                    if feature_id is None:
+                        continue
+
                     feature_name = self.id_to_feature[feature_id]
 
                     feature_values = last_pron.preferred_features.get(feature_name)
