@@ -236,3 +236,20 @@ def pairwise(iterable):
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
+
+
+def sliding_window(iterable, n=2):
+    iterables = itertools.tee(iterable, n)
+
+    for win_iter, num_skipped in zip(iterables, itertools.count()):
+        for _ in range(num_skipped):
+            next(win_iter, None)
+
+    return zip(*iterables)

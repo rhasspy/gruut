@@ -116,7 +116,7 @@ class RegexTokenizer(Tokenizer):
         pos_model: Path to CRF part of speech tagger model. See also: :py:mod:`gruut.pos`.
     """
 
-    WHITESPACE_PATTERN = re.compile(r"\s+")
+    WHITESPACE_PATTERN = re.compile(r"(\s+)")
     """Default pattern for initially splitting text into words"""
 
     NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
@@ -296,6 +296,20 @@ class RegexTokenizer(Tokenizer):
     # -------------------------------------------------------------------------
 
     def text_to_tokens(
+        self, text: str
+    ) -> typing.Iterable[typing.Tuple[typing.List[str], typing.List[Token]]]:
+
+        original_words: typing.List[str] = []
+        sentence_tokens: typing.List[Token] = []
+
+        for word_text in self.split_pattern.split(text):
+            original_words.append(word_text)
+            sentence_tokens.append(Token(word_text))
+
+        assert False, sentence_tokens
+        yield original_words, sentence_tokens
+
+    def _text_to_tokens(
         self, text: str
     ) -> typing.Iterable[typing.Tuple[typing.List[str], typing.List[Token]]]:
         """

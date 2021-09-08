@@ -86,3 +86,23 @@ class Sentence:
 
     phonemes: typing.Optional[typing.Sequence[WORD_PHONEMES]] = None
     """Optional phonetic pronunciations for :py:attr:`tokens`. Added by phonemizer."""
+
+
+@dataclass
+class TextSpan:
+    start: int
+    length: int = 0
+    attrs: typing.Dict[str, typing.Any] = field(default_factory=dict)
+
+class SpanAttrs(str, Enum):
+    WHITESPACE = "whitespace"
+    WORD = "word"
+    PUNCTUATION = "punctuation"
+    NUMBER = "number"
+    CURRENCY = "currency"
+    DATE = "date"
+    TIME = "time"
+
+    WORD_BOUNDARY = "word_boundary"
+    PHRASE_BOUNDARY = "phrase_boundary"
+    SENTENCE_BOUNDARY = "sentence_boundary"

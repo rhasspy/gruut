@@ -4,7 +4,7 @@ flake8==3.7.9
 mkdocs>=1.1
 mkdocs-material==5.1.1
 mypy==0.910
-pylint==2.4.4
+pylint==2.10.2
 pytest==5.4.1
 pytest-cov==2.8.1
 yamllint==1.21.0
