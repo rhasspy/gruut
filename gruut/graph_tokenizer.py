@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-from dataclasses import dataclass
 import functools
-import typing
+import itertools
 import re
 import sys
-import itertools
+import typing
 import unittest
-from enum import Enum
 from collections import defaultdict
-from decimal import Decimal
+from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
+from enum import Enum
 
-import dateparser
 import babel
-import babel.numbers
 import babel.dates
+import babel.numbers
+import dateparser
 import networkx as nx
 from num2words import num2words
 
-
-from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE, Token, Sentence
+from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE, Sentence, Token
 from .toksen import Tokenizer
-from .utils import grouper, sliding_window, get_currency_names, maybe_compile_regex
+from .utils import get_currency_names, grouper, maybe_compile_regex, sliding_window
 
 # -----------------------------------------------------------------------------
 

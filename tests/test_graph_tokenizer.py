@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import re
+import sys
 import unittest
+import typing
+from dataclasses import dataclass
 
 from gruut.graph_tokenizer import GraphTokenizer
 
@@ -263,8 +266,34 @@ class GraphTokenizerTests(unittest.TestCase):
             ["That", "will", "cost", "€5."], [w.strip() for w in sentence.raw_words]
         )
 
-    # def test_number_converter_ordinal(self):
-    #     """Test ordinal number converter"""
+    def test_ssml_break(self):
+        # tokenizer = GraphTokenizer()
+        from xml.etree import ElementTree as etree
+
+        root = etree.fromstring('<speak><say-as interpret-as="cardinal">1</say-as> test <break /> with <say-as interpret-as="spell-out">SSML</say-as></speak>')
+        for n in text_and_nodes(root):
+            print(n, file=sys.stderr)
+
+
+def text_and_nodes(node):
+    yield node
+
+    text = node.text.strip() if node.text is not None else ""
+    if text:
+        yield text
+
+    for child in node:
+        yield from text_and_nodes(child)
+
+    yield End(node)
+
+@dataclass
+class End:
+    node: typing.Any
+
+
+    # def test_ssml_ordinal(self):
+    #     """Test ordinal number with SSML"""
     #     tokenizer = GraphTokenizer(locale="en_US", use_number_converters=True)
 
     #     text = "It's the 23_ordinal"

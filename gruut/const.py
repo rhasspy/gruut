@@ -94,6 +94,7 @@ class TextSpan:
     length: int = 0
     attrs: typing.Dict[str, typing.Any] = field(default_factory=dict)
 
+
 class SpanAttrs(str, Enum):
     WHITESPACE = "whitespace"
     WORD = "word"
