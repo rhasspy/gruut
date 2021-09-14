@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
+import functools
+import logging
 import operator
+import os
 import re
+import sqlite3
 import sys
 import typing
 import unittest
@@ -17,11 +21,15 @@ import dateparser
 import networkx as nx
 from num2words import num2words
 
-from .pos import PartOfSpeechTagger
 from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE, Token, TokenFeatures
+from .g2p import GraphemesToPhonemes
+from .g2p_phonetisaurus import PhonetisaurusGraph
+from .pos import PartOfSpeechTagger
 from .utils import grouper, maybe_compile_regex
 
 # -----------------------------------------------------------------------------
+
+_LOGGER = logging.getLogger("gruut")
 
 DEFAULT_MAJOR_BREAKS = set(".?!")
 DEFAULT_MINOR_BREAKS = set(",;:")
@@ -86,7 +94,8 @@ class Word(Node):
     date: typing.Optional[datetime] = None
     currency: typing.Optional[str] = None
 
-    pos: typing.Optional[str] = None
+    role: str = ""
+    phonemes: typing.Optional[typing.Sequence[str]] = None
 
 
 @dataclass
@@ -106,8 +115,147 @@ class Speak(Node):
 
 # -----------------------------------------------------------------------------
 
+ROLE_TO_PHONEMES = typing.Dict[str, typing.Sequence[str]]
 
-class SSMLTokenizer:
+
+class Phonemizer:
+    DEFAULT_ROLE: str = ""
+
+    def __init__(
+        self,
+        lexicon: typing.Optional[typing.Dict[str, ROLE_TO_PHONEMES]] = None,
+        db_conn: typing.Optional[sqlite3.Connection] = None,
+        g2p_model: typing.Optional[typing.Union[str, Path]] = None,
+        word_transform_funcs=None,
+        guess_transform_func=None,
+    ):
+        self.lexicon: typing.Dict[
+            str, ROLE_TO_PHONEMES
+        ] = lexicon if lexicon is not None else {}
+        self.db_conn = db_conn
+
+        self.word_transform_funcs = word_transform_funcs
+        self.guess_transform_func = guess_transform_func
+
+        self.g2p_tagger: typing.Optional[GraphemesToPhonemes] = None
+        self.g2p_graph: typing.Optional[PhonetisaurusGraph] = None
+
+        if g2p_model is not None:
+            # Load g2p model
+            g2p_ext = os.path.splitext(g2p_model)[1]
+            if g2p_ext == ".npz":
+                # Load Phonetisaurus FST as a numpy graph
+                _LOGGER.debug("Loading Phonetisaurus g2p model from %s", g2p_model)
+                self.g2p_graph = PhonetisaurusGraph.load(g2p_model)
+            else:
+                # Load CRF tagger
+                _LOGGER.debug("Loading CRF g2p model from %s", g2p_model)
+                self.g2p_tagger = GraphemesToPhonemes(g2p_model)
+
+    def lookup(
+        self, word: str, transform: bool = True
+    ) -> typing.Optional[ROLE_TO_PHONEMES]:
+        role_to_word = self.lexicon.get(word)
+
+        if role_to_word is not None:
+            return role_to_word
+
+        if self.db_conn is not None:
+            # Load pronunciations from database.
+            #
+            # Ordered by pronunciation descending because so duplicate roles
+            # will be overwritten by earlier pronunciation.
+            cursor = self.db_conn.execute(
+                "SELECT role, phonemes FROM word_phonemes WHERE word = ? ORDER BY pron_order DESC",
+                (word,),
+            )
+
+            for row in cursor:
+                if role_to_word is None:
+                    # Create new lexicon entry
+                    role_to_word = {}
+                    self.lexicon[word] = role_to_word
+
+                role, phonemes = row[0], row[1].split()
+                role_to_word[role] = phonemes
+
+            if role_to_word is not None:
+                # Successfully looked up in the database
+                return role_to_word
+
+        if transform and self.word_transform_funcs:
+            # Try transforming word and looking up again (with transforms
+            # disabled, of course)
+            for transform_func in self.word_transform_funcs:
+                maybe_word = transform_func(word)
+                maybe_role_to_word = self.lookup(maybe_word, transform=False)
+                if maybe_role_to_word:
+                    # Make a copy for this word
+                    role_to_word = dict(maybe_role_to_word)
+                    self.lexicon[word] = role_to_word
+                    return role_to_word
+
+        return None
+
+    def get_pronunciation(
+        self,
+        word: str,
+        role: typing.Optional[str] = None,
+        transform: bool = True,
+        guess: bool = True,
+    ) -> typing.Optional[typing.Sequence[str]]:
+        role_to_word = self.lookup(word, transform=transform)
+        if role_to_word:
+            if role:
+                # Desired role
+                maybe_phonemes = role_to_word.get(role)
+                if maybe_phonemes:
+                    return maybe_phonemes
+
+            # Default role
+            maybe_phonemes = role_to_word.get(Phonemizer.DEFAULT_ROLE)
+            if maybe_phonemes:
+                return maybe_phonemes
+
+            # Any role
+            return next(iter(role_to_word.values()))
+
+        if role_to_word is None:
+            # Mark word as missing
+            role_to_word = {}
+            self.lexicon[word] = role_to_word
+
+        if guess:
+            guessed_phonemes = self.guess_pronunciation(word)
+            role_to_word[Phonemizer.DEFAULT_ROLE] = guessed_phonemes
+            return guessed_phonemes
+
+        return None
+
+    def guess_pronunciation(self, word: str) -> typing.Sequence[str]:
+        if self.guess_transform_func:
+            word = self.guess_transform_func(word)
+
+        guessed_phonemes: typing.Sequence[str] = []
+
+        if self.g2p_tagger:
+            # CRF model
+            _LOGGER.debug("Guessing pronunciations for %s with CRF", word)
+            guessed_phonemes = self.g2p_tagger(word)
+        elif self.g2p_graph:
+            # Phonetisaurus FST
+            _LOGGER.debug("Guessing pronunciations for %s with Phonetisaurus", word)
+            _, _, guessed_phonemes = next(  # type: ignore
+                self.g2p_graph.g2p([word])
+            )
+
+        return guessed_phonemes
+
+
+# -----------------------------------------------------------------------------
+
+
+class SSMLTextProcessor:
     @dataclass
     class EndElement:
         element: etree.Element
@@ -115,6 +263,7 @@ class SSMLTokenizer:
     def __init__(
         self,
         lang: str = "en_US",
+        phonemizer: typing.Optional[Phonemizer] = None,
         babel_locale: typing.Optional[str] = None,
         num2words_lang: typing.Optional[str] = None,
         dateparser_lang: typing.Optional[str] = None,
@@ -125,7 +274,11 @@ class SSMLTokenizer:
         replacements: typing.Optional[
             typing.Sequence[typing.Tuple[REGEX_TYPE, str]]
         ] = None,
+        major_breaks: typing.Optional[typing.Set[str]] = None,
+        minor_breaks: typing.Optional[typing.Set[str]] = None,
     ):
+        self.phonemizer = phonemizer
+
         if babel_locale is None:
             babel_locale = lang
 
@@ -148,6 +301,9 @@ class SSMLTokenizer:
 
         self.split_pattern = split_pattern
         self.join_str = join_str
+
+        self.major_breaks = major_breaks or set()
+        self.minor_breaks = minor_breaks or set()
 
         # Sorted by decreasing length
         self.currency_symbols = sorted(
@@ -207,7 +363,7 @@ class SSMLTokenizer:
 
             return root
 
-        for elem_or_text in SSMLTokenizer.text_and_elements(root_element):
+        for elem_or_text in SSMLTextProcessor.text_and_elements(root_element):
             # print(elem_or_text, file=sys.stderr)
             if isinstance(elem_or_text, str):
                 text = typing.cast(str, elem_or_text)
@@ -244,9 +400,9 @@ class SSMLTokenizer:
                     # May be multiple sentences
                     pass
 
-            elif isinstance(elem_or_text, SSMLTokenizer.EndElement):
+            elif isinstance(elem_or_text, SSMLTextProcessor.EndElement):
                 # End of an element (e.g., </s>)
-                end_elem = typing.cast(SSMLTokenizer.EndElement, elem_or_text)
+                end_elem = typing.cast(SSMLTextProcessor.EndElement, elem_or_text)
                 end_tag = end_elem.element.tag
 
                 if end_tag == "voice":
@@ -327,29 +483,61 @@ class SSMLTokenizer:
 
         assert root is not None
 
+        # Split on major/minor breaks
+        # TODO: Use pre-compiled patterns
+        if self.major_breaks:
+            self.pipeline_split(
+                functools.partial(
+                    self.split_on_regex, pattern=re.compile(r"([.?!])\s*$")
+                ),
+                root,
+                graph,
+            )
+
+        if self.minor_breaks:
+            self.pipeline_split(
+                functools.partial(
+                    self.split_on_regex, pattern=re.compile(r"([,;:])\s*$")
+                ),
+                root,
+                graph,
+            )
+
         # Transform text into known classes
         self.pipeline_transform(self.transform_number, root, graph)
         self.pipeline_transform(self.transform_date, root, graph)
         self.pipeline_transform(self.transform_currency, root, graph)
+        self.pipeline_transform(self.transform_initialism, root, graph)
 
         # Verbalize known classes
         self.pipeline_transform(self.verbalize_number, root, graph)
         self.pipeline_transform(self.verbalize_date, root, graph)
         self.pipeline_transform(self.verbalize_currency, root, graph)
 
+        self.pipeline_split(self.split_spell_out, root, graph)
+
+        words = [
+            w for w in self.leaves(graph, root, skip_seen=True) if isinstance(w, Word)
+        ]
+
         # Add part-of-speech tags
         if self.pos_tagger is not None:
             # Predict tags for entire sentence
-            words = [
-                w
-                for w in self.leaves(graph, root, skip_seen=True)
-                if isinstance(w, Word)
-            ]
-            pos_tags = self.pos_tagger([w.text for w in words])
+            pos_tags = self.pos_tagger([word.text.strip() for word in words])
             for word, pos in zip(words, pos_tags):
-                word.pos = pos
+                if not word.role:
+                    word.role = f"gruut:{pos}"
 
-        SSMLTokenizer.print_graph(graph, root.node)
+        if self.phonemizer is not None:
+            # Phonemize words
+            for word in words:
+                word.phonemes = self.phonemizer.get_pronunciation(
+                    word.text.strip(), role=word.role,
+                )
+
+        SSMLTextProcessor.print_graph(graph, root.node)
+
+        return words
 
     def leaves(self, graph, node, skip_seen=False, seen=None):
         if skip_seen and (seen is None):
@@ -385,6 +573,42 @@ class SSMLTokenizer:
     def pipeline_transform(self, transform_func, parent_node, graph, skip_seen=True):
         for leaf_node in list(self.leaves(graph, parent_node, skip_seen=skip_seen)):
             transform_func(leaf_node, graph)
+
+    def pipeline_split(self, split_func, parent_node, graph, skip_seen=True):
+        for leaf_node in list(self.leaves(graph, parent_node, skip_seen=skip_seen)):
+            for word_kwargs in split_func(leaf_node, graph):
+                word_node = Word(node=len(graph), **word_kwargs)
+                graph.add_node(word_node.node, data=word_node)
+                graph.add_edge(leaf_node.node, word_node.node)
+
+    def split_on_regex(self, node, graph, pattern):
+        if not isinstance(node, Word):
+            return
+
+        word = typing.cast(Word, node)
+        if word.interpret_as:
+            return
+
+        parts = pattern.split(word.text)
+        if len(parts) < 2:
+            return
+
+        for part in parts:
+            if not part:
+                continue
+
+            yield {"text": part}
+
+    def split_spell_out(self, node, graph):
+        if not isinstance(node, Word):
+            return
+
+        word = typing.cast(Word, node)
+        if word.interpret_as != InterpretAs.SPELL_OUT:
+            return
+
+        for c in word.text:
+            yield {"text": c, "role": "gruut:letter"}
 
     def transform_number(self, node, graph, babel_locale: typing.Optional[str] = None):
         if not isinstance(node, Word):
@@ -449,6 +673,23 @@ class SSMLTokenizer:
                     break
                 except ValueError:
                     pass
+
+    def transform_initialism(self, node, graph):
+        if not isinstance(node, Word):
+            return
+
+        word = typing.cast(Word, node)
+        if word.interpret_as:
+            return
+
+        if self.phonemizer and self.phonemizer.lookup(word.text):
+            # Don't expand words already in lexicon
+            return
+
+        if (len(word.text) > 1) and word.text.isupper():
+            word.interpret_as = InterpretAs.SPELL_OUT
+        elif (len(word.text) > 3) and re.match(r"(?:[a-zA-Z]\.){2,}\s*", word.text):
+            word.interpret_as = InterpretAs.SPELL_OUT
 
     def verbalize_number(self, node, graph, **num2words_kwargs):
         if not isinstance(node, Word):
@@ -642,43 +883,62 @@ class SSMLTokenizer:
             yield text
 
         for child in element:
-            yield from SSMLTokenizer.text_and_elements(child)
+            yield from SSMLTextProcessor.text_and_elements(child)
 
         # Text after any elements
         tail = element.tail.strip() if element.tail is not None else ""
         if tail:
             yield tail
 
-        yield SSMLTokenizer.EndElement(element)
+        yield SSMLTextProcessor.EndElement(element)
 
     @staticmethod
     def print_graph(g, n, s: str = "-"):
         n_data = g.nodes[n]["data"]
         print(s, n, n_data, file=sys.stderr)
         for n2 in g.successors(n):
-            SSMLTokenizer.print_graph(g, n2, s + "-")
+            SSMLTextProcessor.print_graph(g, n2, s + "-")
 
 
 # -----------------------------------------------------------------------------
 
 
-class SSMLTokenizerTestCase(unittest.TestCase):
+class SSMLTextProcessorTestCase(unittest.TestCase):
     def test1(self):
-        tokenizer = SSMLTokenizer()
+        tokenizer = SSMLTextProcessor()
         tokenizer.tokenize(
             "<speak>This is a test. <p><s>These are.</s><s>Two sentences.</s></p></speak>"
         )
 
     def test2(self):
-        tokenizer = SSMLTokenizer()
+        tokenizer = SSMLTextProcessor()
         tokenizer.tokenize("<speak>1/2/2022 1,234 $50.32</speak>")
 
     def test3(self):
-        tokenizer = SSMLTokenizer()
+        tokenizer = SSMLTextProcessor()
         tokenizer.tokenize(
             '<speak><say-as interpret-as="number" format="ordinal">12</say-as></speak>'
         )
 
     def test4(self):
-        tokenizer = SSMLTokenizer(pos_model="/home/hansenm/opt/gruut/gruut/data/en-us/pos/model.crf")
+        tokenizer = SSMLTextProcessor(
+            pos_model="/home/hansenm/opt/gruut/gruut/data/en-us/pos/model.crf"
+        )
         tokenizer.tokenize("This is a <break /> $50 test")
+
+    def test5(self):
+
+        tokenizer = SSMLTextProcessor(
+            major_breaks={"."},
+            pos_model="/home/hansenm/opt/gruut/gruut/data/en-us/pos/model.crf",
+            phonemizer=Phonemizer(
+                db_conn=sqlite3.connect(
+                    "/home/hansenm/opt/gruut/gruut/data/en-us/lexicon.db"
+                ),
+                g2p_model="/home/hansenm/opt/gruut/gruut/data/en-us/g2p/model.crf",
+                word_transform_funcs=[str.lower],
+                guess_transform_func=str.lower,
+            ),
+        )
+
+        tokenizer.tokenize("<speak>plOOP</speak>")

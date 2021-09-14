@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Converts a text lexicon to a gruut sqlite3 database"""
 import argparse
+import sqlite3
 import sys
-
-from .const import TokenFeatures, WordPronunciation
-from .phonemize import SqlitePhonemizer
 
 # -----------------------------------------------------------------------------
 
@@ -25,9 +23,12 @@ def main():
     )
     parser.add_argument("--database", required=True, help="SQLite database to write")
     parser.add_argument(
-        "--pos",
-        action="store_true",
-        help="Lexicon includes part of speech (2nd column)",
+        "--role", action="store_true", help="Lexicon includes word roles (2nd column)",
+    )
+    parser.add_argument(
+        "--empty-role",
+        default="_",
+        help="String used to identify empty word role (see --role)",
     )
     args = parser.parse_args()
 
@@ -42,14 +43,20 @@ def main():
 
     # -------------------------------------------------------------------------
 
-    token_features = []
-    if args.pos:
-        token_features.append(TokenFeatures.PART_OF_SPEECH)
+    conn = sqlite3.connect(args.database)
 
-    phonemizer = SqlitePhonemizer(
-        database_path=args.database, token_features=token_features
+    # Re-create tables in output
+    conn.execute("DROP TABLE IF EXISTS word_phonemes")
+    conn.execute("DROP TABLE IF EXISTS g2p_alignments")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS word_phonemes "
+        + "(id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT, pron_order INTEGER, phonemes TEXT, role TEXT);"
     )
-    phonemizer.create_tables(drop_existing=True)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS g2p_alignments "
+        + "(id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT, alignment TEXT);"
+    )
+    conn.commit()
 
     # word -> pron_order
     pron_orders = {}
@@ -57,9 +64,9 @@ def main():
     if args.lexicon == "-":
         lexicon_file = sys.stdin
     else:
-        lexicon_file = open(args.lexicon, "r")
+        lexicon_file = open(args.lexicon, "r", encoding="utf-8")
 
-    with lexicon_file, phonemizer.db_conn:
+    with lexicon_file, conn:
         for i, line in enumerate(lexicon_file):
             try:
                 line = line.strip()
@@ -68,20 +75,19 @@ def main():
                     # Also skip lines without a pronunciation.
                     continue
 
-                if args.pos:
-                    # With part of speech
-                    word, pos_str, phonemes_str = line.split(maxsplit=2)
-                    pos = set(pos_str.split(","))
-                    phonemes = phonemes_str.split()
+                role = ""
 
-                    word_pron = WordPronunciation(
-                        phonemes, preferred_features={TokenFeatures.PART_OF_SPEECH: pos}
-                    )
+                if args.role:
+                    # With role
+                    word, role, phonemes_str = line.split(maxsplit=2)
+
+                    if role == args.empty_role:
+                        role = ""
+                    elif ":" not in role:
+                        role = f"gruut:{role}"
                 else:
                     # Without part of speech
                     word, phonemes_str = line.split(maxsplit=1)
-                    phonemes = phonemes_str.split()
-                    word_pron = WordPronunciation(phonemes)
 
                 if word_casing:
                     word = word_casing(word)
@@ -89,7 +95,10 @@ def main():
                 pron_order = pron_orders.get(word, 0)
 
                 # Don't commit on every word, or it will be terribly slow
-                phonemizer.insert_prons(word, [word_pron], commit=False)
+                conn.execute(
+                    "INSERT into word_phonemes (word, pron_order, phonemes, role) VALUES (?, ?, ?, ?)",
+                    (word, pron_order, phonemes_str, role),
+                )
 
                 pron_orders[word] = pron_order + 1
             except Exception as e:
