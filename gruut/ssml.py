@@ -9,6 +9,7 @@ import sys
 import typing
 import unittest
 import xml.etree.ElementTree as etree
+import collections.abc
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -33,8 +34,12 @@ _LOGGER = logging.getLogger("gruut")
 
 DEFAULT_MAJOR_BREAKS = set(".?!")
 DEFAULT_MINOR_BREAKS = set(",;:")
-DEFAULT_SPLIT_PATTERN = re.compile("(\s+)")
+DEFAULT_SPLIT_PATTERN = re.compile(r"(\s+)")
 DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
+
+NO_NAMESPACE_PATTERN = re.compile(r"^{[^}]+}")
+
+HAS_DIGIT_PATTERN = re.compile(r"[0-9]")
 
 
 class InterpretAs(str, Enum):
@@ -73,6 +78,7 @@ class Node:
     node: int
     element: typing.Optional[etree.Element] = None
     voice: str = ""
+    lang: str = ""
 
 
 @dataclass
@@ -94,7 +100,8 @@ class WordNode(Node):
 
     number: typing.Optional[Decimal] = None
     date: typing.Optional[datetime] = None
-    currency: typing.Optional[str] = None
+    currency_symbol: typing.Optional[str] = None
+    currency_name: typing.Optional[str] = None
 
     role: str = ""
     phonemes: typing.Optional[typing.Sequence[str]] = None
@@ -144,49 +151,68 @@ class Phonemizer:
 
     def __init__(
         self,
-        lexicon: typing.Optional[typing.Dict[str, ROLE_TO_PHONEMES]] = None,
-        db_conn: typing.Optional[sqlite3.Connection] = None,
-        g2p_model: typing.Optional[typing.Union[str, Path]] = None,
+        lang: str = "en_US",
+        lexicon: typing.Optional[
+            typing.Dict[str, typing.Dict[str, ROLE_TO_PHONEMES]]
+        ] = None,
+        db_conn: typing.Optional[typing.Dict[str, sqlite3.Connection]] = None,
+        g2p_model: typing.Optional[typing.Dict[str, typing.Union[str, Path]]] = None,
         word_transform_funcs=None,
         guess_transform_func=None,
     ):
-        self.lexicon: typing.Dict[
-            str, ROLE_TO_PHONEMES
-        ] = lexicon if lexicon is not None else {}
-        self.db_conn = db_conn
+        self.lang = lang
 
+        # lang -> word -> [phonemes]
+        self.lexicon = lexicon if lexicon is not None else {}
+
+        # lang -> connection
+        self.db_conn = db_conn or {}
+
+        # lang -> [functions]
         self.word_transform_funcs = word_transform_funcs
+
+        # lang -> function
         self.guess_transform_func = guess_transform_func
 
-        self.g2p_tagger: typing.Optional[GraphemesToPhonemes] = None
-        self.g2p_graph: typing.Optional[PhonetisaurusGraph] = None
+        # lang -> g2p
+        self.g2p_tagger: typing.Dict[str, GraphemesToPhonemes] = {}
+        self.g2p_graph: typing.Dict[PhonetisaurusGraph] = {}
 
         if g2p_model is not None:
-            # Load g2p model
-            g2p_ext = os.path.splitext(g2p_model)[1]
-            if g2p_ext == ".npz":
-                # Load Phonetisaurus FST as a numpy graph
-                _LOGGER.debug("Loading Phonetisaurus g2p model from %s", g2p_model)
-                self.g2p_graph = PhonetisaurusGraph.load(g2p_model)
-            else:
-                # Load CRF tagger
-                _LOGGER.debug("Loading CRF g2p model from %s", g2p_model)
-                self.g2p_tagger = GraphemesToPhonemes(g2p_model)
+            for g2p_lang, g2p_path in g2p_model.items():
+                # Load g2p model
+                g2p_ext = os.path.splitext(g2p_path)[1]
+                if g2p_ext == ".npz":
+                    # Load Phonetisaurus FST as a numpy graph
+                    _LOGGER.debug("Loading Phonetisaurus g2p model from %s", g2p_model)
+                    self.g2p_graph[g2p_lang] = PhonetisaurusGraph.load(g2p_model)
+                else:
+                    # Load CRF tagger
+                    _LOGGER.debug("Loading CRF g2p model from %s", g2p_model)
+                    self.g2p_tagger[g2p_lang] = GraphemesToPhonemes(g2p_model)
 
     def lookup(
-        self, word: str, transform: bool = True
+        self, word: str, lang: typing.Optional[str] = None, transform: bool = True
     ) -> typing.Optional[ROLE_TO_PHONEMES]:
-        role_to_word = self.lexicon.get(word)
+        lang = lang or self.lang
+        lexicon = self.lexicon.get(lang)
+        if lexicon is None:
+            lexicon = {}
+            self.lexicon[lang] = lexicon
+
+        assert lexicon is not None
+        role_to_word = lexicon.get(word)
 
         if role_to_word is not None:
             return role_to_word
 
-        if self.db_conn is not None:
+        db_conn = self.db_conn.get(lang)
+        if db_conn is not None:
             # Load pronunciations from database.
             #
             # Ordered by pronunciation descending because so duplicate roles
             # will be overwritten by earlier pronunciation.
-            cursor = self.db_conn.execute(
+            cursor = db_conn.execute(
                 "SELECT role, phonemes FROM word_phonemes WHERE word = ? ORDER BY pron_order DESC",
                 (word,),
             )
@@ -204,28 +230,34 @@ class Phonemizer:
                 # Successfully looked up in the database
                 return role_to_word
 
-        if transform and self.word_transform_funcs:
-            # Try transforming word and looking up again (with transforms
-            # disabled, of course)
-            for transform_func in self.word_transform_funcs:
-                maybe_word = transform_func(word)
-                maybe_role_to_word = self.lookup(maybe_word, transform=False)
-                if maybe_role_to_word:
-                    # Make a copy for this word
-                    role_to_word = dict(maybe_role_to_word)
-                    self.lexicon[word] = role_to_word
-                    return role_to_word
+        if transform:
+            word_transform_funcs = self.word_transform_funcs.get(lang)
+            if word_transform_funcs is not None:
+                # Try transforming word and looking up again (with transforms
+                # disabled, of course)
+                for transform_func in word_transform_funcs:
+                    maybe_word = transform_func(word)
+                    maybe_role_to_word = self.lookup(
+                        maybe_word, lang=lang, transform=False
+                    )
+                    if maybe_role_to_word:
+                        # Make a copy for this word
+                        role_to_word = dict(maybe_role_to_word)
+                        lexicon[word] = role_to_word
+                        return role_to_word
 
         return None
 
     def get_pronunciation(
         self,
         word: str,
+        lang: typing.Optional[str] = None,
         role: typing.Optional[str] = None,
         transform: bool = True,
         guess: bool = True,
     ) -> typing.Optional[typing.Sequence[str]]:
-        role_to_word = self.lookup(word, transform=transform)
+        lang = lang or self.lang
+        role_to_word = self.lookup(word, lang=lang, transform=transform)
         if role_to_word:
             if role:
                 # Desired role
@@ -247,33 +279,45 @@ class Phonemizer:
             self.lexicon[word] = role_to_word
 
         if guess:
-            guessed_phonemes = self.guess_pronunciation(word)
+            guessed_phonemes = self.guess_pronunciation(word, lang=lang)
             role_to_word[Phonemizer.DEFAULT_ROLE] = guessed_phonemes
             return guessed_phonemes
 
         return None
 
-    def guess_pronunciation(self, word: str) -> typing.Sequence[str]:
-        if self.guess_transform_func:
-            word = self.guess_transform_func(word)
+    def guess_pronunciation(
+        self, word: str, lang: typing.Optional[str] = None,
+    ) -> typing.Sequence[str]:
+        lang = lang or self.lang
+        guess_transform_func = self.guess_transform_func.get(lang)
 
-        guessed_phonemes: typing.Sequence[str] = []
+        if guess_transform_func is not None:
+            word = guess_transform_func(word)
 
-        if self.g2p_tagger:
+        g2p_tagger = self.g2p_tagger.get(lang)
+
+        if g2p_tagger is not None:
             # CRF model
             _LOGGER.debug("Guessing pronunciations for %s with CRF", word)
-            guessed_phonemes = self.g2p_tagger(word)
-        elif self.g2p_graph:
+            return g2p_tagger(word)
+
+        g2p_graph = self.g2p_graph.get(lang)
+        if g2p_graph:
             # Phonetisaurus FST
             _LOGGER.debug("Guessing pronunciations for %s with Phonetisaurus", word)
             _, _, guessed_phonemes = next(  # type: ignore
-                self.g2p_graph.g2p([word])
+                g2p_graph.g2p([word])
             )
 
-        return guessed_phonemes
+            return guessed_phonemes
+
+        return []
 
 
 # -----------------------------------------------------------------------------
+
+MAYBE_LANG = typing.Optional[str]
+POS_TAGGER = typing.Callable[[typing.Iterable[str]], typing.Iterable[str]]
 
 
 class SSMLTextProcessor:
@@ -285,156 +329,303 @@ class SSMLTextProcessor:
         self,
         lang: str = "en_US",
         phonemizer: typing.Optional[Phonemizer] = None,
-        babel_locale: typing.Optional[str] = None,
-        num2words_lang: typing.Optional[str] = None,
-        dateparser_lang: typing.Optional[str] = None,
-        split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN,
-        join_str: str = " ",
-        keep_whitespace: bool = True,
-        pos_model: typing.Optional[typing.Union[str, Path]] = None,
+        babel_locale: typing.Optional[
+            typing.Union[str, typing.Mapping[MAYBE_LANG, str]]
+        ] = None,
+        num2words_lang: typing.Optional[
+            typing.Union[str, typing.Mapping[MAYBE_LANG, str]]
+        ] = None,
+        dateparser_lang: typing.Optional[
+            typing.Union[str, typing.Mapping[str, str]]
+        ] = None,
+        split_pattern: typing.Optional[
+            typing.Union[REGEX_TYPE, typing.Mapping[MAYBE_LANG, REGEX_TYPE]]
+        ] = None,
+        join_str: typing.Dict[MAYBE_LANG, str] = None,
+        keep_whitespace: typing.Dict[MAYBE_LANG, bool] = True,
         replacements: typing.Optional[
             typing.Sequence[typing.Tuple[REGEX_TYPE, str]]
         ] = None,
-        major_breaks: typing.Optional[typing.Set[str]] = None,
-        minor_breaks: typing.Optional[typing.Set[str]] = None,
+        major_breaks: typing.Optional[typing.Dict[str, typing.Set[str]]] = None,
+        minor_breaks: typing.Optional[typing.Dict[str, typing.Set[str]]] = None,
+        default_currency: typing.Optional[typing.Dict[str, str]] = None,
+        currencies: typing.Optional[typing.Dict[str, typing.Dict[str, str]]] = None,
+        pos_tagger: typing.Optional[
+            typing.Union[POS_TAGGER, typing.Dict[MAYBE_LANG, POS_TAGGER]]
+        ] = None,
     ):
         self.phonemizer = phonemizer
 
+        # Default locales/languages
+        self.lang = lang
+
+        # Locale for parsing numbers
         if babel_locale is None:
+            # Use default language
             babel_locale = lang
 
+        if not isinstance(babel_locale, collections.abc.Mapping):
+            # Set for all languages
+            babel_locale = {None: babel_locale}
+
+        self.babel_locale = babel_locale
+
+        # Language for verbalizing numbers
         if num2words_lang is None:
             num2words_lang = lang
 
+        if not isinstance(num2words_lang, collections.abc.Mapping):
+            # Set for all languages
+            num2words_lang = {None: num2words_lang}
+
+        self.num2words_lang = num2words_lang
+
+        # Language for parsing dates
         if dateparser_lang is None:
             # en_US -> en
             dateparser_lang = lang.split("_")[0]
 
-        self.lang = lang
-        self.babel_locale = babel_locale
-        self.num2words_lang = num2words_lang
+        if not isinstance(dateparser_lang, collections.abc.Mapping):
+            dateparser_lang = {None: dateparser_lang}
+
         self.dateparser_lang = dateparser_lang
+
+        # ----------
+        # Whitespace
+        # ----------
+
+        # True if whitespace should be kept at the end of words
+        if keep_whitespace is None:
+            keep_whitespace = True
+
+        if not isinstance(keep_whitespace, collections.abc.Mapping):
+            keep_whitespace = {None: keep_whitespace}
 
         self.keep_whitespace = keep_whitespace
 
-        self.default_currency = "USD"
-        self.currencies = {"$": "USD"}
+        # Regular expression used to split apart words
+        if split_pattern is None:
+            split_pattern = DEFAULT_SPLIT_PATTERN
 
-        self.split_pattern = split_pattern
+        if not isinstance(split_pattern, collections.abc.Mapping):
+            # Set for all languages
+            split_pattern = {None: split_pattern}
+
+        self.split_pattern = {
+            k: maybe_compile_regex(v) for k, v in split_pattern.items()
+        }
+
+        # String used to join words
+        if join_str is None:
+            join_str = " "
+
+        if not isinstance(join_str, collections.abc.Mapping):
+            # Set for all languages
+            join_str = {None: join_str}
+
         self.join_str = join_str
 
-        self.major_breaks = major_breaks or set()
-        self.minor_breaks = minor_breaks or set()
+        # ------
+        # Breaks
+        # ------
 
-        self.major_break_pattern = None
-        if self.major_breaks:
-            major_breaks_str = "".join(re.escape(b) for b in self.major_breaks)
-            self.major_break_pattern = re.compile(f"[{major_breaks_str}]\\s*")
+        # Strings that cause sentences to break apart
+        if major_breaks is None:
+            major_breaks = set()
 
-        self.minor_break_pattern = None
-        if self.minor_breaks:
-            minor_breaks_str = "".join(re.escape(b) for b in self.minor_breaks)
-            self.minor_break_pattern = re.compile(f"[{minor_breaks_str}]\\s*")
+        if not isinstance(major_breaks, collections.abc.Mapping):
+            # Set for all languages
+            major_breaks = {None: major_breaks}
+
+        self.major_breaks = major_breaks
+
+        # Pre-compile regex patterns for matching major breaks
+        self.major_break_pattern: typing.Dict[MAYBE_LANG, REGEX_PATTERN] = {}
+        for break_lang, break_set in self.major_breaks.items():
+            if not break_set:
+                continue
+
+            break_str = "".join(re.escape(b) for b in break_set)
+
+            # Match major break with either whitespace at the end or at the end of the text
+            self.major_break_pattern[break_lang] = re.compile(
+                f"([{break_str}](?:\\s+|$))"
+            )
+
+        # Strings that separate words, but not sentences
+        if minor_breaks is None:
+            minor_breaks = set()
+
+        if not isinstance(minor_breaks, collections.abc.Mapping):
+            # Set for all languages
+            minor_breaks = {None: minor_breaks}
+
+        self.minor_breaks = minor_breaks
+
+        # Pre-compile regex patterns for matching minor breaks
+        self.minor_break_pattern: typing.Dict[MAYBE_LANG, REGEX_PATTERN] = {}
+        for break_lang, break_set in self.minor_breaks.items():
+            if not break_set:
+                continue
+
+            break_str = "".join(re.escape(b) for b in break_set)
+
+            # Match minor break with optional whitespace after
+            self.minor_break_pattern[break_lang] = re.compile(f"([{break_str}]\\s*)")
+
+        # --------
+        # Currency
+        # --------
+
+        if default_currency is None:
+            default_currency = "USD"
+
+        if not isinstance(default_currency, collections.abc.Mapping):
+            # Set for all languages
+            default_currency = {None: default_currency}
+
+        self.default_currency = default_currency
+
+        # lang (en_US) -> symbol ($) -> name (USD)
+        if currencies is None:
+            currencies = {}
+
+        if (not currencies) or (
+            currencies
+            and not isinstance(next(iter(currencies.values())), collections.abc.Mapping)
+        ):
+            # Set for all languages
+            currencies = {None: currencies}
+
+        self.currencies = currencies
 
         # Sorted by decreasing length
-        self.currency_symbols = sorted(
-            self.currencies, key=operator.length_hint, reverse=True
-        )
+        # lang -> [longest_symbol, symbol, shortest_symbol]
+        self.currency_symbols = {}
 
-        self.replacements = [
-            (maybe_compile_regex(p), r) for p, r in (replacements or [])
-        ]
+        # TODO: Handle replacements
+        # self.replacements = [
+        #     (maybe_compile_regex(p), r) for p, r in (replacements or [])
+        # ]
 
-        self.pos_tagger: typing.Optional[PartOfSpeechTagger] = None
-        if pos_model is not None:
-            self.pos_tagger = PartOfSpeechTagger(pos_model)
+        if pos_tagger is None:
+            pos_tagger = {}
 
-    def pre_tokenize(self, text: str) -> str:
-        for pattern, replacement in self.replacements:
-            text = pattern.sub(replacement, text)
+        if not isinstance(pos_tagger, collections.abc.Mapping):
+            pos_tagger = {None: pos_tagger}
 
-        return text
+        self.pos_tagger = pos_tagger
 
-    def process(self, text: str, add_speak_tag: bool = True):
+    # def pre_tokenize(self, text: str) -> str:
+    #     for pattern, replacement in self.replacements:
+    #         text = pattern.sub(replacement, text)
+
+    #     return text
+
+    def process(self, text: str, add_speak_tag: bool = True, phonemize: bool = True):
         if add_speak_tag and (not text.lstrip().startswith("<")):
             # Wrap in <speak> tag
             text = f"<speak>{text}</speak>"
 
         root_element = etree.fromstring(text)
         graph = nx.DiGraph()
-        return self.process_etree(root_element, graph)
+        return self.process_etree(root_element, graph, phonemize=phonemize)
 
-    def process_etree(self, root_element: etree.Element, graph):
-        # TODO: Remove namespaces
-        assert root_element.tag == "speak", "Root must be <speak>"
-
-        target_stack: typing.List[Node] = []
-        target: typing.Optional[Node] = None
+    def process_etree(self, root_element: etree.Element, graph, phonemize: bool = True):
+        last_paragraph: typing.Optional[Paragraph] = None
+        last_sentence: typing.Optional[Sentence] = None
+        last_speak: typing.Optional[Speak] = None
         root: typing.Optional[Speak] = None
 
         voice_stack: typing.List[str] = []
         say_as_stack: typing.List[typing.Tuple[str, str]] = []
+
+        lang_stack: typing.List[typing.Tuple[str, str]] = []
+        current_lang: str = self.lang
+
+        in_word: bool = False
+        word_role: typing.Optional[str] = None
 
         def scope_kwargs(target_class):
             scope = {}
             if voice_stack:
                 scope["voice"] = voice_stack[-1]
 
-            if say_as_stack and (target_class is WordNode):
-                scope["interpret_as"], scope["format"] = say_as_stack[-1]
+            scope["lang"] = current_lang
+
+            if target_class is WordNode:
+                if say_as_stack:
+                    scope["interpret_as"], scope["format"] = say_as_stack[-1]
+
+                if word_role is not None:
+                    scope["role"] = word_role
 
             return scope
-
-        def find_parent(classes):
-            while target_stack and (not isinstance(target_stack[-1], classes)):
-                target_stack.pop()
-
-            if target_stack:
-                return target_stack[-1]
-
-            return root
 
         for elem_or_text in SSMLTextProcessor.text_and_elements(root_element):
             # print(elem_or_text, file=sys.stderr)
             if isinstance(elem_or_text, str):
                 text = typing.cast(str, elem_or_text)
-                target = find_parent((Sentence, Paragraph, Speak))
 
-                if isinstance(target, Speak):
-                    # Ensure paragraph
+                if last_speak is None:
+                    # Implicit <speak>
+                    last_speak = Speak(node=len(graph))
+                    graph.add_node(last_speak.node, data=last_speak)
+                    if root is None:
+                        root = last_speak
+
+                assert last_speak is not None
+
+                if last_paragraph is None:
+                    # Implicit <p>
                     p_node = Paragraph(node=len(graph), **scope_kwargs(Paragraph))
                     graph.add_node(p_node.node, data=p_node)
 
-                    graph.add_edge(target.node, p_node.node)
-                    target_stack.append(p_node)
-                    target = p_node
+                    graph.add_edge(last_speak.node, p_node.node)
+                    last_paragraph = p_node
 
-                if isinstance(target, Paragraph):
-                    # Ensure sentence
+                assert last_paragraph is not None
+
+                if last_sentence is None:
+                    # Implicit <s>
                     s_node = Sentence(node=len(graph), **scope_kwargs(Sentence))
                     graph.add_node(s_node.node, data=s_node)
 
-                    graph.add_edge(target.node, s_node.node)
-                    target_stack.append(s_node)
-                    target = s_node
+                    graph.add_edge(last_paragraph.node, s_node.node)
+                    last_sentence = s_node
 
-                if isinstance(target, Sentence):
-                    # Interpret as single sentence
+                assert last_sentence is not None
+
+                if in_word:
+                    # No splitting
+                    word_node = WordNode(
+                        node=len(graph),
+                        text=text.strip(),
+                        text_with_ws=text,
+                        **scope_kwargs(WordNode),
+                    )
+                    graph.add_node(word_node.node, data=word_node)
+                    graph.add_edge(last_sentence.node, word_node.node)
+                else:
+                    # Split by whitespace
+                    split_pattern = self.split_pattern.get(current_lang)
+                    if split_pattern is None:
+                        split_pattern = self.split_pattern.get(None)
+
+                    assert split_pattern is not None
+
                     self.pipeline_tokenize(
                         text,
-                        self.split_pattern,
-                        target,
+                        split_pattern,
+                        last_sentence,
                         graph,
                         scope_kwargs=scope_kwargs(WordNode),
                     )
-                else:
-                    # May be multiple sentences
-                    pass
 
             elif isinstance(elem_or_text, SSMLTextProcessor.EndElement):
                 # End of an element (e.g., </s>)
                 end_elem = typing.cast(SSMLTextProcessor.EndElement, elem_or_text)
-                end_tag = end_elem.element.tag
+                end_tag = SSMLTextProcessor.tag_no_namespace(end_elem.element.tag)
 
                 if end_tag == "voice":
                     if voice_stack:
@@ -442,77 +633,98 @@ class SSMLTextProcessor:
                 elif end_tag == "say-as":
                     say_as_stack.pop()
                 else:
-                    while target_stack and (
-                        target_stack[-1].element != end_elem.element
-                    ):
-                        target_stack.pop()
+                    if lang_stack and (lang_stack[-1][0] == end_tag):
+                        lang_stack.pop()
 
-                    if target_stack:
-                        target = target_stack[-1]
+                    if lang_stack:
+                        current_lang = lang_stack[-1][1]  # tag, lang
                     else:
-                        target = root
+                        current_lang = self.lang
+
+                    if end_tag == "w":
+                        # End of word
+                        in_word = False
+                        word_role = None
+
+                    if end_tag == "s":
+                        # End of sentence
+                        last_sentence = None
+
+                    if end_tag == "p":
+                        # End of paragraph
+                        last_paragraph = None
+
+                    if end_tag == "speak":
+                        # End of speak
+                        last_speak = root
             else:
                 # Start of an element (e.g., <p>)
                 elem = typing.cast(etree.Element, elem_or_text)
+                elem_tag = SSMLTextProcessor.tag_no_namespace(elem.tag)
 
-                # TODO: namespaces
-                if elem.tag == "speak":
-                    # Root <speak>
+                if elem_tag == "speak":
+                    # Explicit <speak>
                     speak_node = Speak(node=len(graph), element=elem)
                     if root is None:
                         root = speak_node
 
                     graph.add_node(speak_node.node, data=root)
-                    target_stack.append(speak_node)
-                    target = speak_node
-                elif elem.tag == "voice":
+                    last_speak = root
+                elif elem_tag == "voice":
                     # Set voice scope
-                    voice_name = elem.attrib["name"]
+                    voice_name = SSMLTextProcessor.attrib_no_namespace(elem, "name")
                     voice_stack.append(voice_name)
-                elif elem.tag == "p":
-                    # Paragraph
-                    target = find_parent(Speak)
-
+                elif elem_tag == "p":
+                    # Explicit paragraph
+                    assert last_speak is not None
                     p_node = Paragraph(
                         node=len(graph), element=elem, **scope_kwargs(Paragraph)
                     )
                     graph.add_node(p_node.node, data=p_node)
-                    graph.add_edge(target.node, p_node.node)
-                    target_stack.append(p_node)
-                    target = p_node
-                elif elem.tag == "s":
-                    # Sentence
-                    target = find_parent((Paragraph, Speak))
-
-                    # Ensure paragraph
-                    if isinstance(target, Speak):
+                    graph.add_edge(last_speak.node, p_node.node)
+                    last_paragraph = p_node
+                elif elem_tag == "s":
+                    # Explicit sentence
+                    assert last_speak is not None
+                    if last_paragraph is None:
+                        # Implicit paragraph
                         p_node = Paragraph(node=len(graph), **scope_kwargs(Paragraph))
                         graph.add_node(p_node.node, data=p_node)
 
-                        graph.add_edge(target.node, p_node.node)
-                        target_stack.append(p_node)
-                        target = p_node
+                        graph.add_edge(last_speak.node, p_node.node)
+                        last_paragraph = p_node
 
                     s_node = Sentence(node=len(graph), element=elem)
                     graph.add_node(s_node.node, data=s_node)
-                    graph.add_edge(target.node, s_node.node)
-                    target_stack.append(s_node)
-                    target = s_node
-                elif elem.tag == "break":
+                    graph.add_edge(last_paragraph.node, s_node.node)
+                    last_sentence = s_node
+                elif elem_tag == "break":
                     # Break
-                    target = find_parent((Sentence, Paragraph, Speak))
+                    last_target = last_sentence or last_paragraph or last_speak
+                    assert last_target is not None
                     break_node = Break(
-                        node=len(graph), element=elem, time=elem.attrib.get("time", "")
+                        node=len(graph),
+                        element=elem,
+                        time=SSMLTextProcessor.attrib_no_namespace(elem, "time", ""),
                     )
                     graph.add_node(break_node.node, data=break_node)
-                    graph.add_edge(target.node, break_node.node)
-                elif elem.tag == "say-as":
+                    graph.add_edge(last_target.node, break_node.node)
+                elif elem_tag == "say-as":
                     say_as_stack.append(
                         (
-                            elem.attrib.get("interpret-as", ""),
-                            elem.attrib.get("format", ""),
+                            SSMLTextProcessor.attrib_no_namespace(
+                                elem, "interpret-as", ""
+                            ),
+                            SSMLTextProcessor.attrib_no_namespace(elem, "format", ""),
                         )
                     )
+                elif elem_tag == "w":
+                    in_word = True
+                    maybe_lang = SSMLTextProcessor.attrib_no_namespace(elem, "lang")
+                    if maybe_lang:
+                        lang_stack.append((elem_tag, maybe_lang))
+
+                    word_role = SSMLTextProcessor.attrib_no_namespace(elem, "role")
 
         assert root is not None
 
@@ -522,34 +734,124 @@ class SSMLTextProcessor:
                 self.split_major_breaks, root, graph,
             )
 
-        # Break sentences apart
+            # Break apart sentences using BreakWordNodes
+            self.break_sentences(graph, root)
+
+        if self.minor_break_pattern:
+            self.pipeline_split(
+                self.split_minor_breaks, root, graph,
+            )
+
+        # Transform text into known classes
+        self.pipeline_transform(self.transform_number, root, graph)
+        self.pipeline_transform(self.transform_date, root, graph)
+        self.pipeline_transform(self.transform_currency, root, graph)
+        self.pipeline_transform(self.transform_initialism, root, graph)
+
+        # Verbalize known classes
+        self.pipeline_transform(self.verbalize_number, root, graph)
+        self.pipeline_transform(self.verbalize_date, root, graph)
+        self.pipeline_transform(self.verbalize_currency, root, graph)
+
+        # spell-out (e.g., 123 -> 1 2 3)
+        self.pipeline_split(self.split_spell_out, root, graph)
+
+        # Gather words from leaves of the tree, group by sentence
+        sentences = []
+        words = []
+        for n in self.leaves(graph, root, skip_seen=True):
+            if isinstance(n, WordNode):
+                words.append(n)
+            elif isinstance(n, BreakWordNode) and (n.break_type == BreakType.MAJOR):
+                sentences.append(words)
+                words = []
+
+        if words:
+            sentences.append(words)
+            words = []
+
+        for words in sentences:
+            # First word on the sentence determines the language for part-of-speech tagging
+            pos_lang = self.lang
+            if words:
+                pos_lang = words[0].lang or pos_lang
+
+            # Add part-of-speech tags
+            pos_tagger = self.pos_tagger.get(pos_lang)
+            if pos_tagger is not None:
+                # Predict tags for entire sentence
+                pos_tags = pos_tagger([word.text for word in words])
+                for word, pos in zip(words, pos_tags):
+                    if not word.role:
+                        word.role = f"gruut:{pos}"
+
+            if phonemize and (self.phonemizer is not None):
+                # Phonemize words
+                for word in words:
+                    word.phonemes = self.phonemizer.get_pronunciation(
+                        word.text, lang=(word.lang or self.lang), role=word.role,
+                    )
+
+        SSMLTextProcessor.print_graph(graph, root.node)
+
+        return graph, root
+
+    @staticmethod
+    def tag_no_namespace(tag: str) -> str:
+        return NO_NAMESPACE_PATTERN.sub("", tag)
+
+    @staticmethod
+    def attrib_no_namespace(
+        element, name: str, default: typing.Any = None
+    ) -> typing.Any:
+        for key, value in element.attrib.items():
+            key_no_ns = NO_NAMESPACE_PATTERN.sub("", key)
+            if key_no_ns == name:
+                return value
+
+        return default
+
+    def break_sentences(self, graph, root):
+        # Break sentences apart at BreakWordNode(break_type="major") nodes.
+        # This involves:
+        # 1. Identifying where in the edge list of sentence the break occurs
+        # 2. Creating a new sentence next to the existing one in the parent paragraph
+        # 3. Moving everything after the break into the new sentence
         for leaf_node in list(self.leaves(graph, root, skip_seen=True)):
             if not isinstance(leaf_node, BreakWordNode):
+                # Not a break
                 continue
 
             break_word_node = typing.cast(BreakWordNode, leaf_node)
             if break_word_node.break_type != BreakType.MAJOR:
+                # Not a major break
                 continue
 
-            parent_node = next(iter(graph.predecessors(break_word_node.node)))
-            parent = graph.nodes[parent_node]["data"]
-            s_path = [parent]
+            # Get the path from the break up to the nearest sentence
+            parent_node: int = next(iter(graph.predecessors(break_word_node.node)))
+            parent: Node = graph.nodes[parent_node]["data"]
+            s_path: typing.List[Node] = [parent]
+
             while not isinstance(parent, Sentence):
                 parent_node = next(iter(graph.predecessors(parent_node)))
                 parent = graph.nodes[parent_node]["data"]
                 s_path.append(parent)
 
+            # Should at least be [WordNode, SentenceNode]
             assert len(s_path) >= 2
             s_node = s_path[-1]
+            assert isinstance(s_node, Sentence)
+
+            # Probably a WordNode
             below_s_node = s_path[-2]
 
-            # Edges after
+            # Edges after the break will need to be moved to the new sentence
             s_edges = list(graph.out_edges(s_node.node))
             break_edge_idx = s_edges.index((s_node.node, below_s_node.node))
 
             edges_to_move = s_edges[break_edge_idx + 1 :]
             if not edges_to_move:
-                # Final sentence
+                # Final sentence, nothing to move
                 continue
 
             # Locate parent paragraph so we can create a new sentence
@@ -575,49 +877,6 @@ class SSMLTextProcessor:
             # Move edges from current sentence to new sentence
             graph.remove_edges_from(edges_to_move)
             graph.add_edges_from([(new_s_node.node, v) for (u, v) in edges_to_move])
-
-        if self.minor_break_pattern:
-            self.pipeline_split(
-                self.split_minor_breaks, root, graph,
-            )
-
-        # Transform text into known classes
-        self.pipeline_transform(self.transform_number, root, graph)
-        self.pipeline_transform(self.transform_date, root, graph)
-        self.pipeline_transform(self.transform_currency, root, graph)
-        self.pipeline_transform(self.transform_initialism, root, graph)
-
-        # Verbalize known classes
-        self.pipeline_transform(self.verbalize_number, root, graph)
-        self.pipeline_transform(self.verbalize_date, root, graph)
-        self.pipeline_transform(self.verbalize_currency, root, graph)
-
-        self.pipeline_split(self.split_spell_out, root, graph)
-
-        words = [
-            w
-            for w in self.leaves(graph, root, skip_seen=True)
-            if isinstance(w, WordNode)
-        ]
-
-        # Add part-of-speech tags
-        if self.pos_tagger is not None:
-            # Predict tags for entire sentence
-            pos_tags = self.pos_tagger([word.text for word in words])
-            for word, pos in zip(words, pos_tags):
-                if not word.role:
-                    word.role = f"gruut:{pos}"
-
-        if self.phonemizer is not None:
-            # Phonemize words
-            for word in words:
-                word.phonemes = self.phonemizer.get_pronunciation(
-                    word.text, role=word.role,
-                )
-
-        SSMLTextProcessor.print_graph(graph, root.node)
-
-        return graph, root
 
     def split_major_breaks(self, node, graph):
         if not isinstance(node, WordNode):
@@ -734,10 +993,17 @@ class SSMLTextProcessor:
         if scope_kwargs is None:
             scope_kwargs = {}
 
+        text_lang = scope_kwargs.get("lang", self.lang)
+        keep_whitespace = self.keep_whitespace.get(text_lang)
+        if keep_whitespace is None:
+            keep_whitespace = self.keep_whitespace.get(None)
+
+        assert keep_whitespace is not None
+
         for non_ws, ws in grouper(pattern.split(text), 2):
             word = non_ws
 
-            if self.keep_whitespace:
+            if keep_whitespace:
                 word += ws or ""
 
             if not word:
@@ -797,7 +1063,7 @@ class SSMLTextProcessor:
         if word.interpret_as and (word.interpret_as != InterpretAs.NUMBER):
             return
 
-        babel_locale = babel_locale or self.babel_locale
+        babel_locale = babel_locale or word.lang or self.babel_locale
 
         try:
             # Try to parse as a number
@@ -808,7 +1074,7 @@ class SSMLTextProcessor:
         except ValueError:
             pass
 
-    def transform_date(self, node, graph):
+    def transform_date(self, node, graph, dateparser_lang: typing.Optional[str] = None):
         if not isinstance(node, WordNode):
             return
 
@@ -816,18 +1082,38 @@ class SSMLTextProcessor:
         if word.interpret_as and (word.interpret_as != InterpretAs.DATE):
             return
 
+        if not HAS_DIGIT_PATTERN.search(word.text):
+            # Dates must have at least one digit
+            return
+
+        word_lang = word.lang or self.lang
+        dateparser_lang = (
+            dateparser_lang
+            or self.dateparser_lang.get(word_lang)
+            or self.dateparser_lang.get(None)
+            or word_lang
+        )
+        assert dateparser_lang is not None
+
         dateparser_kwargs = {
             "settings": {"STRICT_PARSING": True},
-            "languages": [self.dateparser_lang],
+            "languages": [dateparser_lang],
         }
 
+        # TODO: Filter words first (contains digit?)
         date = dateparser.parse(word.text, **dateparser_kwargs)
         if date is not None:
             word.interpret_as = InterpretAs.DATE
             word.date = date
 
     def transform_currency(
-        self, node, graph, babel_locale: typing.Optional[str] = None
+        self,
+        node,
+        graph,
+        babel_locale: typing.Optional[str] = None,
+        default_currency=None,
+        currency_symbols=None,
+        currencies=None,
     ):
 
         if not isinstance(node, WordNode):
@@ -837,9 +1123,36 @@ class SSMLTextProcessor:
         if word.interpret_as and (word.interpret_as != InterpretAs.CURRENCY):
             return
 
-        babel_locale = babel_locale or self.babel_locale
+        if not HAS_DIGIT_PATTERN.search(word.text):
+            # Currency must have at least one digit
+            return
 
-        for currency_symbol in self.currency_symbols:
+        babel_locale = babel_locale or word.lang or self.babel_locale
+
+        # Look up currency symbols for current locale (e.g., "$").
+        # These must be sorted by decreasing length.
+        currency_symbols = currency_symbols or self.currency_symbols.get(babel_locale)
+        if currency_symbols is None:
+            # Get possible currency symbols and sort them
+            currencies = currencies or self.currencies.get(babel_locale)
+            if currencies is None:
+                # Ask Babel for locale-specific currency symbols
+                locale_obj = babel.Locale(babel_locale)
+                currencies = {
+                    babel.numbers.get_currency_symbol(cn): cn
+                    for cn in locale_obj.currency_symbols
+                }
+
+                self.currencies[babel_locale] = currencies
+
+            currency_symbols = sorted(
+                currencies, key=operator.length_hint, reverse=True
+            )
+
+            self.currency_symbols[babel_locale] = currency_symbols
+
+        parsed = False
+        for currency_symbol in currency_symbols:
             if word.text.startswith(currency_symbol):
                 num_str = word.text[len(currency_symbol) :]
                 try:
@@ -847,9 +1160,24 @@ class SSMLTextProcessor:
                     # This is important to handle thousand/decimal separators correctly.
                     number = babel.numbers.parse_decimal(num_str, locale=babel_locale)
                     word.interpret_as = InterpretAs.CURRENCY
-                    word.currency = currency_symbol
+                    word.currency_symbol = currency_symbol
                     word.number = number
+                    parsed = True
                     break
+                except ValueError:
+                    pass
+
+        if (not parsed) and (word.interpret_as == InterpretAs.CURRENCY):
+            default_currency = default_currency or self.default_currency.get(
+                babel_locale
+            )
+            if default_currency:
+                # Forced interpretation using default currency
+                try:
+                    number = babel.numbers.parse_decimal(word.text, locale=babel_locale)
+                    word.interpret_as = InterpretAs.CURRENCY
+                    word.currency_name = default_currency
+                    word.number = number
                 except ValueError:
                     pass
 
@@ -865,9 +1193,11 @@ class SSMLTextProcessor:
             # Don't expand words already in lexicon
             return
 
+        # TODO: Check alpha
         if (len(word.text) > 1) and word.text.isupper():
             word.interpret_as = InterpretAs.SPELL_OUT
         elif (len(word.text) > 3) and re.match(r"(?:[a-zA-Z]\.){2,}\s*", word.text):
+            # TODO: Remove dots
             word.interpret_as = InterpretAs.SPELL_OUT
 
     def verbalize_number(self, node, graph, **num2words_kwargs):
@@ -878,8 +1208,20 @@ class SSMLTextProcessor:
         if (word.interpret_as != InterpretAs.NUMBER) or (word.number is None):
             return
 
+        if not HAS_DIGIT_PATTERN.search(word.text):
+            # Numbers must have at least one digit
+            return
+
+        word_lang = word.lang or self.lang
+        keep_whitespace = self.keep_whitespace.get(word_lang)
+        if keep_whitespace is None:
+            keep_whitespace = self.keep_whitespace.get(None)
+
+        assert keep_whitespace is not None
+
+
         if "lang" not in num2words_kwargs:
-            num2words_kwargs["lang"] = self.num2words_lang
+            num2words_kwargs["lang"] = word.lang or self.num2words_lang
 
         decimal_nums = [word.number]
 
@@ -912,16 +1254,20 @@ class SSMLTextProcessor:
             # Split into separate words
             for part_str, sep_str in grouper(self.split_pattern.split(num_str), 2):
                 number_word_text = part_str
-                if self.keep_whitespace:
+                if keep_whitespace:
                     number_word_text += sep_str or ""
 
                 if not number_word_text:
                     continue
 
-                if self.keep_whitespace and (not number_word_text.endswith(" ")):
+                if keep_whitespace and (not number_word_text.endswith(" ")):
                     number_word_text += " "
 
-                number_word = WordNode(node=len(graph), text=number_word_text)
+                number_word = WordNode(
+                    node=len(graph),
+                    text=number_word_text.strip(),
+                    text_with_ws=number_word_text,
+                )
                 graph.add_node(number_word.node, data=number_word)
                 graph.add_edge(word.node, number_word.node)
 
@@ -934,6 +1280,13 @@ class SSMLTextProcessor:
         word = typing.cast(WordNode, node)
         if (word.interpret_as != InterpretAs.DATE) or (word.date is None):
             return
+
+        word_lang = word.lang or self.lang
+        keep_whitespace = self.keep_whitespace.get(word_lang)
+        if keep_whitespace is None:
+            keep_whitespace = self.keep_whitespace.get(None)
+
+        assert keep_whitespace is not None
 
         babel_locale = babel_locale or self.babel_locale
         if "lang" not in num2words_kwargs:
@@ -970,16 +1323,20 @@ class SSMLTextProcessor:
         # Split into separate words
         for part_str, sep_str in grouper(self.split_pattern.split(date_str), 2):
             date_word_text = part_str
-            if self.keep_whitespace:
+            if keep_whitespace:
                 date_word_text += sep_str or ""
 
             if not date_word_text:
                 continue
 
-            if self.keep_whitespace and (not date_word_text.endswith(" ")):
+            if keep_whitespace and (not date_word_text.endswith(" ")):
                 date_word_text += " "
 
-            date_word = WordNode(node=len(graph), text=date_word_text)
+            date_word = WordNode(
+                node=len(graph),
+                text=date_word_text.strip(),
+                text_with_ws=date_word_text,
+            )
             graph.add_node(date_word.node, data=date_word)
             graph.add_edge(word.node, date_word.node)
 
@@ -987,6 +1344,7 @@ class SSMLTextProcessor:
         self,
         node,
         graph,
+        babel_locale: typing.Optional[str] = None,
         default_currency: typing.Optional[str] = None,
         currencies: typing.Optional[typing.Dict[str, str]] = None,
         **num2words_kwargs,
@@ -997,12 +1355,15 @@ class SSMLTextProcessor:
         word = typing.cast(WordNode, node)
         if (
             (word.interpret_as != InterpretAs.CURRENCY)
-            or (word.currency is None)
+            or ((word.currency_symbol is None) and (word.currency_name is None))
             or (word.number is None)
         ):
             return
 
-        default_currency = default_currency or self.default_currency
+        babel_locale = babel_locale or word.lang or self.babel_locale
+        default_currency = default_currency or self.default_currency.get(
+            babel_locale, "USD"
+        )
         decimal_num = word.number
 
         # True if number has non-zero fractional part
@@ -1013,12 +1374,20 @@ class SSMLTextProcessor:
 
         num2words_kwargs["to"] = "currency"
 
-        # Name of currency (e.g., USD)
-        currency_name = default_currency
-        if currencies:
-            currency_name = currencies.get(word.currency, default_currency)
+        if "lang" not in num2words_kwargs:
+            num2words_kwargs["lang"] = babel_locale
 
-        num2words_kwargs["currency"] = currency_name
+        # Name of currency (e.g., USD)
+        if not word.currency_name:
+            currency_name = default_currency
+            currencies = currencies or self.currencies.get(babel_locale)
+            if currencies:
+                # Look up currency in locale
+                currency_name = currencies.get(word.currency_symbol, default_currency)
+
+            word.currency_name = currency_name
+
+        num2words_kwargs["currency"] = word.currency_name
 
         # Custom separator so we can remove 'zero cents'
         num2words_kwargs["separator"] = "|"
@@ -1039,16 +1408,20 @@ class SSMLTextProcessor:
         # Split into separate words
         for part_str, sep_str in grouper(self.split_pattern.split(num_str), 2):
             currency_word_text = part_str
-            if self.keep_whitespace:
+            if keep_whitespace:
                 currency_word_text += sep_str or ""
 
             if not currency_word_text:
                 continue
 
-            if self.keep_whitespace and (not currency_word_text.endswith(" ")):
+            if keep_whitespace and (not currency_word_text.endswith(" ")):
                 currency_word_text += " "
 
-            currency_word = WordNode(node=len(graph), text=currency_word_text)
+            currency_word = WordNode(
+                node=len(graph),
+                text=currency_word_text.strip(),
+                text_with_ws=currency_word_text,
+            )
             graph.add_node(currency_word.node, data=currency_word)
             graph.add_edge(word.node, currency_word.node)
 
@@ -1056,20 +1429,22 @@ class SSMLTextProcessor:
     def text_and_elements(element):
         yield element
 
-        # Text before any elements
+        # Text before any tags (or end tag)
         text = element.text if element.text is not None else ""
-        if text:
+        if text.strip():
             yield text
 
         for child in element:
+            # Sub-elements
             yield from SSMLTextProcessor.text_and_elements(child)
 
-        # Text after any elements
-        tail = element.tail if element.tail is not None else ""
-        if tail:
-            yield tail
-
+        # End of current element
         yield SSMLTextProcessor.EndElement(element)
+
+        # Text after the current tag
+        tail = element.tail if element.tail is not None else ""
+        if tail.strip():
+            yield tail
 
     @staticmethod
     def print_graph(g, n, s: str = "-"):
@@ -1116,11 +1491,11 @@ class SSMLTextProcessorTestCase(unittest.TestCase):
         )
 
     def test_multiple_sentences(self):
-        processor = SSMLTextProcessor(major_breaks={"."})
-        graph, root = processor.process("First sentence. Second sentence.")
+        processor = SSMLTextProcessor(major_breaks={".", "!"})
+        graph, root = processor.process("First sentence. Second sentence!")
         words = list(processor.words(graph, root))
 
-        # Whitespace is discarded
+        # Separated by a major break
         self.assertEqual(
             words,
             [
@@ -1130,6 +1505,208 @@ class SSMLTextProcessorTestCase(unittest.TestCase):
                 Word(idx=1, sent_idx=1, text="sentence", text_with_ws="sentence"),
             ],
         )
+
+    def test_numbers_one_language(self):
+        processor = SSMLTextProcessor(lang="en_US")
+        graph, root = processor.process("1 2 3")
+        words = list(processor.words(graph, root))
+
+        # Numbers should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
+                Word(idx=1, sent_idx=0, text="two", text_with_ws="two "),
+                Word(idx=2, sent_idx=0, text="three", text_with_ws="three "),
+            ],
+        )
+
+    def test_numbers_multiple_languages(self):
+        processor = SSMLTextProcessor(lang="en_US")
+        graph, root = processor.process('1 <w lang="es_ES">2</w> <w lang="de_DE">3</w>')
+        words = list(processor.words(graph, root))
+
+        # Numbers should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
+                Word(idx=1, sent_idx=0, text="dos", text_with_ws="dos "),
+                Word(idx=2, sent_idx=0, text="drei", text_with_ws="drei "),
+            ],
+        )
+
+    def test_currency_one_language(self):
+        processor = SSMLTextProcessor(lang="en_US")
+        graph, root = processor.process("$10")
+        words = list(processor.words(graph, root))
+
+        # Currency should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
+            ],
+        )
+
+    def test_currency_multiple_language(self):
+        processor = SSMLTextProcessor(lang="en_US")
+        graph, root = processor.process(
+            '€10 <w lang="fr_FR">€10</w> <w lang="nl_NL">€10</w>'
+        )
+        words = list(processor.words(graph, root))
+
+        # Currencies should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(idx=1, sent_idx=0, text="euro", text_with_ws="euro "),
+                Word(idx=2, sent_idx=0, text="dix", text_with_ws="dix "),
+                Word(idx=3, sent_idx=0, text="euros", text_with_ws="euros "),
+                Word(idx=4, sent_idx=0, text="tien", text_with_ws="tien "),
+                Word(idx=5, sent_idx=0, text="euro", text_with_ws="euro "),
+            ],
+        )
+
+    def test_currency_default(self):
+        processor = SSMLTextProcessor(lang="en_US", default_currency={"en_US": "USD"})
+        graph, root = processor.process('<say-as interpret-as="currency">10</say-as>')
+        words = list(processor.words(graph, root))
+
+        # Currency should be verbalized, despite lack of "$" symbol
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
+            ],
+        )
+
+    def test_phonemize_one_language(self):
+        processor = SSMLTextProcessor(
+            lang="en_US",
+            phonemizer=Phonemizer(
+                lang="en_US",
+                lexicon={
+                    "en_US": {"test": {Phonemizer.DEFAULT_ROLE: ["t", "e", "s", "t"]}}
+                },
+            ),
+        )
+        graph, root = processor.process("test")
+        words = list(processor.words(graph, root))
+
+        # Single word is phonemized according to the lexicon
+        self.assertEqual(
+            words,
+            [
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    text="test",
+                    text_with_ws="test",
+                    phonemes=["t", "e", "s", "t"],
+                ),
+            ],
+        )
+
+    def test_phonemize_one_language_multiple_roles(self):
+        processor = SSMLTextProcessor(
+            lang="en_US",
+            phonemizer=Phonemizer(
+                lang="en_US",
+                lexicon={
+                    "en_US": {
+                        "test": {
+                            # Made-up roles.
+                            # These are usually part-of-speech tags.
+                            "role_1": ["t", "e", "s", "t"],
+                            "role_2": ["T", "E", "S", "T"],
+                        }
+                    }
+                },
+            ),
+        )
+
+        # Use both made-up roles
+        graph, root = processor.process(
+            '<speak><w role="role_1">test</w> <w role="role_2">test</w></speak>'
+        )
+        words = list(processor.words(graph, root))
+
+        # Single word is phonemized according to the lexicon in two different manners
+        self.assertEqual(
+            words,
+            [
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    text="test",
+                    text_with_ws="test",
+                    phonemes=["t", "e", "s", "t"],
+                ),
+                Word(
+                    idx=1,
+                    sent_idx=0,
+                    text="test",
+                    text_with_ws="test",
+                    phonemes=["T", "E", "S", "T"],
+                ),
+            ],
+        )
+
+    def test_phonemize_multiple_languages(self):
+        processor = SSMLTextProcessor(
+            lang="en_US",
+            phonemizer=Phonemizer(
+                lang="en_US",
+                lexicon={
+                    # Made-up phonemes for two different languages
+                    "en_US": {"test": {Phonemizer.DEFAULT_ROLE: ["t", "e", "s", "t"]}},
+                    "de_DE": {"test": {Phonemizer.DEFAULT_ROLE: ["T", "E", "S", "T"]}},
+                },
+            ),
+        )
+        graph, root = processor.process(
+            '<speak><w lang="en_US">test</w> <w lang="de_DE">test</w></speak>'
+        )
+        words = list(processor.words(graph, root))
+
+        # Single word is phonemized according to the lexicon with two different languages
+        self.assertEqual(
+            words,
+            [
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    text="test",
+                    text_with_ws="test",
+                    phonemes=["t", "e", "s", "t"],
+                ),
+                Word(
+                    idx=1,
+                    sent_idx=0,
+                    text="test",
+                    text_with_ws="test",
+                    phonemes=["T", "E", "S", "T"],
+                ),
+            ],
+        )
+
+    # def test_pos_phonemize(self):
+    #     processor = SSMLTextProcessor(lang="en_US", default_currency={"en_US": "USD"})
+    #     graph, root = processor.process('<say-as interpret-as="currency">10</say-as>')
+    #     words = list(processor.words(graph, root))
+
+    #     # Currency should be verbalized, despite lack of "$" symbol
+    #     self.assertEqual(
+    #         words,
+    #         [
+    #             Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+    #             Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
+    #         ],
+    #     )
 
     # def test_no_whitespace(self):
     #     processor = SSMLTextProcessor(keep_whitespace=False)
