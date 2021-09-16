@@ -2,19 +2,15 @@
 import functools
 import logging
 import operator
-import os
 import re
-import sqlite3
 import sys
 import typing
 import unittest
 import xml.etree.ElementTree as etree
-import collections.abc
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from pathlib import Path
 
 import babel
 import babel.numbers
@@ -22,17 +18,13 @@ import dateparser
 import networkx as nx
 from num2words import num2words
 
-from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE, Token, TokenFeatures
-from .g2p import GraphemesToPhonemes
-from .g2p_phonetisaurus import PhonetisaurusGraph
+from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE
 from .utils import grouper, maybe_compile_regex
 
 # -----------------------------------------------------------------------------
 
 _LOGGER = logging.getLogger("gruut")
 
-DEFAULT_MAJOR_BREAKS = set(".?!")
-DEFAULT_MINOR_BREAKS = set(",;:")
 DEFAULT_SPLIT_PATTERN = re.compile(r"(\s+)")
 DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
@@ -57,10 +49,14 @@ class InterpretAsFormat(str, Enum):
     DATE_DMY = "dmy"
     DATE_MDY = "mdy"
     DATE_YMD = "ymd"
+    DATE_DMY_ORDINAL = "omy"
+    DATE_MDY_ORDINAL = "moy"
+    DATE_YMD_ORDINAL = "ymo"
     DATE_YM = "ym"
     DATE_MY = "my"
     DATE_MD = "md"
-    DATE_DM = "dm"
+    DATE_MD_ORDINAL = "mo"
+    DATE_DM_ORDINAL = "om"
     DATE_Y = "y"
 
 
@@ -208,11 +204,14 @@ class TextProcessorSettings:
 # -----------------------------------------------------------------------------
 
 GRAPH_TYPE = typing.Type[nx.DiGraph]
+NODE_TYPE = int
 
 
 @dataclass
 class Node:
-    node: int
+    """Base class of all text processing graph nodes"""
+
+    node: NODE_TYPE
     element: typing.Optional[etree.Element] = None
     voice: str = ""
     lang: str = ""
@@ -221,10 +220,12 @@ class Node:
 
 @dataclass
 class BreakNode(Node):
+    """Represents a user-specified break"""
+
     time: str = ""
 
 
-# TODO: Add <sub>
+# TODO: Implement <sub>
 @dataclass
 class SubNode(Node):
     alias: str = ""
@@ -232,6 +233,8 @@ class SubNode(Node):
 
 @dataclass
 class WordNode(Node):
+    """Represents a single word"""
+
     text: str = ""
     text_with_ws: str = ""
     interpret_as: typing.Union[str, InterpretAs] = ""
@@ -249,6 +252,8 @@ class WordNode(Node):
 
 @dataclass
 class BreakWordNode(Node):
+    """Represents a major/minor break in the text"""
+
     break_type: typing.Union[str, BreakType] = ""
     text: str = ""
     text_with_ws: str = ""
@@ -270,6 +275,8 @@ class ParagraphNode(Node):
 
 @dataclass
 class SpeakNode(Node):
+    """Top-level node for SSML"""
+
     pass
 
 
@@ -1124,6 +1131,7 @@ class TextProcessor:
                         word_idx += 1
 
     def leaves(self, graph: GRAPH_TYPE, node: Node):
+        """Iterate through the leaves of a graph in depth-first order"""
         for dfs_node in nx.dfs_preorder_nodes(graph, node.node):
             if not graph.out_degree(dfs_node) == 0:
                 continue
@@ -1298,6 +1306,12 @@ class TextProcessor:
         if date is not None:
             word.interpret_as = InterpretAs.DATE
             word.date = date
+        elif word.interpret_as == InterpretAs.DATE:
+            # Try again without strict parsing
+            dateparser_kwargs["settings"]["STRICT_PARSING"] = False
+            date = dateparser.parse(word.text, **dateparser_kwargs)
+            if date is not None:
+                word.date = date
 
     def transform_initialism(self, graph: GRAPH_TYPE, node: Node):
         if not isinstance(node, WordNode):
@@ -1419,7 +1433,8 @@ class TextProcessor:
 
         date = word.date
         date_format = (word.format or InterpretAsFormat.DATE_MDY).strip().upper()
-        day_str = ""
+        day_card_str = ""
+        day_ord_str = ""
         month_str = ""
         year_str = ""
 
@@ -1431,8 +1446,14 @@ class TextProcessor:
         num2words_kwargs = {"lang": settings.num2words_lang}
 
         if "D" in date_format:
+            # Cardinal day (1 -> one)
+            num2words_kwargs["to"] = "cardinal"
+            day_card_str = num2words(date.day, **num2words_kwargs)
+
+        if "O" in date_format:
+            # Ordinal day (1 -> first)
             num2words_kwargs["to"] = "ordinal"
-            day_str = num2words(date.day, **num2words_kwargs)
+            day_ord_str = num2words(date.day, **num2words_kwargs)
 
         if "Y" in date_format:
             num2words_kwargs["to"] = "year"
@@ -1441,7 +1462,9 @@ class TextProcessor:
         # Transform into Python format string
         # MDY -> {M} {D} {Y}
         date_format_str = settings.join_str.join(f"{{{c}}}" for c in date_format)
-        date_str = date_format_str.format(M=month_str, D=day_str, Y=year_str)
+        date_str = date_format_str.format(
+            M=month_str, D=day_card_str, O=day_ord_str, Y=year_str
+        )
 
         # Split into separate words
         for part_str, sep_str in grouper(settings.split_pattern.split(date_str), 2):
@@ -1832,6 +1855,40 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_date_format_ordinal(self):
+        processor = TextProcessor(default_lang="en_US")
+        graph, root = processor.process(
+            '<say-as interpret-as="date" format="mo">4/1</say-as>'
+        )
+        words = list(processor.words(graph, root))
+
+        # Date is forced to be interpreted and format using day ordinal (first)
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
+                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
+            ],
+        )
+
+    def test_date_format_cardinal(self):
+        processor = TextProcessor(default_lang="en_US")
+        graph, root = processor.process(
+            '<say-as interpret-as="date" format="dmy">4/1/2000</say-as>'
+        )
+        words = list(processor.words(graph, root))
+
+        # Date is forced to be interpreted and format using day ordinal (first)
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
+                Word(idx=1, sent_idx=0, text="April", text_with_ws="April "),
+                Word(idx=2, sent_idx=0, text="two", text_with_ws="two "),
+                Word(idx=3, sent_idx=0, text="thousand", text_with_ws="thousand "),
+            ],
+        )
+
     def test_part_of_speech_tagging(self):
         processor = TextProcessor(
             default_lang="en_US",
@@ -1942,56 +1999,3 @@ class TextProcessorTestCase(unittest.TestCase):
                 ),
             ],
         )
-
-    # def test_pos_phonemize(self):
-    #     processor = TextProcessor(default_lang="en_US", default_currency={"en_US": "USD"})
-    #     graph, root = processor.process('<say-as interpret-as="currency">10</say-as>')
-    #     words = list(processor.words(graph, root))
-
-    #     # Currency should be verbalized, despite lack of "$" symbol
-    #     self.assertEqual(
-    #         words,
-    #         [
-    #             Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-    #             Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
-    #         ],
-    #     )
-
-    # def test1(self):
-    #     tokenizer = TextProcessor()
-    #     tokenizer.tokenize(
-    #         "<speak>This is a test. <p><s>These are.</s><s>Two sentences.</s></p></speak>"
-    #     )
-
-    # def test2(self):
-    #     tokenizer = TextProcessor()
-    #     tokenizer.tokenize("<speak>1/2/2022 1,234 $50.32</speak>")
-
-    # def test3(self):
-    #     tokenizer = TextProcessor()
-    #     tokenizer.tokenize(
-    #         '<speak><say-as interpret-as="number" format="ordinal">12</say-as></speak>'
-    #     )
-
-    # def test4(self):
-    #     tokenizer = TextProcessor(
-    #         pos_model="/home/hansenm/opt/gruut/gruut/data/en-us/pos/model.crf"
-    #     )
-    #     tokenizer.tokenize("This is a <break /> $50 test")
-
-    # def test5(self):
-
-    #     tokenizer = TextProcessor(
-    #         major_breaks={"."},
-    #         pos_model="/home/hansenm/opt/gruut/gruut/data/en-us/pos/model.crf",
-    #         phonemizer=Phonemizer(
-    #             db_conn=sqlite3.connect(
-    #                 "/home/hansenm/opt/gruut/gruut/data/en-us/lexicon.db"
-    #             ),
-    #             g2p_model="/home/hansenm/opt/gruut/gruut/data/en-us/g2p/model.crf",
-    #             word_transform_funcs=[str.lower],
-    #             guess_transform_func=str.lower,
-    #         ),
-    #     )
-
-    #     tokenizer.tokenize("<speak>plOOP</speak>")
