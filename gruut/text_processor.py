@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-import functools
 import logging
 import operator
 import re
 import sys
 import typing
-import unittest
 import xml.etree.ElementTree as etree
+import xml.sax.saxutils as saxutils
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -18,34 +17,58 @@ import dateparser
 import networkx as nx
 from num2words import num2words
 
-from .const import REGEX_MATCH, REGEX_PATTERN, REGEX_TYPE
-from .utils import grouper, maybe_compile_regex
+from gruut.const import REGEX_PATTERN, REGEX_TYPE
+from gruut.utils import (
+    attrib_no_namespace,
+    grouper,
+    maybe_compile_regex,
+    tag_no_namespace,
+)
 
 # -----------------------------------------------------------------------------
 
-_LOGGER = logging.getLogger("gruut")
+_LOGGER = logging.getLogger("gruut.text_processor")
 
 DEFAULT_SPLIT_PATTERN = re.compile(r"(\s+)")
 DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
-NO_NAMESPACE_PATTERN = re.compile(r"^{[^}]+}")
+NORMALIZE_WHITESPACE_PATTERN = re.compile(r"\s+")
 
 HAS_DIGIT_PATTERN = re.compile(r"[0-9]")
 
 
 class InterpretAs(str, Enum):
     SPELL_OUT = "spell-out"
+    """Word should be spelled out (abc = a b c)"""
+
     DATE = "date"
+    """Word should be interpreted as a date"""
+
     NUMBER = "number"
+    """Word should be interpreted as a number"""
+
     CURRENCY = "currency"
+    """Word should be interpreted as an amount of currency"""
 
 
 class InterpretAsFormat(str, Enum):
     NUMBER_CARDINAL = "cardinal"
-    NUMBER_ORDINAL = "ordinal"
-    NUMBER_DIGITS = "digits"
-    NUMBER_YEAR = "year"
+    """Cardinal version of number (1 = one)"""
 
+    NUMBER_ORDINAL = "ordinal"
+    """Ordinal version of number (1 = first)"""
+
+    NUMBER_DIGITS = "digits"
+    """Number as digits (12 = one two)"""
+
+    NUMBER_YEAR = "year"
+    """Number as a year (2021 = twenty twenty-one)"""
+
+    # Date formats
+    # d = day
+    # m = month
+    # y = year
+    # o = ordinal day ("first" instead of "one")
     DATE_DMY = "dmy"
     DATE_MDY = "mdy"
     DATE_YMD = "ymd"
@@ -67,7 +90,9 @@ class BreakType(str, Enum):
 
 class WordRole(str, Enum):
     DEFAULT = ""
+
     LETTER = "gruut:letter"
+    """Word should be pronounced as a letter (a = /eɪ/ instead of /ə/)"""
 
 
 # -----------------------------------------------------------------------------
@@ -107,6 +132,12 @@ class TextProcessorSettings:
     join_str: str = " "
     keep_whitespace: bool = True
 
+    # Replacements/abbreviations
+    replacements: typing.Sequence[typing.Tuple[REGEX_TYPE, str]] = field(
+        default_factory=list
+    )
+    abbreviations: typing.Dict[REGEX_TYPE, str] = field(default_factory=dict)
+
     # Breaks
     major_breaks: typing.Set[str] = field(default_factory=set)
     major_breaks_pattern: typing.Optional[REGEX_TYPE] = None
@@ -129,6 +160,9 @@ class TextProcessorSettings:
     # Dates
     dateparser_lang: typing.Optional[str] = None
     is_maybe_date: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    default_date_format: typing.Union[
+        str, InterpretAsFormat
+    ] = InterpretAsFormat.DATE_MDY_ORDINAL
 
     # Part of speech (pos) tagging
     get_parts_of_speech: typing.Optional[GetPartsOfSpeech] = None
@@ -145,13 +179,46 @@ class TextProcessorSettings:
 
     def __post_init__(self):
         if self.babel_locale is None:
-            self.babel_locale = self.lang
+            if "-" in self.lang:
+                # en-us -> en_US
+                lang_parts = self.lang.split("-", maxsplit=1)
+                self.babel_locale = "_".join(
+                    [lang_parts[0].lower(), lang_parts[1].upper()]
+                )
+            else:
+                self.babel_locale = self.lang
 
         if self.num2words_lang is None:
-            self.num2words_lang = self.lang
+            self.num2words_lang = self.babel_locale
 
         if self.dateparser_lang is None:
-            self.dateparser_lang = self.lang.split("_")[0]
+            # en_US -> en
+            self.dateparser_lang = self.babel_locale.split("_")[0]
+
+        # Pre-compiled regular expressions
+        self.replacements = [
+            (maybe_compile_regex(pattern), template)
+            for pattern, template in self.replacements
+        ]
+
+        compiled_abbreviations = {}
+        for pattern, template in self.abbreviations.items():
+            if isinstance(pattern, str):
+                if not pattern.endswith("$") and self.major_breaks:
+                    # Automatically add optional major break at the end
+                    break_pattern_str = "|".join(
+                        re.escape(b) for b in self.major_breaks
+                    )
+                    pattern = (
+                        f"{pattern}(?P<break>{break_pattern_str})?(?P<whitespace>\\s*)$"
+                    )
+                    template += r"\g<break>\g<whitespace>"
+
+                pattern = re.compile(pattern)
+
+            compiled_abbreviations[pattern] = template
+
+        self.abbreviations = compiled_abbreviations
 
         self.split_pattern = maybe_compile_regex(self.split_pattern)
 
@@ -205,6 +272,7 @@ class TextProcessorSettings:
 
 GRAPH_TYPE = typing.Type[nx.DiGraph]
 NODE_TYPE = int
+DATA_PROP = "data"
 
 
 @dataclass
@@ -285,13 +353,24 @@ class SpeakNode(Node):
 
 @dataclass
 class Word:
+    idx: int
     text: str
     text_with_ws: str
-    idx: int
     sent_idx: int
+    lang: str = ""
     pos: typing.Optional[str] = None
     phonemes: typing.Optional[typing.Sequence[str]] = None
     is_break: bool = False
+
+
+@dataclass
+class Sentence:
+    idx: int
+    text: str
+    text_with_ws: str
+    lang: str = ""
+    voice: str = ""
+    words: typing.Sequence[Word] = field(default_factory=list)
 
 
 # -----------------------------------------------------------------------------
@@ -481,7 +560,9 @@ class TextProcessor:
     def __init__(
         self,
         default_lang: str = "en_US",
-        settings: typing.Optional[typing.Mapping[str, TextProcessorSettings]] = None,
+        settings: typing.Optional[
+            typing.MutableMapping[str, TextProcessorSettings]
+        ] = None,
         **kwargs,
     ):
         self.default_lang = default_lang
@@ -495,13 +576,6 @@ class TextProcessor:
             settings[self.default_lang] = default_settings
 
         self.settings = settings
-
-    # TODO: Replacements
-    # def pre_tokenize(self, text: str) -> str:
-    #     for pattern, replacement in self.replacements:
-    #         text = pattern.sub(replacement, text)
-
-    #     return text
 
     def get_settings(self, lang: typing.Optional[str] = None) -> TextProcessorSettings:
         lang = lang or self.default_lang
@@ -517,23 +591,23 @@ class TextProcessor:
 
         return lang_settings
 
-    def process(
-        self,
-        text: str,
-        add_speak_tag: bool = True,
-        pos: bool = True,
-        phonemize: bool = True,
+    def __call__(
+        self, text: str, ssml: bool = False, pos: bool = True, phonemize: bool = True,
     ):
-        if add_speak_tag and (not text.lstrip().startswith("<")):
+        if not ssml:
+            # Not XML
+            text = saxutils.escape(text)
+
+        if not text.lstrip().startswith("<"):
             # Wrap in <speak> tag
             text = f"<speak>{text}</speak>"
 
         root_element = etree.fromstring(text)
         graph = nx.DiGraph()
 
-        return self.process_etree(root_element, graph, pos=pos, phonemize=phonemize)
+        return self._process_etree(root_element, graph, pos=pos, phonemize=phonemize)
 
-    def process_etree(
+    def _process_etree(
         self,
         root_element: etree.Element,
         graph,
@@ -641,7 +715,7 @@ class TextProcessor:
             elif isinstance(elem_or_text, TextProcessor.EndElement):
                 # End of an element (e.g., </s>)
                 end_elem = typing.cast(TextProcessor.EndElement, elem_or_text)
-                end_tag = TextProcessor.tag_no_namespace(end_elem.element.tag)
+                end_tag = tag_no_namespace(end_elem.element.tag)
 
                 if end_tag == "voice":
                     if voice_stack:
@@ -677,7 +751,7 @@ class TextProcessor:
             else:
                 # Start of an element (e.g., <p>)
                 elem = typing.cast(etree.Element, elem_or_text)
-                elem_tag = TextProcessor.tag_no_namespace(elem.tag)
+                elem_tag = tag_no_namespace(elem.tag)
 
                 if elem_tag == "speak":
                     # Explicit <speak>
@@ -688,13 +762,13 @@ class TextProcessor:
                     graph.add_node(speak_node.node, data=root)
                     last_speak = root
 
-                    maybe_lang = TextProcessor.attrib_no_namespace(elem, "lang")
+                    maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
                 elif elem_tag == "voice":
                     # Set voice scope
-                    voice_name = TextProcessor.attrib_no_namespace(elem, "name")
+                    voice_name = attrib_no_namespace(elem, "name")
                     voice_stack.append(voice_name)
                 elif elem_tag == "p":
                     # Explicit paragraph
@@ -714,7 +788,7 @@ class TextProcessor:
                     graph.add_edge(last_speak.node, p_node.node)
                     last_paragraph = p_node
 
-                    maybe_lang = TextProcessor.attrib_no_namespace(elem, "lang")
+                    maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
@@ -744,19 +818,19 @@ class TextProcessor:
                     graph.add_edge(last_paragraph.node, s_node.node)
                     last_sentence = s_node
 
-                    maybe_lang = TextProcessor.attrib_no_namespace(elem, "lang")
+                    maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
                 elif elem_tag in {"w", "token"}:
                     # Explicit word
                     in_word = True
-                    maybe_lang = TextProcessor.attrib_no_namespace(elem, "lang")
+                    maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
 
-                    word_role = TextProcessor.attrib_no_namespace(elem, "role")
+                    word_role = attrib_no_namespace(elem, "role")
                 elif elem_tag == "break":
                     # Break
                     last_target = last_sentence or last_paragraph or last_speak
@@ -764,23 +838,31 @@ class TextProcessor:
                     break_node = BreakNode(
                         node=len(graph),
                         element=elem,
-                        time=TextProcessor.attrib_no_namespace(elem, "time", ""),
+                        time=attrib_no_namespace(elem, "time", ""),
                     )
                     graph.add_node(break_node.node, data=break_node)
                     graph.add_edge(last_target.node, break_node.node)
                 elif elem_tag == "say-as":
                     say_as_stack.append(
                         (
-                            TextProcessor.attrib_no_namespace(elem, "interpret-as", ""),
-                            TextProcessor.attrib_no_namespace(elem, "format", ""),
+                            attrib_no_namespace(elem, "interpret-as", ""),
+                            attrib_no_namespace(elem, "format", ""),
                         )
                     )
 
         assert root is not None
 
-        # Split on major/minor breaks
-        self.pipeline_split(self.split_major_breaks, graph, root)
+        # Do replacements before minor/major breaks
+        self.pipeline_split(self.split_replacements, graph, root)
+
+        # Split on minor breaks
         self.pipeline_split(self.split_minor_breaks, graph, root)
+
+        # Expand abbrevations before major breaks
+        self.pipeline_split(self.split_abbreviations, graph, root)
+
+        # Split on major breaks
+        self.pipeline_split(self.split_major_breaks, graph, root)
 
         # Break apart sentences using BreakWordNodes
         self.break_sentences(graph, root)
@@ -840,7 +922,7 @@ class TextProcessor:
         sentence_words: typing.List[WordNode] = []
 
         for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
-            node = graph.nodes[dfs_node]["data"]
+            node = graph.nodes[dfs_node][DATA_PROP]
             if isinstance(node, SentenceNode):
                 if sentence_words:
                     process_sentence(sentence_words)
@@ -854,46 +936,9 @@ class TextProcessor:
             process_sentence(sentence_words)
             sentence_words = []
 
-        # for words in sentences:
-        #     # First word on the sentence determines the language for part-of-speech tagging
-        #     pos_lang = self.default_lang
-        #     if words:
-        #         pos_lang = words[0].lang or pos_lang
-
-        #     # Add part-of-speech tags
-        #     pos_tagger = self.pos_tagger.get(pos_lang)
-        #     if pos_tagger is not None:
-        #         # Predict tags for entire sentence
-        #         pos_tags = pos_tagger([word.text for word in words])
-        #         for word, pos in zip(words, pos_tags):
-        #             if not word.role:
-        #                 word.role = f"gruut:{pos}"
-
-        # if phonemize and (self.phonemizer is not None):
-        #     # Phonemize words
-        #     for word in words:
-        #         word.phonemes = self.phonemizer.get_pronunciation(
-        #             word.text, lang=(word.lang or self.default_lang), role=word.role,
-        #         )
-
         TextProcessor.print_graph(graph, root.node)
 
         return graph, root
-
-    @staticmethod
-    def tag_no_namespace(tag: str) -> str:
-        return NO_NAMESPACE_PATTERN.sub("", tag)
-
-    @staticmethod
-    def attrib_no_namespace(
-        element, name: str, default: typing.Any = None
-    ) -> typing.Any:
-        for key, value in element.attrib.items():
-            key_no_ns = NO_NAMESPACE_PATTERN.sub("", key)
-            if key_no_ns == name:
-                return value
-
-        return default
 
     def break_sentences(self, graph: GRAPH_TYPE, root: Node):
         # Break sentences apart at BreakWordNode(break_type="major") nodes.
@@ -913,12 +958,12 @@ class TextProcessor:
 
             # Get the path from the break up to the nearest sentence
             parent_node: int = next(iter(graph.predecessors(break_word_node.node)))
-            parent: Node = graph.nodes[parent_node]["data"]
+            parent: Node = graph.nodes[parent_node][DATA_PROP]
             s_path: typing.List[Node] = [parent]
 
             while not isinstance(parent, SentenceNode):
                 parent_node = next(iter(graph.predecessors(parent_node)))
-                parent = graph.nodes[parent_node]["data"]
+                parent = graph.nodes[parent_node][DATA_PROP]
                 s_path.append(parent)
 
             # Should at least be [WordNode, SentenceNode]
@@ -1073,7 +1118,7 @@ class TextProcessor:
     def find_parent(self, graph, node, *classes):
         parents = []
         for parent_node in graph.predecessors(node.node):
-            parent = graph.nodes[parent_node]["data"]
+            parent = graph.nodes[parent_node][DATA_PROP]
             if isinstance(parent, classes):
                 return parent
 
@@ -1097,7 +1142,7 @@ class TextProcessor:
         word_idx = 0
 
         for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
-            node = graph.nodes[dfs_node]["data"]
+            node = graph.nodes[dfs_node][DATA_PROP]
             if isinstance(node, SentenceNode):
                 sent_idx += 1
                 word_idx = 0
@@ -1130,13 +1175,88 @@ class TextProcessor:
 
                         word_idx += 1
 
+    def normalize_whitespace(self, s: str) -> str:
+        return NORMALIZE_WHITESPACE_PATTERN.sub(" ", s.strip())
+
+    def sentences(
+        self,
+        graph: GRAPH_TYPE,
+        root: Node,
+        major_breaks: bool = True,
+        minor_breaks: bool = True,
+    ) -> typing.Iterable[Sentence]:
+        def make_sentence(node, words, sent_idx):
+            settings = self.get_settings(node.lang)
+            text_with_ws = "".join(w.text_with_ws for w in words)
+            text = self.normalize_whitespace(text_with_ws)
+
+            return Sentence(
+                idx=sent_idx,
+                text=text,
+                text_with_ws=text_with_ws,
+                lang=node.lang,
+                voice=node.voice,
+                words=words,
+            )
+
+        sent_idx: int = 0
+        word_idx: int = 0
+        words: typing.List[Word] = []
+        last_sentence_node: typing.Optional[Node] = None
+
+        for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
+            node = graph.nodes[dfs_node][DATA_PROP]
+            if isinstance(node, SentenceNode):
+                if words:
+                    yield make_sentence(node, words, sent_idx)
+                    sent_idx += 1
+                    word_idx = 0
+                    words = []
+
+                last_sentence_node = node
+            elif graph.out_degree(dfs_node) == 0:
+                if isinstance(node, WordNode):
+                    word = typing.cast(WordNode, node)
+
+                    words.append(
+                        Word(
+                            idx=word_idx,
+                            sent_idx=sent_idx,
+                            text=word.text,
+                            text_with_ws=word.text_with_ws,
+                            phonemes=word.phonemes,
+                            pos=word.pos,
+                        )
+                    )
+
+                    word_idx += 1
+                elif isinstance(node, BreakWordNode):
+                    break_word = typing.cast(BreakWordNode, node)
+                    if (
+                        minor_breaks and (break_word.break_type == BreakType.MINOR)
+                    ) or (major_breaks and (break_word.break_type == BreakType.MAJOR)):
+                        words.append(
+                            Word(
+                                idx=word_idx,
+                                sent_idx=sent_idx,
+                                text=break_word.text,
+                                text_with_ws=break_word.text_with_ws,
+                                is_break=True,
+                            )
+                        )
+
+                        word_idx += 1
+
+        if words and (last_sentence_node is not None):
+            yield make_sentence(last_sentence_node, words, sent_idx)
+
     def leaves(self, graph: GRAPH_TYPE, node: Node):
         """Iterate through the leaves of a graph in depth-first order"""
         for dfs_node in nx.dfs_preorder_nodes(graph, node.node):
             if not graph.out_degree(dfs_node) == 0:
                 continue
 
-            yield graph.nodes[dfs_node]["data"]
+            yield graph.nodes[dfs_node][DATA_PROP]
 
     # -------------------------------------------------------------------------
 
@@ -1202,6 +1322,87 @@ class TextProcessor:
                 "lang": word.lang,
                 "role": WordRole.LETTER,
             }
+
+    def split_replacements(self, graph: GRAPH_TYPE, node: Node):
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if word.interpret_as and (word.interpret_as != InterpretAs.NUMBER):
+            return
+
+        settings = self.get_settings(word.lang)
+
+        if not settings.replacements:
+            # No replacements
+            return
+
+        matched = False
+        new_text = word.text_with_ws
+
+        for pattern, template in settings.replacements:
+            assert isinstance(pattern, REGEX_PATTERN)
+            new_text, num_subs = pattern.subn(template, new_text)
+
+            if num_subs > 0:
+                matched = True
+
+        if matched:
+            # Tokenize new text
+            for part_str, sep_str in grouper(settings.split_pattern.split(new_text), 2):
+                if settings.keep_whitespace:
+                    part_str += sep_str or ""
+
+                if not part_str.strip():
+                    # Ignore empty words
+                    continue
+
+                yield WordNode, {
+                    "text": self.normalize_whitespace(part_str),
+                    "text_with_ws": part_str,
+                    "implicit": True,
+                    "lang": word.lang,
+                }
+
+    def split_abbreviations(self, graph: GRAPH_TYPE, node: Node):
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if word.interpret_as and (word.interpret_as != InterpretAs.NUMBER):
+            return
+
+        settings = self.get_settings(word.lang)
+
+        if not settings.abbreviations:
+            # No abbreviations
+            return
+
+        new_text: typing.Optional[str] = None
+        for pattern, template in settings.abbreviations.items():
+            assert isinstance(pattern, REGEX_PATTERN), pattern
+            match = pattern.match(word.text_with_ws)
+
+            if match is not None:
+                new_text = match.expand(template)
+                break
+
+        if new_text is not None:
+            # Tokenize new text
+            for part_str, sep_str in grouper(settings.split_pattern.split(new_text), 2):
+                if settings.keep_whitespace:
+                    part_str += sep_str or ""
+
+                if not part_str.strip():
+                    # Ignore empty words
+                    continue
+
+                yield WordNode, {
+                    "text": self.normalize_whitespace(part_str),
+                    "text_with_ws": part_str,
+                    "implicit": True,
+                    "lang": word.lang,
+                }
 
     def transform_number(self, graph: GRAPH_TYPE, node: Node):
         if not isinstance(node, WordNode):
@@ -1432,7 +1633,7 @@ class TextProcessor:
         assert settings.num2words_lang
 
         date = word.date
-        date_format = (word.format or InterpretAsFormat.DATE_MDY).strip().upper()
+        date_format = (word.format or settings.default_date_format).strip().upper()
         day_card_str = ""
         day_ord_str = ""
         month_str = ""
@@ -1588,414 +1789,7 @@ class TextProcessor:
 
     @staticmethod
     def print_graph(g, n, s: str = "-"):
-        n_data = g.nodes[n]["data"]
+        n_data = g.nodes[n][DATA_PROP]
         print(s, n, n_data, file=sys.stderr)
         for n2 in g.successors(n):
             TextProcessor.print_graph(g, n2, s + "-")
-
-
-# -----------------------------------------------------------------------------
-
-
-class TextProcessorTestCase(unittest.TestCase):
-    def test_whitespace(self):
-        processor = TextProcessor()
-        graph, root = processor.process("This is  a   test    ")
-        words = list(processor.words(graph, root))
-
-        # Whitespace is retained by default
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="This", text_with_ws="This "),
-                Word(idx=1, sent_idx=0, text="is", text_with_ws="is  "),
-                Word(idx=2, sent_idx=0, text="a", text_with_ws="a   "),
-                Word(idx=3, sent_idx=0, text="test", text_with_ws="test    "),
-            ],
-        )
-
-    def test_no_whitespace(self):
-        processor = TextProcessor(keep_whitespace=False)
-        graph, root = processor.process("This is  a   test    ")
-        words = list(processor.words(graph, root))
-
-        # Whitespace is discarded
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="This", text_with_ws="This"),
-                Word(idx=1, sent_idx=0, text="is", text_with_ws="is"),
-                Word(idx=2, sent_idx=0, text="a", text_with_ws="a"),
-                Word(idx=3, sent_idx=0, text="test", text_with_ws="test"),
-            ],
-        )
-
-    def test_multiple_sentences(self):
-        processor = TextProcessor(major_breaks={".", "!"})
-        graph, root = processor.process("First sentence. Second sentence!")
-        words = list(processor.words(graph, root))
-
-        # Separated by a major break
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="First", text_with_ws="First "),
-                Word(idx=1, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=0, text=".", text_with_ws=". ", is_break=True),
-                Word(idx=0, sent_idx=1, text="Second", text_with_ws="Second "),
-                Word(idx=1, sent_idx=1, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=1, text="!", text_with_ws="!", is_break=True),
-            ],
-        )
-
-    def test_explicit_sentence(self):
-        processor = TextProcessor(major_breaks={".", "!"})
-        graph, root = processor.process("<s>First sentence. Second sentence!</s>")
-        words = list(processor.words(graph, root))
-
-        # Sentences should not be split apart
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="First", text_with_ws="First "),
-                Word(idx=1, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=0, text=".", text_with_ws=". ", is_break=True),
-                Word(idx=3, sent_idx=0, text="Second", text_with_ws="Second "),
-                Word(idx=4, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=5, sent_idx=0, text="!", text_with_ws="!", is_break=True),
-            ],
-        )
-
-    def test_minor_breaks(self):
-        processor = TextProcessor(minor_breaks={","})
-        graph, root = processor.process("this, is a test")
-        words = list(processor.words(graph, root))
-
-        # Comma should be split from word
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="this", text_with_ws="this"),
-                Word(idx=1, sent_idx=0, text=",", text_with_ws=", ", is_break=True),
-                Word(idx=2, sent_idx=0, text="is", text_with_ws="is "),
-                Word(idx=3, sent_idx=0, text="a", text_with_ws="a "),
-                Word(idx=4, sent_idx=0, text="test", text_with_ws="test"),
-            ],
-        )
-
-    def test_word_breaks(self):
-        processor = TextProcessor(word_breaks={"-"})
-        graph, root = processor.process("ninety-nine")
-        words = list(processor.words(graph, root))
-
-        # Word should be split
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=1, sent_idx=0, text="nine", text_with_ws="nine "),
-            ],
-        )
-
-    def test_spell_out(self):
-        processor = TextProcessor()
-        graph, root = processor.process(
-            '<say-as interpret-as="spell-out">test</say-as>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Word should be split into letters
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="t", text_with_ws="t "),
-                Word(idx=1, sent_idx=0, text="e", text_with_ws="e "),
-                Word(idx=2, sent_idx=0, text="s", text_with_ws="s "),
-                Word(idx=3, sent_idx=0, text="t", text_with_ws="t "),
-            ],
-        )
-
-    def test_initialism(self):
-        processor = TextProcessor(is_initialism=str.isupper, split_initialism=list)
-        graph, root = processor.process("TTS")
-        words = list(processor.words(graph, root))
-
-        # Word should be split
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="T", text_with_ws="T "),
-                Word(idx=1, sent_idx=0, text="T", text_with_ws="T "),
-                Word(idx=2, sent_idx=0, text="S", text_with_ws="S "),
-            ],
-        )
-
-    def test_numbers_one_language(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process("1 2 3")
-        words = list(processor.words(graph, root))
-
-        # Numbers should be verbalized
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
-                Word(idx=1, sent_idx=0, text="two", text_with_ws="two "),
-                Word(idx=2, sent_idx=0, text="three", text_with_ws="three "),
-            ],
-        )
-
-    def test_numbers_multiple_languages(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process('1 <w lang="es_ES">2</w> <w lang="de_DE">3</w>')
-        words = list(processor.words(graph, root))
-
-        # Numbers should be verbalized
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
-                Word(idx=1, sent_idx=0, text="dos", text_with_ws="dos "),
-                Word(idx=2, sent_idx=0, text="drei", text_with_ws="drei "),
-            ],
-        )
-
-    def test_currency_one_language(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process("$10")
-        words = list(processor.words(graph, root))
-
-        # Currency should be verbalized
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
-            ],
-        )
-
-    def test_currency_multiple_language(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process(
-            '€10 <w lang="fr_FR">€10</w> <w lang="nl_NL">€10</w>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Currencies should be verbalized
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="euro", text_with_ws="euro "),
-                Word(idx=2, sent_idx=0, text="dix", text_with_ws="dix "),
-                Word(idx=3, sent_idx=0, text="euros", text_with_ws="euros "),
-                Word(idx=4, sent_idx=0, text="tien", text_with_ws="tien "),
-                Word(idx=5, sent_idx=0, text="euro", text_with_ws="euro "),
-            ],
-        )
-
-    def test_currency_default(self):
-        processor = TextProcessor(default_lang="en_US", default_currency="USD")
-        graph, root = processor.process('<say-as interpret-as="currency">10</say-as>')
-        words = list(processor.words(graph, root))
-
-        # Currency should be verbalized, despite lack of "$" symbol
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
-            ],
-        )
-
-    def test_date_one_language(self):
-        processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
-        graph, root = processor.process("4/1/1999")
-        words = list(processor.words(graph, root))
-
-        # Date should be verbalized
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
-                Word(idx=2, sent_idx=0, text="nineteen", text_with_ws="nineteen "),
-                Word(idx=3, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=4, sent_idx=0, text="nine", text_with_ws="nine "),
-            ],
-        )
-
-    def test_date_multiple_languages(self):
-        processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
-        graph, root = processor.process(
-            '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s></speak>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Date should be verbalized
-        self.assertEqual(
-            words,
-            [
-                # English
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
-                Word(idx=2, sent_idx=0, text="nineteen", text_with_ws="nineteen "),
-                Word(idx=3, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=4, sent_idx=0, text="nine", text_with_ws="nine "),
-                # French
-                Word(idx=0, sent_idx=1, text="janvier", text_with_ws="janvier "),
-                Word(idx=1, sent_idx=1, text="quatrième", text_with_ws="quatrième "),
-                Word(idx=2, sent_idx=1, text="mille", text_with_ws="mille "),
-                Word(idx=3, sent_idx=1, text="neuf", text_with_ws="neuf "),
-                Word(idx=4, sent_idx=1, text="cent", text_with_ws="cent "),
-                Word(idx=5, sent_idx=1, text="quatre", text_with_ws="quatre "),
-                Word(idx=6, sent_idx=1, text="vingt", text_with_ws="vingt "),
-                Word(idx=7, sent_idx=1, text="dix", text_with_ws="dix "),
-                Word(idx=8, sent_idx=1, text="neuf", text_with_ws="neuf "),
-            ],
-        )
-
-    def test_date_format_ordinal(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process(
-            '<say-as interpret-as="date" format="mo">4/1</say-as>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Date is forced to be interpreted and format using day ordinal (first)
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
-            ],
-        )
-
-    def test_date_format_cardinal(self):
-        processor = TextProcessor(default_lang="en_US")
-        graph, root = processor.process(
-            '<say-as interpret-as="date" format="dmy">4/1/2000</say-as>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Date is forced to be interpreted and format using day ordinal (first)
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
-                Word(idx=1, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=2, sent_idx=0, text="two", text_with_ws="two "),
-                Word(idx=3, sent_idx=0, text="thousand", text_with_ws="thousand "),
-            ],
-        )
-
-    def test_part_of_speech_tagging(self):
-        processor = TextProcessor(
-            default_lang="en_US",
-            # Made-up tagger that just gives the UPPER of the word back
-            get_parts_of_speech=lambda words: [w.upper() for w in words],
-        )
-        graph, root = processor.process("a test")
-        words = list(processor.words(graph, root))
-
-        # Fake POS tags are added
-        self.assertEqual(
-            words,
-            [
-                Word(idx=0, sent_idx=0, text="a", text_with_ws="a ", pos="A"),
-                Word(idx=1, sent_idx=0, text="test", text_with_ws="test", pos="TEST"),
-            ],
-        )
-
-    def test_phonemize_one_language(self):
-        processor = TextProcessor(
-            default_lang="en_US",
-            # Made-up phonemizer that just gives back the letters
-            lookup_phonemes=lambda word, role: list(word),
-        )
-        graph, root = processor.process("test")
-        words = list(processor.words(graph, root))
-
-        # Single word is "phonemized"
-        self.assertEqual(
-            words,
-            [
-                Word(
-                    idx=0,
-                    sent_idx=0,
-                    text="test",
-                    text_with_ws="test",
-                    phonemes=["t", "e", "s", "t"],
-                ),
-            ],
-        )
-
-    def test_phonemize_one_language_multiple_roles(self):
-        processor = TextProcessor(
-            default_lang="en_US",
-            # Made-up phonemizer that gives back upper-case letters if a role is provided
-            lookup_phonemes=lambda word, role: list(word)
-            if not role
-            else list(word.upper()),
-        )
-
-        # Use made-up role
-        graph, root = processor.process(
-            '<speak>test <w role="some_role">test</w></speak>'
-        )
-        words = list(processor.words(graph, root))
-
-        # Single word is phonemized two different manners depending on role
-        self.assertEqual(
-            words,
-            [
-                Word(
-                    idx=0,
-                    sent_idx=0,
-                    text="test",
-                    text_with_ws="test ",
-                    phonemes=["t", "e", "s", "t"],
-                ),
-                Word(
-                    idx=1,
-                    sent_idx=0,
-                    text="test",
-                    text_with_ws="test",
-                    phonemes=["T", "E", "S", "T"],
-                ),
-            ],
-        )
-
-    def test_phonemize_multiple_languages(self):
-        processor = TextProcessor(
-            default_lang="en_US",
-            lookup_phonemes=lambda word, role: list(word),
-            settings={
-                "de_DE": TextProcessorSettings(
-                    lang="de_DE", lookup_phonemes=lambda word, role: list(word.upper())
-                )
-            },
-        )
-        graph, root = processor.process('<speak>test <w lang="de_DE">test</w></speak>')
-        words = list(processor.words(graph, root))
-
-        # Single word is phonemized according to the lexicon with two different languages
-        self.assertEqual(
-            words,
-            [
-                Word(
-                    idx=0,
-                    sent_idx=0,
-                    text="test",
-                    text_with_ws="test ",
-                    phonemes=["t", "e", "s", "t"],
-                ),
-                Word(
-                    idx=1,
-                    sent_idx=0,
-                    text="test",
-                    text_with_ws="test",
-                    phonemes=["T", "E", "S", "T"],
-                ),
-            ],
-        )

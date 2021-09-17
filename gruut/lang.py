@@ -56,9 +56,12 @@ def resolve_lang(lang: str) -> str:
 
     if lang not in KNOWN_LANGS:
         # Try with _ replaced by -
-        maybe_lang = lang.replace("_", "-")
-        if maybe_lang in KNOWN_LANGS:
-            lang = maybe_lang
+        if "_" in lang:
+            lang_parts = lang.split("_")
+            maybe_lang = f"{lang_parts[0]}-{lang_parts[1].lower()}"
+
+            if maybe_lang in KNOWN_LANGS:
+                lang = maybe_lang
 
     return lang
 

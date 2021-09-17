@@ -5,12 +5,13 @@ import logging
 import os
 import re
 import typing
+import xml.etree.ElementTree as etree
 from enum import Enum
 from pathlib import Path
 
 import gruut_ipa
 
-from .const import REGEX_MATCH, REGEX_PATTERN
+from gruut.const import REGEX_MATCH, REGEX_PATTERN
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
@@ -43,7 +44,7 @@ def find_lang_dir(
         Path to the language model directory or None if it can't be found
     """
     try:
-        base_lang = lang.split("-")[0]
+        base_lang = lang.split("-")[0].lower()
         lang_module_name = f"gruut_lang_{base_lang}"
         lang_module = __import__(lang_module_name)
 
@@ -229,6 +230,8 @@ def strip_sounds_like_segments(word: str) -> str:
 
 
 # -----------------------------------------------------------------------------
+# Iteration
+# -----------------------------------------------------------------------------
 
 
 def pairwise(iterable):
@@ -253,3 +256,27 @@ def sliding_window(iterable, n=2):
             next(win_iter, None)
 
     return zip(*iterables)
+
+
+# -----------------------------------------------------------------------------
+# XML
+# -----------------------------------------------------------------------------
+
+NO_NAMESPACE_PATTERN = re.compile(r"^{[^}]+}")
+
+
+def tag_no_namespace(tag: str) -> str:
+    """Remove namespace from XML tag"""
+    return NO_NAMESPACE_PATTERN.sub("", tag)
+
+
+def attrib_no_namespace(
+    element: etree.Element, name: str, default: typing.Any = None
+) -> typing.Any:
+    """Search for an attribute by key without namespaces"""
+    for key, value in element.attrib.items():
+        key_no_ns = NO_NAMESPACE_PATTERN.sub("", key)
+        if key_no_ns == name:
+            return value
+
+    return default

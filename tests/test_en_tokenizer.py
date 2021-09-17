@@ -2,7 +2,8 @@
 """Tests for EnglishTokenizer class"""
 import unittest
 
-from gruut.lang import get_tokenizer
+# from gruut.lang import get_tokenizer
+from gruut import get_text_processor
 
 
 class EnglishTokenizerTestCase(unittest.TestCase):
@@ -10,10 +11,10 @@ class EnglishTokenizerTestCase(unittest.TestCase):
 
     def test_unclean_text(self):
         """Test text with lots of noise"""
-        tokenizer = get_tokenizer("en-us")
+        processor = get_text_processor("en_US")
 
         text = "IT’S <a> 'test' (seNtEnce) for $100, dr., & [ I ] ## like ## it 100%!"
-        sentences = list(tokenizer.tokenize(text))
+        sentences = list(processor.sentences(*processor(text)))
         self.assertEqual(1, len(sentences))
         sentence = sentences[0]
 
