@@ -52,7 +52,9 @@ FEATURES_TYPE = typing.Dict[
 class PartOfSpeechTagger:
     """Part of speech tagger using a pre-trained CRF model"""
 
-    def __init__(self, crf_tagger: typing.Union[str, Path, pycrfsuite.Tagger]):
+    def __init__(
+        self, crf_tagger: typing.Union[str, Path, pycrfsuite.Tagger], **kwargs
+    ):
         if isinstance(crf_tagger, pycrfsuite.Tagger):
             self.crf_tagger = crf_tagger
         else:
@@ -60,7 +62,7 @@ class PartOfSpeechTagger:
             self.crf_tagger = pycrfsuite.Tagger()
             self.crf_tagger.open(str(crf_tagger))
 
-    def __call__(self, words: typing.List[str]) -> typing.List[str]:
+    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
         """Returns POS tag for each word"""
         features = PartOfSpeechTagger.sent2features(words)
         return self.crf_tagger.tag(features)
@@ -104,7 +106,7 @@ class PartOfSpeechTagger:
 
     @staticmethod
     def word2features(
-        sentence: typing.List[str],
+        sentence: typing.Sequence[str],
         i: int,
         add_bos: bool = True,
         add_eos: bool = True,
@@ -145,7 +147,7 @@ class PartOfSpeechTagger:
 
     @staticmethod
     def sent2features(
-        sentence: typing.List[str], **kwargs
+        sentence: typing.Sequence[str], **kwargs
     ) -> typing.List[FEATURES_TYPE]:
         """Get features for all words in a sentence"""
         return [

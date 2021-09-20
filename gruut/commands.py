@@ -5,10 +5,10 @@ import typing
 
 import gruut_ipa
 
-from .const import Token
-from .phonemize import Phonemizer, UnknownWordError
-from .toksen import Tokenizer
-from .utils import encode_inline_pronunciations
+from gruut.const import Token
+from gruut.phonemize import Phonemizer, UnknownWordError
+from gruut.toksen import Tokenizer
+from gruut.utils import encode_inline_pronunciations
 
 _LOGGER = logging.getLogger("gruut.commands")
 

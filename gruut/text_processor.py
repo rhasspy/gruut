@@ -34,7 +34,23 @@ DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
 NORMALIZE_WHITESPACE_PATTERN = re.compile(r"\s+")
 
+TRAILING_WHITESPACE_PATTERN = re.compile(r"(\s+)$")
+
+
+def get_trailing_whitespace(s: str) -> str:
+    match = TRAILING_WHITESPACE_PATTERN.search(s)
+    if match is not None:
+        return match.group(1)
+
+    return ""
+
+
 HAS_DIGIT_PATTERN = re.compile(r"[0-9]")
+
+
+def has_digit(s: str) -> bool:
+    """True if string contains at least one digit"""
+    return HAS_DIGIT_PATTERN.search(s) is not None
 
 
 class InterpretAs(str, Enum):
@@ -101,6 +117,8 @@ PHONEMES_TYPE = typing.Sequence[str]
 
 
 class LookupPhonemes(typing.Protocol):
+    """Look up phonemes for word/role in a lexicon"""
+
     def __call__(
         self, word: str, role: typing.Optional[str] = None
     ) -> typing.Optional[PHONEMES_TYPE]:
@@ -108,6 +126,8 @@ class LookupPhonemes(typing.Protocol):
 
 
 class GuessPhonemes(typing.Protocol):
+    """Guess phonemes for word/role"""
+
     def __call__(
         self, word: str, role: typing.Optional[str] = None
     ) -> typing.Optional[PHONEMES_TYPE]:
@@ -115,12 +135,10 @@ class GuessPhonemes(typing.Protocol):
 
 
 class GetPartsOfSpeech(typing.Protocol):
+    """Get part of speech tags for words"""
+
     def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
         pass
-
-
-def has_digit(s: str) -> bool:
-    return HAS_DIGIT_PATTERN.search(s) is not None
 
 
 @dataclass
@@ -137,6 +155,7 @@ class TextProcessorSettings:
         default_factory=list
     )
     abbreviations: typing.Dict[REGEX_TYPE, str] = field(default_factory=dict)
+    spell_out_words: typing.Dict[str, str] = field(default_factory=dict)
 
     # Breaks
     major_breaks: typing.Set[str] = field(default_factory=set)
@@ -267,6 +286,9 @@ class TextProcessorSettings:
                 self.currencies, key=operator.length_hint, reverse=True
             )
 
+    def normalize_whitespace(self, s: str) -> str:
+        return NORMALIZE_WHITESPACE_PATTERN.sub(self.join_str, s.strip())
+
 
 # -----------------------------------------------------------------------------
 
@@ -375,182 +397,6 @@ class Sentence:
 
 # -----------------------------------------------------------------------------
 
-# ROLE_TO_PHONEMES = typing.Dict[str, typing.Sequence[str]]
-
-
-# class Phonemizer:
-#     DEFAULT_ROLE: str = ""
-
-#     def __init__(
-#         self,
-#         lang: str = "en_US",
-#         lexicon: typing.Optional[
-#             typing.Dict[str, typing.Dict[str, ROLE_TO_PHONEMES]]
-#         ] = None,
-#         db_conn: typing.Optional[typing.Dict[str, sqlite3.Connection]] = None,
-#         g2p_model: typing.Optional[typing.Dict[str, typing.Union[str, Path]]] = None,
-#         word_transform_funcs=None,
-#         guess_transform_func=None,
-#     ):
-#         self.default_lang = lang
-
-#         # lang -> word -> [phonemes]
-#         self.lexicon = lexicon if lexicon is not None else {}
-
-#         # lang -> connection
-#         self.db_conn = db_conn or {}
-
-#         # lang -> [functions]
-#         self.word_transform_funcs = word_transform_funcs
-
-#         # lang -> function
-#         self.guess_transform_func = guess_transform_func
-
-#         # lang -> g2p
-#         self.g2p_tagger: typing.Dict[str, GraphemesToPhonemes] = {}
-#         self.g2p_graph: typing.Dict[PhonetisaurusGraph] = {}
-
-#         if g2p_model is not None:
-#             for g2p_lang, g2p_path in g2p_model.items():
-#                 # Load g2p model
-#                 g2p_ext = os.path.splitext(g2p_path)[1]
-#                 if g2p_ext == ".npz":
-#                     # Load Phonetisaurus FST as a numpy graph
-#                     _LOGGER.debug("Loading Phonetisaurus g2p model from %s", g2p_model)
-#                     self.g2p_graph[g2p_lang] = PhonetisaurusGraph.load(g2p_model)
-#                 else:
-#                     # Load CRF tagger
-#                     _LOGGER.debug("Loading CRF g2p model from %s", g2p_model)
-#                     self.g2p_tagger[g2p_lang] = GraphemesToPhonemes(g2p_model)
-
-#     def lookup(
-#         self, word: str, lang: typing.Optional[str] = None, transform: bool = True
-#     ) -> typing.Optional[ROLE_TO_PHONEMES]:
-#         lang = lang or self.default_lang
-#         lexicon = self.lexicon.get(lang)
-#         if lexicon is None:
-#             lexicon = {}
-#             self.lexicon[lang] = lexicon
-
-#         assert lexicon is not None
-#         role_to_word = lexicon.get(word)
-
-#         if role_to_word is not None:
-#             return role_to_word
-
-#         db_conn = self.db_conn.get(lang)
-#         if db_conn is not None:
-#             # Load pronunciations from database.
-#             #
-#             # Ordered by pronunciation descending because so duplicate roles
-#             # will be overwritten by earlier pronunciation.
-#             cursor = db_conn.execute(
-#                 "SELECT role, phonemes FROM word_phonemes WHERE word = ? ORDER BY pron_order DESC",
-#                 (word,),
-#             )
-
-#             for row in cursor:
-#                 if role_to_word is None:
-#                     # Create new lexicon entry
-#                     role_to_word = {}
-#                     self.lexicon[word] = role_to_word
-
-#                 role, phonemes = row[0], row[1].split()
-#                 role_to_word[role] = phonemes
-
-#             if role_to_word is not None:
-#                 # Successfully looked up in the database
-#                 return role_to_word
-
-#         if transform:
-#             word_transform_funcs = self.word_transform_funcs.get(lang)
-#             if word_transform_funcs is not None:
-#                 # Try transforming word and looking up again (with transforms
-#                 # disabled, of course)
-#                 for transform_func in word_transform_funcs:
-#                     maybe_word = transform_func(word)
-#                     maybe_role_to_word = self.lookup(
-#                         maybe_word, lang=lang, transform=False
-#                     )
-#                     if maybe_role_to_word:
-#                         # Make a copy for this word
-#                         role_to_word = dict(maybe_role_to_word)
-#                         lexicon[word] = role_to_word
-#                         return role_to_word
-
-#         return None
-
-#     def get_pronunciation(
-#         self,
-#         word: str,
-#         lang: typing.Optional[str] = None,
-#         role: typing.Optional[str] = None,
-#         transform: bool = True,
-#         guess: bool = True,
-#     ) -> typing.Optional[typing.Sequence[str]]:
-#         lang = lang or self.default_lang
-#         role_to_word = self.lookup(word, lang=lang, transform=transform)
-#         if role_to_word:
-#             if role:
-#                 # Desired role
-#                 maybe_phonemes = role_to_word.get(role)
-#                 if maybe_phonemes:
-#                     return maybe_phonemes
-
-#             # Default role
-#             maybe_phonemes = role_to_word.get(Phonemizer.DEFAULT_ROLE)
-#             if maybe_phonemes:
-#                 return maybe_phonemes
-
-#             # Any role
-#             return next(iter(role_to_word.values()))
-
-#         if role_to_word is None:
-#             # Mark word as missing
-#             role_to_word = {}
-#             self.lexicon[word] = role_to_word
-
-#         if guess:
-#             guessed_phonemes = self.guess_pronunciation(word, lang=lang)
-#             role_to_word[Phonemizer.DEFAULT_ROLE] = guessed_phonemes
-#             return guessed_phonemes
-
-#         return None
-
-#     def guess_pronunciation(
-#         self, word: str, lang: typing.Optional[str] = None,
-#     ) -> typing.Sequence[str]:
-#         lang = lang or self.default_lang
-#         guess_transform_func = self.guess_transform_func.get(lang)
-
-#         if guess_transform_func is not None:
-#             word = guess_transform_func(word)
-
-#         g2p_tagger = self.g2p_tagger.get(lang)
-
-#         if g2p_tagger is not None:
-#             # CRF model
-#             _LOGGER.debug("Guessing pronunciations for %s with CRF", word)
-#             return g2p_tagger(word)
-
-#         g2p_graph = self.g2p_graph.get(lang)
-#         if g2p_graph:
-#             # Phonetisaurus FST
-#             _LOGGER.debug("Guessing pronunciations for %s with Phonetisaurus", word)
-#             _, _, guessed_phonemes = next(  # type: ignore
-#                 g2p_graph.g2p([word])
-#             )
-
-#             return guessed_phonemes
-
-#         return []
-
-
-# -----------------------------------------------------------------------------
-
-# MAYBE_LANG = typing.Optional[str]
-# POS_TAGGER = typing.Callable[[typing.Iterable[str]], typing.Iterable[str]]
-
 
 class TextProcessor:
     @dataclass
@@ -593,7 +439,12 @@ class TextProcessor:
 
     def __call__(
         self, text: str, ssml: bool = False, pos: bool = True, phonemize: bool = True,
-    ):
+    ) -> typing.Tuple[GRAPH_TYPE, Node]:
+        return self.process(text=text, ssml=ssml, pos=pos, phonemize=phonemize)
+
+    def process(
+        self, text: str, ssml: bool = False, pos: bool = True, phonemize: bool = True,
+    ) -> typing.Tuple[GRAPH_TYPE, Node]:
         if not ssml:
             # Not XML
             text = saxutils.escape(text)
@@ -610,10 +461,10 @@ class TextProcessor:
     def _process_etree(
         self,
         root_element: etree.Element,
-        graph,
+        graph: GRAPH_TYPE,
         pos: bool = True,
         phonemize: bool = True,
-    ):
+    ) -> typing.Tuple[GRAPH_TYPE, Node]:
         last_paragraph: typing.Optional[ParagraphNode] = None
         last_sentence: typing.Optional[SentenceNode] = None
         last_speak: typing.Optional[SpeakNode] = None
@@ -631,6 +482,9 @@ class TextProcessor:
 
         # True if currently inside <w> or <token>
         in_word: bool = False
+
+        # True if current word is the last one
+        is_last_word: bool = False
 
         # Current word's role
         word_role: typing.Optional[str] = None
@@ -694,10 +548,19 @@ class TextProcessor:
 
                 if in_word:
                     # No splitting
+                    word_text = text
+                    settings = self.get_settings(current_lang)
+                    if (
+                        settings.keep_whitespace
+                        and (not is_last_word)
+                        and (not word_text.endswith(settings.join_str))
+                    ):
+                        word_text += settings.join_str
+
                     word_node = WordNode(
                         node=len(graph),
-                        text=text.strip(),
-                        text_with_ws=text,
+                        text=word_text.strip(),
+                        text_with_ws=word_text,
                         **scope_kwargs(WordNode),
                     )
                     graph.add_node(word_node.node, data=word_node)
@@ -705,11 +568,7 @@ class TextProcessor:
                 else:
                     # Split by whitespace
                     self.pipeline_tokenize(
-                        graph,
-                        last_sentence,
-                        text,
-                        settings=self.get_settings(current_lang),
-                        scope_kwargs={"implicit": True, **scope_kwargs(WordNode)},
+                        graph, last_sentence, text, scope_kwargs=scope_kwargs(WordNode),
                     )
 
             elif isinstance(elem_or_text, TextProcessor.EndElement):
@@ -735,6 +594,7 @@ class TextProcessor:
                     if end_tag in {"w", "token"}:
                         # End of word
                         in_word = False
+                        is_last_word = False
                         word_role = None
 
                     if end_tag == "s":
@@ -750,7 +610,14 @@ class TextProcessor:
                         last_speak = root
             else:
                 # Start of an element (e.g., <p>)
-                elem = typing.cast(etree.Element, elem_or_text)
+                elem, elem_metadata = elem_or_text
+                elem = typing.cast(etree.Element, elem)
+
+                # Optional metadata for the element
+                elem_metadata = typing.cast(
+                    typing.Optional[typing.Dict[str, typing.Any]], elem_metadata
+                )
+
                 elem_tag = tag_no_namespace(elem.tag)
 
                 if elem_tag == "speak":
@@ -825,6 +692,9 @@ class TextProcessor:
                 elif elem_tag in {"w", "token"}:
                     # Explicit word
                     in_word = True
+                    is_last_word = (
+                        elem_metadata.get("is_last", False) if elem_metadata else False
+                    )
                     maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
@@ -861,11 +731,20 @@ class TextProcessor:
         # Expand abbrevations before major breaks
         self.pipeline_split(self.split_abbreviations, graph, root)
 
+        # Break apart initialisms 1/2 (e.g., TTS or T.T.S.) before major breaks
+        self.pipeline_split(self.transform_initialism, graph, root)
+
         # Split on major breaks
         self.pipeline_split(self.split_major_breaks, graph, root)
 
+        # Break apart initialisms 2/2 (e.g., TTS. or T.T.S..) after major breaks
+        self.pipeline_split(self.transform_initialism, graph, root)
+
         # Break apart sentences using BreakWordNodes
         self.break_sentences(graph, root)
+
+        # spell-out (e.g., abc -> a b c) before number expansion
+        self.pipeline_split(self.split_spell_out, graph, root)
 
         # Transform text into known classes
         self.pipeline_transform(self.transform_number, graph, root)
@@ -879,12 +758,6 @@ class TextProcessor:
 
         # Break apart words
         self.pipeline_split(self.break_words, graph, root)
-
-        # Break apart initialisms (e.g., TTS or T.T.S.)
-        self.pipeline_split(self.transform_initialism, graph, root)
-
-        # spell-out (e.g., abc -> a b c)
-        self.pipeline_split(self.split_spell_out, graph, root)
 
         # Gather words from leaves of the tree, group by sentence
         def process_sentence(words: typing.List[WordNode]):
@@ -901,6 +774,7 @@ class TextProcessor:
                             word.role = f"gruut:{pos_tag}"
 
             if phonemize:
+                # Add phonemes to word
                 for word in words:
                     if word.phonemes:
                         # Word already has phonemes
@@ -919,6 +793,7 @@ class TextProcessor:
                             word.text, word.role
                         )
 
+        # Process tree leaves
         sentence_words: typing.List[WordNode] = []
 
         for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
@@ -935,8 +810,6 @@ class TextProcessor:
             # Final sentence
             process_sentence(sentence_words)
             sentence_words = []
-
-        TextProcessor.print_graph(graph, root.node)
 
         return graph, root
 
@@ -1034,9 +907,16 @@ class TextProcessor:
             # Didn't split
             return
 
-        for part_text in parts:
-            if settings.keep_whitespace and not part_text.endswith(" "):
-                part_text += " "
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+        last_part_idx = len(parts) - 1
+
+        for part_idx, part_text in enumerate(parts):
+            if settings.keep_whitespace:
+                if part_idx == last_part_idx:
+                    part_text += last_ws
+                else:
+                    part_text += settings.join_str
 
             yield WordNode, {
                 "text": part_text.strip(),
@@ -1137,7 +1017,15 @@ class TextProcessor:
         root: Node,
         major_breaks: bool = True,
         minor_breaks: bool = True,
+        explicit_lang: bool = True,
     ) -> typing.Iterable[Word]:
+        def get_lang(lang: str) -> str:
+            if explicit_lang or (lang != self.default_lang):
+                return lang
+
+            # Implicit default language
+            return ""
+
         sent_idx = -1
         word_idx = 0
 
@@ -1157,6 +1045,7 @@ class TextProcessor:
                         text_with_ws=word.text_with_ws,
                         phonemes=word.phonemes,
                         pos=word.pos,
+                        lang=get_lang(word.lang),
                     )
 
                     word_idx += 1
@@ -1171,12 +1060,10 @@ class TextProcessor:
                             text=break_word.text,
                             text_with_ws=break_word.text_with_ws,
                             is_break=True,
+                            lang=get_lang(word.lang),
                         )
 
                         word_idx += 1
-
-    def normalize_whitespace(self, s: str) -> str:
-        return NORMALIZE_WHITESPACE_PATTERN.sub(" ", s.strip())
 
     def sentences(
         self,
@@ -1184,17 +1071,27 @@ class TextProcessor:
         root: Node,
         major_breaks: bool = True,
         minor_breaks: bool = True,
+        explicit_lang: bool = True,
     ) -> typing.Iterable[Sentence]:
-        def make_sentence(node, words, sent_idx):
+        def get_lang(lang: str) -> str:
+            if explicit_lang or (lang != self.default_lang):
+                return lang
+
+            # Implicit default language
+            return ""
+
+        def make_sentence(
+            node: Node, words: typing.Iterable[WordNode], sent_idx: int
+        ) -> Sentence:
             settings = self.get_settings(node.lang)
             text_with_ws = "".join(w.text_with_ws for w in words)
-            text = self.normalize_whitespace(text_with_ws)
+            text = settings.normalize_whitespace(text_with_ws)
 
             return Sentence(
                 idx=sent_idx,
                 text=text,
                 text_with_ws=text_with_ws,
-                lang=node.lang,
+                lang=get_lang(node.lang),
                 voice=node.voice,
                 words=words,
             )
@@ -1226,6 +1123,7 @@ class TextProcessor:
                             text_with_ws=word.text_with_ws,
                             phonemes=word.phonemes,
                             pos=word.pos,
+                            lang=get_lang(node.lang),
                         )
                     )
 
@@ -1242,6 +1140,7 @@ class TextProcessor:
                                 text=break_word.text,
                                 text_with_ws=break_word.text_with_ws,
                                 is_break=True,
+                                lang=get_lang(node.lang),
                             )
                         )
 
@@ -1261,25 +1160,45 @@ class TextProcessor:
     # -------------------------------------------------------------------------
 
     def pipeline_tokenize(
-        self, graph, parent_node, text, settings=None, scope_kwargs=None
+        self, graph, parent_node, text, scope_kwargs=None,
     ):
         if scope_kwargs is None:
             scope_kwargs = {}
 
-        settings = settings or self.default_lang
+        lang = self.default_lang
+        if scope_kwargs is not None:
+            lang = scope_kwargs.get("lang", lang)
+
+        settings = self.get_settings(lang)
         assert settings is not None
 
-        for non_ws, ws in grouper(settings.split_pattern.split(text), 2):
-            word = non_ws
+        # Split into separate words/separators
+        groups = list(grouper(settings.split_pattern.split(text), 2))
 
-            if settings.keep_whitespace:
-                word += ws or ""
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(text)
+        last_group_idx = len(groups) - 1
 
-            if not word:
+        for group_idx, group in enumerate(groups):
+            part_str, sep_str = group
+            if not part_str:
                 continue
 
+            sep_str = sep_str or ""
+            word_text = part_str
+
+            if settings.keep_whitespace:
+                if group_idx == last_group_idx:
+                    word_text += last_ws
+                else:
+                    word_text += sep_str
+
             word_node = WordNode(
-                node=len(graph), text=non_ws, text_with_ws=word, **scope_kwargs
+                node=len(graph),
+                text=word_text.strip(),
+                text_with_ws=word_text,
+                implicit=True,
+                **scope_kwargs,
             )
             graph.add_node(word_node.node, data=word_node)
             graph.add_edge(parent_node.node, word_node.node)
@@ -1311,16 +1230,39 @@ class TextProcessor:
 
         settings = self.get_settings(word.lang)
 
-        for c in word.text:
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+        last_char_idx = len(word.text) - 1
+
+        for i, c in enumerate(word.text):
+            # Look up in settings first ("." -> "dot")
+            word_text = settings.spell_out_words.get(c)
+            role = WordRole.DEFAULT
+
+            if word_text is None:
+                if c.isalpha():
+                    # Assume this is a letter
+                    word_text = c
+                    role = WordRole.LETTER
+                else:
+                    # Leave as is (expand later in pipeline if digit, etc.)
+                    word_text = c
+
+            if not word_text:
+                continue
+
             if settings.keep_whitespace:
-                c += " "
+                if i == last_char_idx:
+                    word_text += last_ws
+                else:
+                    word_text += settings.join_str
 
             yield WordNode, {
-                "text": c.strip(),
-                "text_with_ws": c,
+                "text": word_text.strip(),
+                "text_with_ws": word_text,
                 "implicit": True,
                 "lang": word.lang,
-                "role": WordRole.LETTER,
+                "role": role,
             }
 
     def split_replacements(self, graph: GRAPH_TYPE, node: Node):
@@ -1358,7 +1300,7 @@ class TextProcessor:
                     continue
 
                 yield WordNode, {
-                    "text": self.normalize_whitespace(part_str),
+                    "text": settings.normalize_whitespace(part_str),
                     "text_with_ws": part_str,
                     "implicit": True,
                     "lang": word.lang,
@@ -1398,7 +1340,7 @@ class TextProcessor:
                     continue
 
                 yield WordNode, {
-                    "text": self.normalize_whitespace(part_str),
+                    "text": settings.normalize_whitespace(part_str),
                     "text_with_ws": part_str,
                     "implicit": True,
                     "lang": word.lang,
@@ -1498,7 +1440,7 @@ class TextProcessor:
 
         assert settings.dateparser_lang
 
-        dateparser_kwargs = {
+        dateparser_kwargs: typing.Dict[str, typing.Any] = {
             "settings": {"STRICT_PARSING": True},
             "languages": [settings.dateparser_lang],
         }
@@ -1538,9 +1480,24 @@ class TextProcessor:
             # Not an initialism
             return
 
-        for part_text in settings.split_initialism(word.text):
-            if settings.keep_whitespace and (not part_text.endswith(" ")):
-                part_text += " "
+        # Split according to language-specific function
+        parts = settings.split_initialism(word.text)
+        if not parts:
+            return
+
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+        last_part_idx = len(parts) - 1
+
+        for part_idx, part_text in enumerate(parts):
+            if not part_text:
+                continue
+
+            if settings.keep_whitespace:
+                if part_idx == last_part_idx:
+                    part_text += last_ws
+                else:
+                    part_text += settings.join_str
 
             yield WordNode, {
                 "text": part_text.strip(),
@@ -1596,19 +1553,29 @@ class TextProcessor:
             num_str = num2words(final_num, **num2words_kwargs)
 
             # Remove all non-word characters
-            num_str = re.sub(r"\W", " ", num_str).strip()
+            num_str = re.sub(r"\W", settings.join_str, num_str).strip()
 
-            # Split into separate words
-            for part_str, sep_str in grouper(settings.split_pattern.split(num_str), 2):
-                number_word_text = part_str
-                if settings.keep_whitespace:
-                    number_word_text += sep_str or ""
+            # Split into separate words/separators
+            groups = list(grouper(settings.split_pattern.split(num_str), 2))
 
-                if not number_word_text:
+            # Preserve whitespace on final word
+            last_ws = get_trailing_whitespace(word.text_with_ws)
+            last_group_idx = len(groups) - 1
+
+            # Split into separate words/separators
+            for group_idx, group in enumerate(groups):
+                part_str, sep_str = group
+                if not part_str:
                     continue
 
-                if settings.keep_whitespace and (not number_word_text.endswith(" ")):
-                    number_word_text += " "
+                sep_str = sep_str or ""
+                number_word_text = part_str
+
+                if settings.keep_whitespace:
+                    if group_idx == last_group_idx:
+                        number_word_text += last_ws
+                    else:
+                        number_word_text += sep_str
 
                 number_word = WordNode(
                     node=len(graph),
@@ -1667,17 +1634,29 @@ class TextProcessor:
             M=month_str, D=day_card_str, O=day_ord_str, Y=year_str
         )
 
-        # Split into separate words
-        for part_str, sep_str in grouper(settings.split_pattern.split(date_str), 2):
+        # Split into separate words/separators
+        groups = list(grouper(settings.split_pattern.split(date_str), 2))
+
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+        last_group_idx = len(groups) - 1
+
+        for group_idx, group in enumerate(groups):
+            part_str, sep_str = group
+            if not part_str:
+                continue
+
+            sep_str = sep_str or ""
             date_word_text = part_str
+
             if settings.keep_whitespace:
-                date_word_text += sep_str or ""
+                if group_idx == last_group_idx:
+                    date_word_text += last_ws
+                else:
+                    date_word_text += sep_str
 
             if not date_word_text:
                 continue
-
-            if settings.keep_whitespace and (not date_word_text.endswith(" ")):
-                date_word_text += " "
 
             date_word = WordNode(
                 node=len(graph),
@@ -1742,17 +1721,27 @@ class TextProcessor:
         # Remove all non-word characters
         num_str = re.sub(r"\W", settings.join_str, num_str).strip()
 
-        # Split into separate words
-        for part_str, sep_str in grouper(settings.split_pattern.split(num_str), 2):
-            currency_word_text = part_str
-            if settings.keep_whitespace:
-                currency_word_text += sep_str or ""
+        # Split into separate words/separators
+        groups = list(grouper(settings.split_pattern.split(num_str), 2))
 
-            if not currency_word_text:
+        # Preserve whitespace on final word
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+        last_group_idx = len(groups) - 1
+
+        # Split into separate words
+        for group_idx, group in enumerate(groups):
+            part_str, sep_str = group
+            if not part_str:
                 continue
 
-            if settings.keep_whitespace and (not currency_word_text.endswith(" ")):
-                currency_word_text += " "
+            sep_str = sep_str or ""
+            currency_word_text = part_str
+
+            if settings.keep_whitespace:
+                if group_idx == last_group_idx:
+                    currency_word_text += last_ws
+                else:
+                    currency_word_text += sep_str
 
             currency_word = WordNode(
                 node=len(graph),
@@ -1767,17 +1756,28 @@ class TextProcessor:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def text_and_elements(element):
-        yield element
+    def text_and_elements(element, is_last=False):
+        element_metadata = None
+
+        if is_last:
+            # True if this is the last child element of a parent.
+            # Used to preserve whitespace.
+            element_metadata = {"is_last": True}
+
+        yield element, element_metadata
 
         # Text before any tags (or end tag)
         text = element.text if element.text is not None else ""
         if text.strip():
             yield text
 
-        for child in element:
+        children = list(element)
+        last_child_idx = len(children) - 1
+
+        for child_idx, child in enumerate(children):
             # Sub-elements
-            yield from TextProcessor.text_and_elements(child)
+            is_last = child_idx == last_child_idx
+            yield from TextProcessor.text_and_elements(child, is_last=is_last)
 
         # End of current element
         yield TextProcessor.EndElement(element)
@@ -1788,8 +1788,19 @@ class TextProcessor:
             yield tail
 
     @staticmethod
-    def print_graph(g, n, s: str = "-"):
-        n_data = g.nodes[n][DATA_PROP]
-        print(s, n, n_data, file=sys.stderr)
-        for n2 in g.successors(n):
-            TextProcessor.print_graph(g, n2, s + "-")
+    def print_graph(
+        graph: GRAPH_TYPE,
+        node: typing.Tuple[NODE_TYPE, Node],
+        indent: str = "-",
+        print_func=print,
+    ):
+        if isinstance(node, Node):
+            n_data = node
+            graph_node = node.node
+        else:
+            graph_node = node
+            n_data = graph.nodes[graph_node][DATA_PROP]
+
+        print_func(indent, graph_node, n_data)
+        for succ_node in graph.successors(graph_node):
+            TextProcessor.print_graph(graph, succ_node, indent + indent)

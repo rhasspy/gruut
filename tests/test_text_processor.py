@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import unittest
 
 from gruut.text_processor import TextProcessor, Word, TextProcessorSettings, Sentence
@@ -10,7 +11,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_whitespace(self):
         processor = TextProcessor()
         graph, root = processor("This is  a   test    ")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Whitespace is retained by default
         self.assertEqual(
@@ -26,7 +27,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_no_whitespace(self):
         processor = TextProcessor(keep_whitespace=False)
         graph, root = processor("This is  a   test    ")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Whitespace is discarded
         self.assertEqual(
@@ -50,7 +51,7 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
         graph, root = processor("\"This,\" [is] <a> (test) 'sentence.'")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Quotes and brackets are discarded
         self.assertEqual(
@@ -77,7 +78,7 @@ class TextProcessorTestCase(unittest.TestCase):
             },
         )
         graph, root = processor("Mr.? I'm just a dr., on this St. at least.")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Abbreviations are expanded, maintaining capitalization
         self.assertEqual(
@@ -102,7 +103,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_multiple_sentences(self):
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("First  sentence. Second sentence! ")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Separated by a major break
         self.assertEqual(
@@ -118,7 +119,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
         # Check sentences too
-        sentences = list(processor.sentences(graph, root))
+        sentences = list(processor.sentences(graph, root, explicit_lang=False))
         self.assertEqual(
             sentences,
             [
@@ -164,7 +165,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_explicit_sentence(self):
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("<s>First sentence. Second sentence!</s>", ssml=True)
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Sentences should not be split apart
         self.assertEqual(
@@ -182,7 +183,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_minor_breaks(self):
         processor = TextProcessor(minor_breaks={","})
         graph, root = processor("this, is a test")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Comma should be split from word
         self.assertEqual(
@@ -199,23 +200,23 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_word_breaks(self):
         processor = TextProcessor(word_breaks={"-"})
         graph, root = processor("ninety-nine")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Word should be split
         self.assertEqual(
             words,
             [
                 Word(idx=0, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=1, sent_idx=0, text="nine", text_with_ws="nine "),
+                Word(idx=1, sent_idx=0, text="nine", text_with_ws="nine"),
             ],
         )
 
     def test_spell_out(self):
-        processor = TextProcessor()
+        processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
-            '<say-as interpret-as="spell-out">test</say-as>', ssml=True
+            '<say-as interpret-as="spell-out">test123</say-as>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Word should be split into letters
         self.assertEqual(
@@ -225,28 +226,38 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(idx=1, sent_idx=0, text="e", text_with_ws="e "),
                 Word(idx=2, sent_idx=0, text="s", text_with_ws="s "),
                 Word(idx=3, sent_idx=0, text="t", text_with_ws="t "),
+                Word(idx=4, sent_idx=0, text="one", text_with_ws="one "),
+                Word(idx=5, sent_idx=0, text="two", text_with_ws="two "),
+                Word(idx=6, sent_idx=0, text="three", text_with_ws="three"),
             ],
         )
 
-    def test_initialism(self):
-        processor = TextProcessor(is_initialism=str.isupper, split_initialism=list)
-        graph, root = processor("TTS")
-        words = list(processor.words(graph, root))
+    def test_initialisms(self):
+        processor = TextProcessor(
+            major_breaks={"."},
+            is_initialism=lambda s: s.isalpha() and s.isupper(),
+            split_initialism=list,
+        )
+        graph, root = processor("TTS.")
+        words = list(processor.words(graph, root, explicit_lang=False))
 
-        # Word should be split
+        processor.print_graph(graph, root, file=sys.stderr)
+
+        # Letters should be split
         self.assertEqual(
             words,
             [
                 Word(idx=0, sent_idx=0, text="T", text_with_ws="T "),
                 Word(idx=1, sent_idx=0, text="T", text_with_ws="T "),
-                Word(idx=2, sent_idx=0, text="S", text_with_ws="S "),
+                Word(idx=2, sent_idx=0, text="S", text_with_ws="S"),
+                Word(idx=3, sent_idx=0, text=".", text_with_ws=".", is_break=True),
             ],
         )
 
     def test_numbers_one_language(self):
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor("1 2 3")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Numbers should be verbalized
         self.assertEqual(
@@ -254,7 +265,7 @@ class TextProcessorTestCase(unittest.TestCase):
             [
                 Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
                 Word(idx=1, sent_idx=0, text="two", text_with_ws="two "),
-                Word(idx=2, sent_idx=0, text="three", text_with_ws="three "),
+                Word(idx=2, sent_idx=0, text="three", text_with_ws="three"),
             ],
         )
 
@@ -269,9 +280,9 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
-                Word(idx=1, sent_idx=0, text="dos", text_with_ws="dos "),
-                Word(idx=2, sent_idx=0, text="drei", text_with_ws="drei "),
+                Word(lang="en_US", idx=0, sent_idx=0, text="one", text_with_ws="one "),
+                Word(lang="es_ES", idx=1, sent_idx=0, text="dos", text_with_ws="dos "),
+                Word(lang="de_DE", idx=2, sent_idx=0, text="drei", text_with_ws="drei"),
             ],
         )
 
@@ -284,8 +295,14 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
+                Word(lang="en_US", idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(
+                    lang="en_US",
+                    idx=1,
+                    sent_idx=0,
+                    text="dollars",
+                    text_with_ws="dollars",
+                ),
             ],
         )
 
@@ -300,12 +317,18 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="euro", text_with_ws="euro "),
-                Word(idx=2, sent_idx=0, text="dix", text_with_ws="dix "),
-                Word(idx=3, sent_idx=0, text="euros", text_with_ws="euros "),
-                Word(idx=4, sent_idx=0, text="tien", text_with_ws="tien "),
-                Word(idx=5, sent_idx=0, text="euro", text_with_ws="euro "),
+                Word(lang="en_US", idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(
+                    lang="en_US", idx=1, sent_idx=0, text="euro", text_with_ws="euro "
+                ),
+                Word(lang="fr_FR", idx=2, sent_idx=0, text="dix", text_with_ws="dix "),
+                Word(
+                    lang="fr_FR", idx=3, sent_idx=0, text="euros", text_with_ws="euros "
+                ),
+                Word(
+                    lang="nl_NL", idx=4, sent_idx=0, text="tien", text_with_ws="tien "
+                ),
+                Word(lang="nl_NL", idx=5, sent_idx=0, text="euro", text_with_ws="euro"),
             ],
         )
 
@@ -320,8 +343,14 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
-                Word(idx=1, sent_idx=0, text="dollars", text_with_ws="dollars "),
+                Word(lang="en_US", idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(
+                    lang="en_US",
+                    idx=1,
+                    sent_idx=0,
+                    text="dollars",
+                    text_with_ws="dollars",
+                ),
             ],
         )
 
@@ -334,11 +363,27 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
-                Word(idx=2, sent_idx=0, text="nineteen", text_with_ws="nineteen "),
-                Word(idx=3, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=4, sent_idx=0, text="nine", text_with_ws="nine "),
+                Word(
+                    lang="en_US", idx=0, sent_idx=0, text="April", text_with_ws="April "
+                ),
+                Word(
+                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first "
+                ),
+                Word(
+                    lang="en_US",
+                    idx=2,
+                    sent_idx=0,
+                    text="nineteen",
+                    text_with_ws="nineteen ",
+                ),
+                Word(
+                    lang="en_US",
+                    idx=3,
+                    sent_idx=0,
+                    text="ninety",
+                    text_with_ws="ninety ",
+                ),
+                Word(lang="en_US", idx=4, sent_idx=0, text="nine", text_with_ws="nine"),
             ],
         )
 
@@ -354,21 +399,63 @@ class TextProcessorTestCase(unittest.TestCase):
             words,
             [
                 # English
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="first", text_with_ws="first "),
-                Word(idx=2, sent_idx=0, text="nineteen", text_with_ws="nineteen "),
-                Word(idx=3, sent_idx=0, text="ninety", text_with_ws="ninety "),
-                Word(idx=4, sent_idx=0, text="nine", text_with_ws="nine "),
+                Word(
+                    lang="en_US", idx=0, sent_idx=0, text="April", text_with_ws="April "
+                ),
+                Word(
+                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first "
+                ),
+                Word(
+                    lang="en_US",
+                    idx=2,
+                    sent_idx=0,
+                    text="nineteen",
+                    text_with_ws="nineteen ",
+                ),
+                Word(
+                    lang="en_US",
+                    idx=3,
+                    sent_idx=0,
+                    text="ninety",
+                    text_with_ws="ninety ",
+                ),
+                Word(lang="en_US", idx=4, sent_idx=0, text="nine", text_with_ws="nine"),
                 # French
-                Word(idx=0, sent_idx=1, text="janvier", text_with_ws="janvier "),
-                Word(idx=1, sent_idx=1, text="quatrième", text_with_ws="quatrième "),
-                Word(idx=2, sent_idx=1, text="mille", text_with_ws="mille "),
-                Word(idx=3, sent_idx=1, text="neuf", text_with_ws="neuf "),
-                Word(idx=4, sent_idx=1, text="cent", text_with_ws="cent "),
-                Word(idx=5, sent_idx=1, text="quatre", text_with_ws="quatre "),
-                Word(idx=6, sent_idx=1, text="vingt", text_with_ws="vingt "),
-                Word(idx=7, sent_idx=1, text="dix", text_with_ws="dix "),
-                Word(idx=8, sent_idx=1, text="neuf", text_with_ws="neuf "),
+                Word(
+                    lang="fr_FR",
+                    idx=0,
+                    sent_idx=1,
+                    text="janvier",
+                    text_with_ws="janvier ",
+                ),
+                Word(
+                    lang="fr_FR",
+                    idx=1,
+                    sent_idx=1,
+                    text="quatrième",
+                    text_with_ws="quatrième ",
+                ),
+                Word(
+                    lang="fr_FR", idx=2, sent_idx=1, text="mille", text_with_ws="mille "
+                ),
+                Word(
+                    lang="fr_FR", idx=3, sent_idx=1, text="neuf", text_with_ws="neuf "
+                ),
+                Word(
+                    lang="fr_FR", idx=4, sent_idx=1, text="cent", text_with_ws="cent "
+                ),
+                Word(
+                    lang="fr_FR",
+                    idx=5,
+                    sent_idx=1,
+                    text="quatre",
+                    text_with_ws="quatre ",
+                ),
+                Word(
+                    lang="fr_FR", idx=6, sent_idx=1, text="vingt", text_with_ws="vingt "
+                ),
+                Word(lang="fr_FR", idx=7, sent_idx=1, text="dix", text_with_ws="dix "),
+                Word(lang="fr_FR", idx=8, sent_idx=1, text="neuf", text_with_ws="neuf"),
             ],
         )
 
@@ -383,8 +470,10 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=1, sent_idx=0, text="one", text_with_ws="one "),
+                Word(
+                    lang="en_US", idx=0, sent_idx=0, text="April", text_with_ws="April "
+                ),
+                Word(lang="en_US", idx=1, sent_idx=0, text="one", text_with_ws="one"),
             ],
         )
 
@@ -399,21 +488,28 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="one", text_with_ws="one "),
-                Word(idx=1, sent_idx=0, text="April", text_with_ws="April "),
-                Word(idx=2, sent_idx=0, text="two", text_with_ws="two "),
-                Word(idx=3, sent_idx=0, text="thousand", text_with_ws="thousand "),
+                Word(lang="en_US", idx=0, sent_idx=0, text="one", text_with_ws="one "),
+                Word(
+                    lang="en_US", idx=1, sent_idx=0, text="April", text_with_ws="April "
+                ),
+                Word(lang="en_US", idx=2, sent_idx=0, text="two", text_with_ws="two "),
+                Word(
+                    lang="en_US",
+                    idx=3,
+                    sent_idx=0,
+                    text="thousand",
+                    text_with_ws="thousand",
+                ),
             ],
         )
 
     def test_part_of_speech_tagging(self):
         processor = TextProcessor(
-            default_lang="en_US",
             # Made-up tagger that just gives the UPPER of the word back
             get_parts_of_speech=lambda words: [w.upper() for w in words],
         )
         graph, root = processor("a test")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Fake POS tags are added
         self.assertEqual(
@@ -426,12 +522,11 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_phonemize_one_language(self):
         processor = TextProcessor(
-            default_lang="en_US",
             # Made-up phonemizer that just gives back the letters
             lookup_phonemes=lambda word, role: list(word),
         )
         graph, root = processor("test")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Single word is "phonemized"
         self.assertEqual(
@@ -449,7 +544,6 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_phonemize_one_language_multiple_roles(self):
         processor = TextProcessor(
-            default_lang="en_US",
             # Made-up phonemizer that gives back upper-case letters if a role is provided
             lookup_phonemes=lambda word, role: list(word)
             if not role
@@ -460,7 +554,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<speak>test <w role="some_role">test</w></speak>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, explicit_lang=False))
 
         # Single word is phonemized two different manners depending on role
         self.assertEqual(
@@ -503,6 +597,7 @@ class TextProcessorTestCase(unittest.TestCase):
             words,
             [
                 Word(
+                    lang="en_US",
                     idx=0,
                     sent_idx=0,
                     text="test",
@@ -510,6 +605,7 @@ class TextProcessorTestCase(unittest.TestCase):
                     phonemes=["t", "e", "s", "t"],
                 ),
                 Word(
+                    lang="de_DE",
                     idx=1,
                     sent_idx=0,
                     text="test",

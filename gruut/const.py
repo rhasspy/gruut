@@ -17,6 +17,7 @@ except AttributeError:
 
 WORD_PHONEMES = typing.Sequence[str]
 
+PHONEMES_TYPE = typing.Sequence[str]
 
 class TokenFeatures(str, Enum):
     """Commonly used token features"""

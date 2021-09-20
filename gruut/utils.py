@@ -33,8 +33,8 @@ def find_lang_dir(
 
        * ``search_dirs``
        * ``$XDG_CONFIG_HOME/gruut``
-       * A "data" directory next to the gruut module
        * A "data" directory inside gruut module
+       * A "data" directory next to the gruut module
 
     Args:
         lang: Full language name (e.g., en-us)
@@ -48,11 +48,11 @@ def find_lang_dir(
         lang_module_name = f"gruut_lang_{base_lang}"
         lang_module = __import__(lang_module_name)
 
-        _LOGGER.debug("Successfully imported %s", lang_module_name)
+        _LOGGER.debug("(%s) successfully imported %s", lang, lang_module_name)
 
         return lang_module.get_lang_dir()
     except ImportError:
-        _LOGGER.debug("Tried to import module for %s", lang)
+        _LOGGER.debug("(%s) unable to import module", lang)
         pass
 
     search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
@@ -64,19 +64,19 @@ def find_lang_dir(
     else:
         search_dirs.append(Path.home() / ".config" / "gruut")
 
-    # Data directory *next to* gruut
-    search_dirs.append(_DIR.parent / "data")
-
     # Data directory *inside* gruut
     search_dirs.append(_DIR / "data")
 
-    _LOGGER.debug("Searching %s for language file(s)", search_dirs)
+    # Data directory *next to* gruut
+    search_dirs.append(_DIR.parent / "data")
+
+    _LOGGER.debug("(%s) searching %s for language file(s)", lang, search_dirs)
 
     for check_dir in search_dirs:
         lang_dir = check_dir / lang
         lexicon_path = lang_dir / "lexicon.db"
         if lexicon_path.is_file():
-            _LOGGER.debug("Found language file(s) in %s", lang_dir)
+            _LOGGER.debug("(%s) found language file(s) in %s", lang, lang_dir)
             return lang_dir
 
     return None
