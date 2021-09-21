@@ -1,9 +1,11 @@
-from gruut import text_to_phonemes
+from gruut import sentences
 
-text = 'He wound it around the wound, saying "I read it was $10 to read."'
+text = 'He wound it around the wound, saying "I read it was $10 to read".'
 
-for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
-    print(word, *word_phonemes)
+for sent in sentences(text, lang="en-us"):
+    for word in sent:
+        if word.phonemes:
+            print(word.text, *word.phonemes)
 
 # he h ˈi
 # wound w ˈaʊ n d
@@ -27,10 +29,10 @@ for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
 
 print("\neSpeak:")
 
-for sent_idx, word, word_phonemes in text_to_phonemes(
-    text, lang="en-us", phonemizer_args={"model_prefix": "espeak"}
-):
-    print(word, *word_phonemes)
+for sent in sentences(text, lang="en-us", espeak=True):
+    for word in sent:
+        if word.phonemes:
+            print(word.text, *word.phonemes)
 
 # eSpeak:
 # he h ˈiː

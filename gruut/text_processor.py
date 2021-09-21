@@ -11,6 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
+from gruut_ipa import IPA
 import babel
 import babel.numbers
 import dateparser
@@ -150,6 +151,12 @@ class TextProcessorSettings:
     join_str: str = " "
     keep_whitespace: bool = True
 
+    # Punctuations
+    begin_punctuations: typing.Optional[typing.Set[str]] = None
+    begin_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+    end_punctuations: typing.Optional[typing.Set[str]] = None
+    end_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+
     # Replacements/abbreviations
     replacements: typing.Sequence[typing.Tuple[REGEX_TYPE, str]] = field(
         default_factory=list
@@ -197,6 +204,7 @@ class TextProcessorSettings:
     guess_phonemes: typing.Optional[GuessPhonemes] = None
 
     def __post_init__(self):
+        # Languages/locales
         if self.babel_locale is None:
             if "-" in self.lang:
                 # en-us -> en_US
@@ -239,7 +247,31 @@ class TextProcessorSettings:
 
         self.abbreviations = compiled_abbreviations
 
+        # Pattern to split text into initial words
         self.split_pattern = maybe_compile_regex(self.split_pattern)
+
+        # Strings that should be separated from words, but do not cause any breaks
+        if (self.begin_punctuations_pattern is None) and self.begin_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.begin_punctuations)
+
+            # Match begin_punctuations only at start a word
+            self.begin_punctuations_pattern = f"\\B({pattern_str})"
+
+        if self.begin_punctuations_pattern is not None:
+            self.begin_punctuations_pattern = maybe_compile_regex(
+                self.begin_punctuations_pattern
+            )
+
+        if (self.end_punctuations_pattern is None) and self.end_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.end_punctuations)
+
+            # Match end_punctuations only at end of a word
+            self.end_punctuations_pattern = f"({pattern_str})\\B"
+
+        if self.end_punctuations_pattern is not None:
+            self.end_punctuations_pattern = maybe_compile_regex(
+                self.end_punctuations_pattern
+            )
 
         # Major breaks (split sentences)
         if (self.major_breaks_pattern is None) and self.major_breaks:
@@ -350,6 +382,14 @@ class BreakWordNode(Node):
 
 
 @dataclass
+class PunctuationWordNode(Node):
+    """Represents a punctuation marker in the text"""
+
+    text: str = ""
+    text_with_ws: str = ""
+
+
+@dataclass
 class SentenceNode(Node):
     """Represents a sentence with WordNodes under it"""
 
@@ -383,6 +423,7 @@ class Word:
     pos: typing.Optional[str] = None
     phonemes: typing.Optional[typing.Sequence[str]] = None
     is_break: bool = False
+    is_punctuation: bool = False
 
 
 @dataclass
@@ -393,6 +434,15 @@ class Sentence:
     lang: str = ""
     voice: str = ""
     words: typing.Sequence[Word] = field(default_factory=list)
+
+    def __iter__(self):
+        return iter(self.words)
+
+    def __len__(self):
+        return len(self.words)
+
+    def __getitem__(self, key):
+        return self.words[key]
 
 
 # -----------------------------------------------------------------------------
@@ -725,7 +775,7 @@ class TextProcessor:
         # Do replacements before minor/major breaks
         self.pipeline_split(self.split_replacements, graph, root)
 
-        # Split on minor breaks
+        # Split on minor breaks (commas, etc.)
         self.pipeline_split(self.split_minor_breaks, graph, root)
 
         # Expand abbrevations before major breaks
@@ -734,7 +784,7 @@ class TextProcessor:
         # Break apart initialisms 1/2 (e.g., TTS or T.T.S.) before major breaks
         self.pipeline_split(self.transform_initialism, graph, root)
 
-        # Split on major breaks
+        # Split on major breaks (periods, etc.)
         self.pipeline_split(self.split_major_breaks, graph, root)
 
         # Break apart initialisms 2/2 (e.g., TTS. or T.T.S..) after major breaks
@@ -742,6 +792,9 @@ class TextProcessor:
 
         # Break apart sentences using BreakWordNodes
         self.break_sentences(graph, root)
+
+        # Split punctuations (quotes, etc.)
+        self.pipeline_split(self.split_punctuations, graph, root)
 
         # spell-out (e.g., abc -> a b c) before number expansion
         self.pipeline_split(self.split_spell_out, graph, root)
@@ -802,9 +855,10 @@ class TextProcessor:
                 if sentence_words:
                     process_sentence(sentence_words)
                     sentence_words = []
-            elif isinstance(node, WordNode) and (graph.out_degree(dfs_node) == 0):
-                word_node = typing.cast(WordNode, node)
-                sentence_words.append(word_node)
+            elif graph.out_degree(dfs_node) == 0:
+                if isinstance(node, WordNode):
+                    word_node = typing.cast(WordNode, node)
+                    sentence_words.append(word_node)
 
         if sentence_words:
             # Final sentence
@@ -902,6 +956,12 @@ class TextProcessor:
             # No pattern set for this language
             return
 
+        if (settings.lookup_phonemes is not None) and settings.lookup_phonemes(
+            word.text
+        ):
+            # Don't break apart words already in the lexicon
+            return
+
         parts = settings.word_breaks_pattern.split(word.text)
         if len(parts) < 2:
             # Didn't split
@@ -921,6 +981,107 @@ class TextProcessor:
             yield WordNode, {
                 "text": part_text.strip(),
                 "text_with_ws": part_text,
+                "implicit": True,
+                "lang": word.lang,
+            }
+
+    def split_punctuations(self, graph: GRAPH_TYPE, node: Node):
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if word.interpret_as:
+            # Don't interpret words that are spoken for
+            return
+
+        settings = self.get_settings(word.lang)
+        if (settings.begin_punctuations_pattern is None) and (
+            settings.end_punctuations_pattern is None
+        ):
+            # No punctuation patterns
+            return
+
+        word_text = word.text
+        has_punctuation = False
+
+        # Punctuations at the beginning of the word
+        if settings.begin_punctuations_pattern is not None:
+            # Split into begin punctuation and rest of word
+            parts = list(
+                filter(
+                    None,
+                    settings.begin_punctuations_pattern.split(word_text, maxsplit=1),
+                )
+            )
+
+            while word_text and (len(parts) == 2):
+                punct_text, word_text = parts
+
+                has_punctuation = True
+                yield PunctuationWordNode, {
+                    "text": punct_text.strip(),
+                    "text_with_ws": punct_text,
+                    "implicit": True,
+                    "lang": word.lang,
+                }
+
+                parts = list(
+                    filter(
+                        None,
+                        settings.begin_punctuations_pattern.split(
+                            word_text, maxsplit=1
+                        ),
+                    )
+                )
+
+        # Punctuations at the end of the word
+        end_punctuations: typing.List[str] = []
+        if settings.end_punctuations_pattern is not None:
+            # Split into rest of word and end punctuation
+            parts = list(
+                filter(
+                    None, settings.end_punctuations_pattern.split(word_text, maxsplit=1)
+                )
+            )
+
+            while word_text and (len(parts) == 2):
+                word_text, punct_text = parts
+                has_punctuation = True
+                end_punctuations.append(punct_text)
+                parts = list(
+                    filter(
+                        None,
+                        settings.end_punctuations_pattern.split(word_text, maxsplit=1),
+                    )
+                )
+
+        if not has_punctuation:
+            # Leave word as-is
+            return
+
+        last_ws = get_trailing_whitespace(word.text_with_ws)
+
+        if settings.keep_whitespace and (not end_punctuations):
+            # Preserve final whitespace
+            word_text += last_ws
+
+        if word_text:
+            yield WordNode, {
+                "text": word_text.strip(),
+                "text_with_ws": word_text,
+                "implicit": True,
+                "lang": word.lang,
+            }
+
+        last_punct_idx = len(end_punctuations) - 1
+        for punct_idx, punct_text in enumerate(reversed(end_punctuations)):
+            if settings.keep_whitespace and (punct_idx == last_punct_idx):
+                # Preserve whitespace at the end of the word
+                punct_text += last_ws
+
+            yield PunctuationWordNode, {
+                "text": punct_text.strip(),
+                "text_with_ws": punct_text,
                 "implicit": True,
                 "lang": word.lang,
             }
@@ -1011,59 +1172,23 @@ class TextProcessor:
 
         return None
 
-    def words(
+    def words(self, graph: GRAPH_TYPE, root: Node, **kwargs) -> typing.Iterable[Word]:
+        for sent in self.sentences(graph, root, **kwargs):
+            for word in sent:
+                yield word
+
+    def phonemes_for_break(
         self,
-        graph: GRAPH_TYPE,
-        root: Node,
-        major_breaks: bool = True,
-        minor_breaks: bool = True,
-        explicit_lang: bool = True,
-    ) -> typing.Iterable[Word]:
-        def get_lang(lang: str) -> str:
-            if explicit_lang or (lang != self.default_lang):
-                return lang
+        break_type: typing.Union[str, BreakType],
+        lang: typing.Optional[str] = None,
+    ) -> typing.Optional[PHONEMES_TYPE]:
+        if break_type == BreakType.MAJOR:
+            return IPA.BREAK_MAJOR.value
 
-            # Implicit default language
-            return ""
+        if break_type == BreakType.MINOR:
+            return IPA.BREAK_MINOR.value
 
-        sent_idx = -1
-        word_idx = 0
-
-        for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
-            node = graph.nodes[dfs_node][DATA_PROP]
-            if isinstance(node, SentenceNode):
-                sent_idx += 1
-                word_idx = 0
-            elif graph.out_degree(dfs_node) == 0:
-                if isinstance(node, WordNode):
-                    word = typing.cast(WordNode, node)
-
-                    yield Word(
-                        idx=word_idx,
-                        sent_idx=sent_idx,
-                        text=word.text,
-                        text_with_ws=word.text_with_ws,
-                        phonemes=word.phonemes,
-                        pos=word.pos,
-                        lang=get_lang(word.lang),
-                    )
-
-                    word_idx += 1
-                elif isinstance(node, BreakWordNode):
-                    break_word = typing.cast(BreakWordNode, node)
-                    if (
-                        minor_breaks and (break_word.break_type == BreakType.MINOR)
-                    ) or (major_breaks and (break_word.break_type == BreakType.MAJOR)):
-                        yield Word(
-                            idx=word_idx,
-                            sent_idx=sent_idx,
-                            text=break_word.text,
-                            text_with_ws=break_word.text_with_ws,
-                            is_break=True,
-                            lang=get_lang(word.lang),
-                        )
-
-                        word_idx += 1
+        return None
 
     def sentences(
         self,
@@ -1071,7 +1196,9 @@ class TextProcessor:
         root: Node,
         major_breaks: bool = True,
         minor_breaks: bool = True,
+        punctuations: bool = True,
         explicit_lang: bool = True,
+        break_phonemes: bool = True,
     ) -> typing.Iterable[Sentence]:
         def get_lang(lang: str) -> str:
             if explicit_lang or (lang != self.default_lang):
@@ -1081,7 +1208,7 @@ class TextProcessor:
             return ""
 
         def make_sentence(
-            node: Node, words: typing.Iterable[WordNode], sent_idx: int
+            node: Node, words: typing.Sequence[Word], sent_idx: int
         ) -> Sentence:
             settings = self.get_settings(node.lang)
             text_with_ws = "".join(w.text_with_ws for w in words)
@@ -1139,12 +1266,31 @@ class TextProcessor:
                                 sent_idx=sent_idx,
                                 text=break_word.text,
                                 text_with_ws=break_word.text_with_ws,
+                                phonemes=self.phonemes_for_break(
+                                    break_word.break_type, lang=break_word.lang
+                                )
+                                if break_phonemes
+                                else None,
                                 is_break=True,
                                 lang=get_lang(node.lang),
                             )
                         )
 
                         word_idx += 1
+                elif punctuations and isinstance(node, PunctuationWordNode):
+                    punct_word = typing.cast(PunctuationWordNode, node)
+                    words.append(
+                        Word(
+                            idx=word_idx,
+                            sent_idx=sent_idx,
+                            text=punct_word.text,
+                            text_with_ws=punct_word.text_with_ws,
+                            is_punctuation=True,
+                            lang=get_lang(word.lang),
+                        )
+                    )
+
+                    word_idx += 1
 
         if words and (last_sentence_node is not None):
             yield make_sentence(last_sentence_node, words, sent_idx)
@@ -1803,4 +1949,6 @@ class TextProcessor:
 
         print_func(indent, graph_node, n_data)
         for succ_node in graph.successors(graph_node):
-            TextProcessor.print_graph(graph, succ_node, indent + indent)
+            TextProcessor.print_graph(
+                graph, succ_node, indent + indent, print_func=print_func
+            )

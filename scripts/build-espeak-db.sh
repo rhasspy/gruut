@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Automatically creates eSpeak lexicon databases and g2p models from
+# data/<lang>/lexicon.txt files.
+#
+# If data/<lang>/espeak/lexicon.txt is missing, it is created automatically from
+# data/<lang>/espeak/words.txt
+# -----------------------------------------------------------------------------
+
 set -e
 
 if [[ -z "$1" ]]; then
@@ -26,16 +35,17 @@ espeak_dir="${src_dir}/data/${lang}/espeak"
 mkdir -p "${espeak_dir}"
 
 if [[ "${lang}" == 'en-us' ]]; then
+    role='1'
     pos='1'
 fi
 
 # Text lexicon
 lexicon_text="${espeak_dir}/lexicon.txt"
-lexicon_args=()
+espeak_word_args=()
 
 if [[ -n "${pos}" ]]; then
-    # Use part of speech with English
-    lexicon_args+=('--pos')
+    # Generate different pronunciations for part of speech (English only)
+    espeak_word_args+=('--pos')
 fi
 
 if [[ ! -s "${lexicon_text}" ]]; then
@@ -53,6 +63,13 @@ fi
 
 # Database lexicon
 lexicon_db="${espeak_dir}/lexicon.db"
+lexicon_args=()
+
+if [[ -n "${role}" ]]; then
+    # Lexicon is formatted as <word> <role> <phonemes>
+    lexicon_args+=('--role')
+fi
+
 echo "Adding lexicon to database (${lexicon_db})"
 python3 -m gruut.lexicon2db \
         --casing lower \
@@ -67,7 +84,7 @@ if [ ! -s "${g2p_corpus}" ] || [ ! -s "${g2p_fst}" ]; then
     echo "Creating Phonetisaurus g2p model (${g2p_fst})"
 
     lexicon_g2p="${lexicon_text}"
-    if [[ -n "${pos}" ]]; then
+    if [[ -n "${role}" ]]; then
         # Drop POS column from lexicon
         lexicon_g2p="$(basename "${lexicon_text}" .txt).nopos.txt"
         cut -d' ' -f1,3- < "${lexicon_text}" > "${lexicon_g2p}"

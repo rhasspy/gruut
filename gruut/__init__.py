@@ -11,7 +11,12 @@ from pathlib import Path
 import gruut_ipa
 
 from gruut.lang import KNOWN_LANGS, resolve_lang
-from gruut.text_processor import TextProcessor, TextProcessorSettings, GetPartsOfSpeech
+from gruut.text_processor import (
+    TextProcessor,
+    TextProcessorSettings,
+    GetPartsOfSpeech,
+    Sentence,
+)
 from gruut.pos import PartOfSpeechTagger
 from gruut.g2p import GraphemesToPhonemes
 from gruut.phonemize import SqlitePhonemizer
@@ -32,23 +37,138 @@ __author__ = "Michael Hansen (synesthesiam)"
 
 # -----------------------------------------------------------------------------
 
-# _CACHE_LOCK = threading.RLock()
+_SETTINGS: typing.Dict[str, TextProcessorSettings] = {}
+_SETTINGS_LOCK = threading.RLock()
 
-# _TOKENIZER_CACHE: typing.Dict[str, Tokenizer] = {}
-# _TOKENIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
 
-# _PHONEMIZER_CACHE: typing.Dict[str, Phonemizer] = {}
-# _PHONEMIZER_CACHE_ARGS: typing.Mapping[str, typing.Any] = {}
+def sentences(
+    text: str,
+    lang: str = "en_US",
+    ssml: bool = False,
+    espeak: bool = False,
+    major_breaks: bool = True,
+    minor_breaks: bool = True,
+    punctuations: bool = True,
+    **process_args,
+) -> typing.Iterable[Sentence]:
+    model_prefix = "" if (not espeak) else "espeak"
+    settings = {}
 
-# _PHONEMES_CACHE: typing.Dict[str, gruut_ipa.Phonemes] = {}
+    with _SETTINGS_LOCK:
+        langs_to_load = {lang}
 
-# _SETTINGS: typing.Dict[str, TextProcessorSettings] = {}
-# _SETTINGS_LOCK = threading.RLock()
+        if ssml:
+            # Need to load all languages for SSML since the 'lang' attribute can
+            # be used almost anywhere.
+            langs_to_load.update(KNOWN_LANGS)
+
+        for load_lang in langs_to_load:
+            load_lang = resolve_lang(load_lang)
+
+            if model_prefix:
+                lang_with_prefix = f"{load_lang}/{model_prefix}"
+            else:
+                lang_with_prefix = load_lang
+
+            if lang_with_prefix not in _SETTINGS:
+                _SETTINGS[lang_with_prefix] = get_settings(
+                    load_lang, model_prefix=model_prefix
+                )
+
+            settings[lang] = _SETTINGS[lang_with_prefix]
+
+    text_processor = TextProcessor(default_lang=lang, settings=settings)
+    graph, root = text_processor(text, ssml=ssml, **process_args)
+
+    yield from text_processor.sentences(
+        graph,
+        root,
+        major_breaks=major_breaks,
+        minor_breaks=minor_breaks,
+        punctuations=punctuations,
+    )
+
+
+# -----------------------------------------------------------------------------
+
+
+def get_settings(
+    lang: str,
+    search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
+    lang_dir: typing.Optional[typing.Union[str, Path]] = None,
+    model_prefix: str = "",
+    load_pos_tagger: bool = True,
+    load_phoneme_lexicon: bool = True,
+    load_g2p_guesser: bool = True,
+    **settings_args,
+) -> TextProcessorSettings:
+    if lang_dir is None:
+        # Search for language data files
+        lang_dir = find_lang_dir(lang, search_dirs=search_dirs)
+
+    if lang_dir is not None:
+        lang_dir = Path(lang_dir)
+
+        # Part of speech tagger
+        if load_pos_tagger:
+            pos_model_path = lang_dir / "pos" / "model.crf"
+            if pos_model_path.is_file():
+                # POS tagger model will load on first use
+                settings_args["get_parts_of_speech"] = DelayedPartOfSpeechTagger(
+                    pos_model_path
+                )
+            else:
+                _LOGGER.debug(
+                    "(%s) no part of speech tagger found at %s", lang, pos_model_path,
+                )
+
+        # Phonemizer
+        if load_phoneme_lexicon:
+            lexicon_db_path = lang_dir / model_prefix / "lexicon.db"
+            if lexicon_db_path.is_file():
+                # TODO: Remove non-word chars in locale
+                phonemizer_args = {"word_transform_funcs": [str.lower]}
+
+                settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
+                    lexicon_db_path, **phonemizer_args
+                )
+            else:
+                _LOGGER.debug(
+                    "(%s) no phoneme lexicon database found at %s",
+                    lang,
+                    lexicon_db_path,
+                )
+
+        # Grapheme to phoneme model
+        if load_g2p_guesser:
+            g2p_model_path = lang_dir / model_prefix / "g2p" / "model.crf"
+            if g2p_model_path.is_file():
+                settings_args["guess_phonemes"] = DelayedGraphemesToPhonemes(
+                    g2p_model_path, transform_func=str.lower
+                )
+
+            else:
+                _LOGGER.debug(
+                    "(%s) no grapheme to phoneme CRF model found at %s",
+                    lang,
+                    g2p_model_path,
+                )
+
+    if lang in {"en-us", "en-gb"}:
+        # English
+        return make_en_US_settings(lang_dir, **settings_args)
+
+    # Default settings only
+    return TextProcessorSettings(lang=lang)
+
+
+# -----------------------------------------------------------------------------
 
 
 def get_text_processor(
     default_lang: str = "en_US",
     languages: typing.Optional[typing.Iterable[str]] = None,
+    lang_dir: typing.Optional[typing.Union[str, Path]] = None,
     search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
     model_prefix: str = "",
     load_pos_tagger: bool = True,
@@ -90,64 +210,15 @@ def get_text_processor(
             language = language_only
 
         if language not in settings:
-            lang_dir = find_lang_dir(language_only, search_dirs=search_dirs)
-
-            if lang_dir is not None:
-                # Part of speech tagger
-                if load_pos_tagger:
-                    pos_model_path = lang_dir / "pos" / "model.crf"
-                    if pos_model_path.is_file():
-                        # POS tagger model will load on first use
-                        settings_args[
-                            "get_parts_of_speech"
-                        ] = DelayedPartOfSpeechTagger(pos_model_path)
-                    else:
-                        _LOGGER.debug(
-                            "(%s) no part of speech tagger found at %s",
-                            language_only,
-                            pos_model_path,
-                        )
-
-                # Phonemizer
-                if load_phoneme_lexicon:
-                    lexicon_db_path = lang_dir / "lexicon.db"
-                    if lexicon_db_path.is_file():
-                        # TODO: Remove non-word chars in locale
-                        phonemizer_args = {"word_transform_funcs": [str.lower]}
-
-                        settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
-                            lexicon_db_path, **phonemizer_args
-                        )
-                    else:
-                        _LOGGER.debug(
-                            "(%s) no phoneme lexicon database found at %s",
-                            language_only,
-                            lexicon_db_path,
-                        )
-
-                # Grapheme to phoneme model
-                if load_g2p_guesser:
-                    g2p_model_path = lang_dir / lang_model_prefix / "g2p" / "model.crf"
-                    if g2p_model_path.is_file():
-                        settings_args["guess_phonemes"] = DelayedGraphemesToPhonemes(
-                            g2p_model_path, transform_func=str.lower
-                        )
-
-                    else:
-                        _LOGGER.debug(
-                            "(%s) no grapheme to phoneme CRF model found at %s",
-                            language_only,
-                            g2p_model_path,
-                        )
-
-            if language_only in {"en-us", "en-gb"}:
-                # English
-                new_settings = make_en_US_settings(lang_dir, **settings_args)
-            else:
-                # Default settings only
-                new_settings = TextProcessorSettings(lang=language_only)
-
-            settings[language] = new_settings
+            settings[language] = get_settings(
+                lang=language_only,
+                model_prefix=lang_model_prefix,
+                search_dirs=search_dirs,
+                lang_dir=lang_dir,
+                load_pos_tagger=load_pos_tagger,
+                load_phoneme_lexicon=load_phoneme_lexicon,
+                load_g2p_guesser=load_g2p_guesser,
+            )
 
     return TextProcessor(default_lang=default_lang, settings=settings,)
 
@@ -163,15 +234,16 @@ DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
     "minor_breaks": {",", ";", ":"},
     "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "USD",
-    "default_date_format": "moy",  # 4/1/2021 -> April first, twenty twenty-one
+    "default_date_format": "moy",  # 4/1/2021 -> April first twenty twenty-one
     "is_initialism": lambda text: (EN_INITIALISM_PATTERN.match(text) is not None)
     or (EN_INITIALISM_DOTS_PATTERN.match(text) is not None),
     "split_initialism": lambda text: list(text.replace(".", "")),
     "replacements": [
         ("\\B'", '"'),  # replace single quotes (left)
         ("'\\B", '"'),  # replace signed quotes (right)
-        ('[\\<\\>\\(\\)\\[\\]"]+', ""),  # drop brackets/quotes
     ],
     "abbreviations": {
         r"^([cC])o\.": "\1ompany",  # co. -> company

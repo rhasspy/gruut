@@ -3,18 +3,19 @@
 A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages.
 
 ```python
-from gruut import text_to_phonemes
+from gruut import sentences
 
-text = 'He wound it around the wound, saying "I read it was $10 to read."'
+text = 'He wound it around the wound, saying "I read it was $10 to read".'
 
-for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
-    print(word, *word_phonemes)
+for sent in sentences(text, lang="en-us"):
+    if word.phonemes:
+        print(word.text, *word.phonemes)
 ```
 
 which outputs:
 
 ```
-he h ˈi
+He h ˈi
 wound w ˈaʊ n d
 it ˈɪ t
 around ɚ ˈaʊ n d
@@ -22,7 +23,7 @@ the ð ə
 wound w ˈu n d
 , |
 saying s ˈeɪ ɪ ŋ
-i ˈaɪ
+I ˈaɪ
 read ɹ ˈɛ d
 it ˈɪ t
 was w ə z
@@ -49,10 +50,10 @@ Additional languages can be added during installation. For example, with French 
 $ pip install gruut[fr,it]
 ```
 
-You may also [manually download language files](https://github.com/rhasspy/gruut/releases/tag/v1.0.0) and use the `--lang-dir` option:
+You may also [manually download language files](https://github.com/rhasspy/gruut/releases/latest) and use the `--lang-dir` option:
 
 ```sh
-$ gruut <lang> <command> --lang-dir /path/to/language-files/
+$ gruut --language <lang> <text> --lang-dir /path/to/language-files/
 ```
 
 Extracting the files to `$HOME/.config/gruut/` will allow gruut to automatically make use of them. gruut will look for language files in the directory `$HOME/.config/gruut/<lang>/` if the corresponding Python package is not installed. Note that `<lang>` here is the **full** language name, e.g. `de-de` instead of just `de`. 
@@ -70,6 +71,7 @@ gruut currently supports:
 * Italian (`it` or `it-it`)
 * Dutch (`nl`)
 * Russian (`ru` or `ru-ru`)
+* Swahili (`sw`)
 * Swedish (`sv` or `sv-se`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
@@ -78,7 +80,7 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 
 * Python 3.6 or higher
 * Linux
-    * Tested on Debian Buster
+    * Tested on Debian Bullseye
 * [num2words fork](https://github.com/rhasspy/num2words) and [Babel](https://pypi.org/project/Babel/)
     * Currency/number handling
     * num2words fork includes additional language support (Arabic, Farsi, Swedish, Swahili)
@@ -90,7 +92,7 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
 
 ## Command-Line Usage
 
-The `gruut` module can be executed with `python3 -m gruut <LANGUAGE> <COMMAND> <ARGS>`
+The `gruut` module can be executed with `python3 -m gruut --language <LANGUAGE> <TEXT>`
 
 The commands are line-oriented, consuming/producing either text or [JSONL](https://jsonlines.org/).
 They can be composed to produce a pipeline for cleaning text.

@@ -49,6 +49,9 @@ def main():
 
     _LOGGER.debug(args)
 
+    if args.lang_dir:
+        args.lang_dir = Path(args.lang_dir)
+
     # -------------------------------------------------------------------------
 
     text_processor = get_text_processor(
@@ -58,6 +61,7 @@ def main():
         load_phoneme_lexicon=(not args.no_lexicon),
         load_g2p_guesser=(not args.no_g2p),
         model_prefix=args.model_prefix,
+        lang_dir=args.lang_dir,
     )
 
     if args.debug:
@@ -96,7 +100,13 @@ def main():
                 ),
             )
 
-        for sentence in text_processor.sentences(graph, root):
+        for sentence in text_processor.sentences(
+            graph,
+            root,
+            major_breaks=(not args.no_major_breaks),
+            minor_breaks=(not args.no_minor_breaks),
+            punctuations=(not args.no_punctuation),
+        ):
             sentence_dict = dataclasses.asdict(sentence)
             writer.write(sentence_dict)
 
@@ -350,9 +360,28 @@ def get_args() -> argparse.Namespace:
         "--no-g2p", action="store_true", help="Disable grapheme to phoneme guesser",
     )
     parser.add_argument(
+        "--no-punctuation",
+        action="store_true",
+        help="Don't output punctuations (quotes, brackets, etc.)",
+    )
+    parser.add_argument(
+        "--no-major-breaks",
+        action="store_true",
+        help="Don't output major breaks (periods, question marks, etc.)",
+    )
+    parser.add_argument(
+        "--no-minor-breaks",
+        action="store_true",
+        help="Don't output minor breaks (commas, semicolons, etc.)",
+    )
+    parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",
     )
+    parser.add_argument(
+        "--lang-dir", help="Directory with language-specific data files"
+    )
+
     # tokenize_parser.add_argument(
     #     "--no-exclude-non-words",
     #     action="store_true",

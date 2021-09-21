@@ -4,6 +4,8 @@ import unittest
 
 from gruut.text_processor import TextProcessor, Word, TextProcessorSettings, Sentence
 
+WORDS_KWARGS = {"explicit_lang": False, "break_phonemes": False}
+
 
 class TextProcessorTestCase(unittest.TestCase):
     """Tests for TextProcessor"""
@@ -11,7 +13,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_whitespace(self):
         processor = TextProcessor()
         graph, root = processor("This is  a   test    ")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Whitespace is retained by default
         self.assertEqual(
@@ -27,7 +29,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_no_whitespace(self):
         processor = TextProcessor(keep_whitespace=False)
         graph, root = processor("This is  a   test    ")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Whitespace is discarded
         self.assertEqual(
@@ -37,6 +39,41 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(idx=1, sent_idx=0, text="is", text_with_ws="is"),
                 Word(idx=2, sent_idx=0, text="a", text_with_ws="a"),
                 Word(idx=3, sent_idx=0, text="test", text_with_ws="test"),
+            ],
+        )
+
+    def test_punctuation(self):
+        processor = TextProcessor(
+            begin_punctuations={'"', "«"},
+            end_punctuations={'"', "»"},
+            minor_breaks={","},
+            major_breaks={"."},
+        )
+        graph, root = processor('This «is»,  a "test".')
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # Punctuations are separated
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="This", text_with_ws="This "),
+                Word(
+                    idx=1, sent_idx=0, text="«", text_with_ws="«", is_punctuation=True
+                ),
+                Word(idx=2, sent_idx=0, text="is", text_with_ws="is"),
+                Word(
+                    idx=3, sent_idx=0, text="»", text_with_ws="»", is_punctuation=True
+                ),
+                Word(idx=4, sent_idx=0, text=",", text_with_ws=",  ", is_break=True),
+                Word(idx=5, sent_idx=0, text="a", text_with_ws="a "),
+                Word(
+                    idx=6, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
+                ),
+                Word(idx=7, sent_idx=0, text="test", text_with_ws="test"),
+                Word(
+                    idx=8, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
+                ),
+                Word(idx=9, sent_idx=0, text=".", text_with_ws=".", is_break=True),
             ],
         )
 
@@ -51,7 +88,7 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
         graph, root = processor("\"This,\" [is] <a> (test) 'sentence.'")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Quotes and brackets are discarded
         self.assertEqual(
@@ -78,7 +115,7 @@ class TextProcessorTestCase(unittest.TestCase):
             },
         )
         graph, root = processor("Mr.? I'm just a dr., on this St. at least.")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Abbreviations are expanded, maintaining capitalization
         self.assertEqual(
@@ -103,7 +140,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_multiple_sentences(self):
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("First  sentence. Second sentence! ")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Separated by a major break
         self.assertEqual(
@@ -119,7 +156,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
         # Check sentences too
-        sentences = list(processor.sentences(graph, root, explicit_lang=False))
+        sentences = list(processor.sentences(graph, root, **WORDS_KWARGS))
         self.assertEqual(
             sentences,
             [
@@ -165,7 +202,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_explicit_sentence(self):
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("<s>First sentence. Second sentence!</s>", ssml=True)
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Sentences should not be split apart
         self.assertEqual(
@@ -183,7 +220,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_minor_breaks(self):
         processor = TextProcessor(minor_breaks={","})
         graph, root = processor("this, is a test")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Comma should be split from word
         self.assertEqual(
@@ -200,7 +237,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_word_breaks(self):
         processor = TextProcessor(word_breaks={"-"})
         graph, root = processor("ninety-nine")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Word should be split
         self.assertEqual(
@@ -216,7 +253,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<say-as interpret-as="spell-out">test123</say-as>', ssml=True
         )
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Word should be split into letters
         self.assertEqual(
@@ -239,9 +276,7 @@ class TextProcessorTestCase(unittest.TestCase):
             split_initialism=list,
         )
         graph, root = processor("TTS.")
-        words = list(processor.words(graph, root, explicit_lang=False))
-
-        processor.print_graph(graph, root, file=sys.stderr)
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Letters should be split
         self.assertEqual(
@@ -257,7 +292,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_numbers_one_language(self):
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor("1 2 3")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Numbers should be verbalized
         self.assertEqual(
@@ -509,7 +544,7 @@ class TextProcessorTestCase(unittest.TestCase):
             get_parts_of_speech=lambda words: [w.upper() for w in words],
         )
         graph, root = processor("a test")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Fake POS tags are added
         self.assertEqual(
@@ -526,7 +561,7 @@ class TextProcessorTestCase(unittest.TestCase):
             lookup_phonemes=lambda word, role: list(word),
         )
         graph, root = processor("test")
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Single word is "phonemized"
         self.assertEqual(
@@ -554,7 +589,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<speak>test <w role="some_role">test</w></speak>', ssml=True
         )
-        words = list(processor.words(graph, root, explicit_lang=False))
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Single word is phonemized two different manners depending on role
         self.assertEqual(
