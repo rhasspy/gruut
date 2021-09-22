@@ -77,6 +77,34 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_punctuation_with_inner_break(self):
+        processor = TextProcessor(
+            begin_punctuations={'"'}, end_punctuations={'"'}, major_breaks={"."},
+        )
+        graph, root = processor('Test "one." Test two.')
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # First sentence includes final quote
+        self.assertEqual(
+            words,
+            [
+                # First sentence
+                Word(idx=0, sent_idx=0, text="Test", text_with_ws="Test "),
+                Word(
+                    idx=1, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
+                ),
+                Word(idx=2, sent_idx=0, text="one", text_with_ws="one"),
+                Word(idx=3, sent_idx=0, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=4, sent_idx=0, text='"', text_with_ws='" ', is_punctuation=True
+                ),
+                # Second sentence
+                Word(idx=0, sent_idx=1, text="Test", text_with_ws="Test "),
+                Word(idx=1, sent_idx=1, text="two", text_with_ws="two"),
+                Word(idx=2, sent_idx=1, text=".", text_with_ws=".", is_break=True),
+            ],
+        )
+
     def test_replacements(self):
         processor = TextProcessor(
             minor_breaks={","},
@@ -648,6 +676,11 @@ class TextProcessorTestCase(unittest.TestCase):
                     phonemes=["T", "E", "S", "T"],
                 ),
             ],
+        )
+
+    def print_graph(self, graph, root):
+        TextProcessor.print_graph(
+            graph, root, print_func=lambda *p: print(*p, file=sys.stderr)
         )
 
 

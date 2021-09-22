@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Tests for FrenchPhonemizer class"""
+"""Tests for French phonemization"""
 import typing
 import unittest
 
-from gruut import text_to_phonemes, Token
-from gruut.lang import get_phonemizer, get_tokenizer
+from gruut import sentences
 
 # # https://www.commeunefrancaise.com/blog/la-liaison
 
@@ -40,40 +39,28 @@ from gruut.lang import get_phonemizer, get_tokenizer
 # Amalia est en danger.
 # C`est incroyable!
 
+
 class FrenchPhonemizerTestCase(unittest.TestCase):
     """Test cases for FrenchPhonemizer class"""
 
-    def test_liason(self):
-        """Test addition of liason"""
-        tokenizer = get_tokenizer("fr-fr")
+    def test_liason_after_determiner(self):
+        self._without_and_with_liason("Les arbres", "Les", ["l", "e"], ["l", "e", "z"])
 
-        # After a determiner
-        sentence = self._without_and_with_liason(
-            "Les arbres", "les", ["l", "e"], ["l", "e", "z"]
-        )
-
-        # Pronoun + verb
-        sentence = self._without_and_with_liason(
-            "On est là!", "on", ["ɔ̃"], ["ɔ̃", "n"]
-        )
-
-        # Adjective + noun
-        sentence = self._without_and_with_liason(
+    def test_liason_adjective_nount(self):
+        self._without_and_with_liason(
             "J’ai des petites oreilles.",
             "petites",
             ["p", "ə", "t", "i", "t"],
             ["p", "ə", "t", "i", "t", "z"],
         )
 
-        # After short prepositions, and “très”
-        sentence = self._without_and_with_liason(
+    def test_liason_pronoun_verb(self):
+        self._without_and_with_liason("On est là!", "On", ["ɔ̃"], ["ɔ̃", "n"])
+
+    def test_liason_tres(self):
+        self._without_and_with_liason(
             "C’est très amusant!", "très", ["t", "ʁ", "ɛ"], ["t", "ʁ", "ɛ", "z"]
         )
-
-    def test_last_token(self):
-        """Ensure liason does not leave last token"""
-        phonemes = text_to_phonemes("Est-ce-que", lang="fr")
-        self.assertGreater(len(phonemes), 0)
 
     def _without_and_with_liason(
         self,
@@ -83,25 +70,16 @@ class FrenchPhonemizerTestCase(unittest.TestCase):
         with_phonemes: typing.List[str],
     ):
         """Get pronunciation of a sentence with and without liason enabled"""
-        tokenizer = get_tokenizer("fr-fr")
-        sentence = next(tokenizer.tokenize(text))
-
-        self.assertIn(liason_word, sentence.clean_words)
 
         # Verify no liason
-        phonemizer_no_liason = get_phonemizer("fr-fr", fr_no_liason=True)
-        phonemes_no_liason = list(phonemizer_no_liason.phonemize(sentence.tokens))
-        for word, word_phonemes in zip(sentence.clean_words, phonemes_no_liason):
-            if word == liason_word:
-                self.assertEqual(word_phonemes, without_phonemes)
+        sentence = next(sentences(text, lang="fr_FR", post_process=False))
+        word = next(w for w in sentence if w.text == liason_word)
+        self.assertEqual(word.phonemes, without_phonemes)
 
         # Verify liason
-        phonemizer_liason = get_phonemizer("fr-fr")
-        phonemes_liason = list(phonemizer_liason.phonemize(sentence.tokens))
-
-        for word, word_phonemes in zip(sentence.clean_words, phonemes_liason):
-            if word == liason_word:
-                self.assertEqual(word_phonemes, with_phonemes)
+        sentence = next(sentences(text, lang="fr_FR", post_process=True))
+        word = next(w for w in sentence if w.text == liason_word)
+        self.assertEqual(word.phonemes, with_phonemes)
 
 
 # -----------------------------------------------------------------------------

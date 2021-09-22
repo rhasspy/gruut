@@ -10,6 +10,7 @@ from pathlib import Path
 
 import gruut_ipa
 
+import networkx as nx
 from gruut.lang import KNOWN_LANGS, resolve_lang
 from gruut.text_processor import (
     TextProcessor,
@@ -34,11 +35,17 @@ _LOGGER = logging.getLogger("gruut")
 
 __version__ = (_DIR / "VERSION").read_text().strip()
 __author__ = "Michael Hansen (synesthesiam)"
+__all__ = [
+    "sentences",
+    "get_text_processor",
+    "is_language_supported",
+    "get_supported_languages",
+]
 
 # -----------------------------------------------------------------------------
 
-_SETTINGS: typing.Dict[str, TextProcessorSettings] = {}
-_SETTINGS_LOCK = threading.RLock()
+SETTINGS: typing.Dict[str, TextProcessorSettings] = {}
+SETTINGS_LOCK = threading.RLock()
 
 
 def sentences(
@@ -54,7 +61,7 @@ def sentences(
     model_prefix = "" if (not espeak) else "espeak"
     settings = {}
 
-    with _SETTINGS_LOCK:
+    with SETTINGS_LOCK:
         langs_to_load = {lang}
 
         if ssml:
@@ -70,12 +77,18 @@ def sentences(
             else:
                 lang_with_prefix = load_lang
 
-            if lang_with_prefix not in _SETTINGS:
-                _SETTINGS[lang_with_prefix] = get_settings(
+            if lang_with_prefix not in SETTINGS:
+                SETTINGS[lang_with_prefix] = get_settings(
                     load_lang, model_prefix=model_prefix
                 )
 
-            settings[lang] = _SETTINGS[lang_with_prefix]
+            settings[load_lang] = SETTINGS[lang_with_prefix]
+
+            if "-" in load_lang:
+                # Add en_US as an alias for en-us
+                lang_parts = load_lang.split("-", maxsplit=1)
+                underscore_lang = f"{lang_parts[0]}_{lang_parts[1].upper()}"
+                settings[underscore_lang] = SETTINGS[load_lang]
 
     text_processor = TextProcessor(default_lang=lang, settings=settings)
     graph, root = text_processor(text, ssml=ssml, **process_args)
@@ -102,6 +115,8 @@ def get_settings(
     load_g2p_guesser: bool = True,
     **settings_args,
 ) -> TextProcessorSettings:
+    lang = resolve_lang(lang)
+
     if lang_dir is None:
         # Search for language data files
         lang_dir = find_lang_dir(lang, search_dirs=search_dirs)
@@ -154,12 +169,40 @@ def get_settings(
                     g2p_model_path,
                 )
 
+    # ---------------------------------
+    # Create language-specific settings
+    # ---------------------------------
+
+    if lang == "ar":
+        # Arabic
+        return make_ar_settings(lang_dir, **settings_args)
+
     if lang in {"en-us", "en-gb"}:
         # English
-        return make_en_US_settings(lang_dir, **settings_args)
+        return make_en_us_settings(lang_dir, **settings_args)
+
+    if lang == "de-de":
+        # German
+        return make_de_settings(lang_dir, **settings_args)
+
+    if lang == "fr-fr":
+        # French
+        return make_fr_settings(lang_dir, **settings_args)
+
+    if lang == "es-es":
+        # Spanish
+        return make_es_settings(lang_dir, **settings_args)
+
+    if lang == "nl":
+        # Dutch
+        return make_nl_settings(lang_dir, **settings_args)
+
+    if lang == "it-it":
+        # Italian
+        return make_it_settings(lang_dir, **settings_args)
 
     # Default settings only
-    return TextProcessorSettings(lang=lang)
+    return TextProcessorSettings(lang=lang, **settings_args)
 
 
 # -----------------------------------------------------------------------------
@@ -205,12 +248,13 @@ def get_text_processor(
         language_only = resolve_lang(language_only)
 
         if lang_model_prefix:
-            language = f"{language_only}/{lang_model_prefix}"
+            lang_with_prefix = f"{language_only}/{lang_model_prefix}"
         else:
-            language = language_only
+            lang_with_prefix = language_only
 
-        if language not in settings:
-            settings[language] = get_settings(
+        if lang_with_prefix not in settings:
+            # Create settings
+            settings[lang_with_prefix] = get_settings(
                 lang=language_only,
                 model_prefix=lang_model_prefix,
                 search_dirs=search_dirs,
@@ -220,15 +264,52 @@ def get_text_processor(
                 load_g2p_guesser=load_g2p_guesser,
             )
 
+        # Mirror settings for original language form (e.g., en_US)
+        settings[language] = settings[lang_with_prefix]
+
     return TextProcessor(default_lang=default_lang, settings=settings,)
 
 
+# -----------------------------------------------------------------------------
+# Arabic
+# -----------------------------------------------------------------------------
+
+DEFAULT_AR_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "؟", "!"},
+    "minor_breaks": {"،", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_AR_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="ar", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# English
 # -----------------------------------------------------------------------------
 
 
 # TTS and T.T.S.
 EN_INITIALISM_PATTERN = re.compile(r"^[A-Z]{2,}$")
 EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:[a-zA-Z]\.){2,}$")
+
+
+def en_is_initialism(text: str) -> bool:
+    """True if text is of the form TTS or T.T.S."""
+    return (EN_INITIALISM_PATTERN.match(text) is not None) or (
+        EN_INITIALISM_DOTS_PATTERN.match(text) is not None
+    )
+
 
 DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
@@ -238,8 +319,7 @@ DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "USD",
     "default_date_format": "moy",  # 4/1/2021 -> April first twenty twenty-one
-    "is_initialism": lambda text: (EN_INITIALISM_PATTERN.match(text) is not None)
-    or (EN_INITIALISM_DOTS_PATTERN.match(text) is not None),
+    "is_initialism": en_is_initialism,
     "split_initialism": lambda text: list(text.replace(".", "")),
     "replacements": [
         ("\\B'", '"'),  # replace single quotes (left)
@@ -269,248 +349,245 @@ DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
 }
 
 
-def make_en_US_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+def make_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     settings_args = {**DEFAULT_EN_US_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="en_US", **settings_args)
 
 
-# class TextToPhonemesReturn(str, Enum):
-#     """
-#     Format of return value from :py:meth:`~gruut.text_to_phonemes`.
-#     """
+# -----------------------------------------------------------------------------
+# German
+# -----------------------------------------------------------------------------
 
-#     WORD_TUPLES = "word_tuples"
-#     """Tuples of the form (sentence index, word, word phonemes)"""
-
-#     FLAT_PHONEMES = "flat_phonemes"
-#     """Flat list of phoneme strings"""
-
-#     WORD_PHONEMES = "word_phonemes"
-#     """Lists of phonemes grouped by words only"""
-
-#     SENTENCE_PHONEMES = "sentence_phonemes"
-#     """Lists of phonemes grouped by sentence only"""
-
-#     SENTENCE_WORD_PHONEMES = "sentence_word_phonemes"
-#     """Lists of phonemes grouped by sentence, then word"""
-
-#     SENTENCES = "sentences"
-#     """List of :py:class:`~gruut.const.Sentence` objects with tokens, features, etc."""
+DEFAULT_DE_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
 
 
-# # (sentence index, word, [phonemes])
-# WORD_TUPLES_TYPE = typing.List[typing.Tuple[int, str, WORD_PHONEMES]]
-# FLAT_PHONEMES_TYPE = typing.List[str]
-# WORD_PHONEMES_TYPE = typing.List[WORD_PHONEMES]
-# SENTENCE_PHONEMES_TYPE = typing.List[WORD_PHONEMES]
-# SENTENCE_WORD_PHONEMES_TYPE = typing.List[typing.List[WORD_PHONEMES]]
-# SENTENCES_TYPE = typing.List[Sentence]
+def make_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_DE_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="de_DE", **settings_args)
 
 
-# TEXT_TO_PHONEMES_RETURN_TYPE = typing.Union[
-#     WORD_TUPLES_TYPE,
-#     FLAT_PHONEMES_TYPE,
-#     WORD_PHONEMES_TYPE,
-#     SENTENCE_PHONEMES_TYPE,
-#     SENTENCE_WORD_PHONEMES_TYPE,
-#     SENTENCES_TYPE,
-# ]
-
+# -----------------------------------------------------------------------------
+# French
 # -----------------------------------------------------------------------------
 
 
-# def text_to_phonemes(
-#     text: str,
-#     lang: str = "en-us",
-#     return_format: typing.Union[str, TextToPhonemesReturn] = "word_tuples",
-#     no_cache: bool = False,
-#     inline_pronunciations: typing.Optional[bool] = None,
-#     tokenizer: typing.Optional[Tokenizer] = None,
-#     tokenizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
-#     phonemizer: typing.Optional[Phonemizer] = None,
-#     phonemizer_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
-# ) -> TEXT_TO_PHONEMES_RETURN_TYPE:
-#     """
-#     High-level text to phonemes interface.
+def fr_post_process_sentence(graph, sent_node, settings):
+    from gruut.text_processor import DATA_PROP, WordNode
+    from gruut.utils import sliding_window
 
-#     Args:
-#         text: Text to tokenize and phonemize
-#         lang: Language of the text
-#         return_format: Format of return value
-#         no_cache: If True, tokenizer/phonemizer cache are not used
-#         inline_pronunciations: If True, allow inline [[ p h o n e m e s ]] and {{ w{or}ds }} in text
-#         tokenizer: Optional tokenizer to use instead of creating one
-#         tokenizer_args: Optional keyword arguments used when creating tokenizer
-#         phonemizer: Optional phonemizer to use instead of creating one
-#         phonemizer_args: Optional keyword arguments used when creating phonemizer
+    words = []
+    for dfs_node in nx.dfs_preorder_nodes(graph, sent_node.node):
+        if not graph.out_degree(dfs_node) == 0:
+            # Only leave
+            continue
 
-#     Returns:
-#         Tuples of the form (sentence index, word, [word phonemes]). See TextToPhonemesReturn enum for more return formats.
+        node = graph.nodes[dfs_node][DATA_PROP]
+        if isinstance(node, WordNode):
+            word_node = typing.cast(WordNode, node)
+            words.append(word_node)
 
-#     Example:
-#         ::
+    for word1, word2 in sliding_window(words, 2):
+        if word2 is None:
+            continue
 
-#             from gruut import text_to_phonemes
+        if not (word1.text and word1.phonemes and word2.text and word2.phonemes):
+            continue
 
-#             text = 'He wound it around the wound, saying "I read it was $10 to read."'
+        liason = False
 
-#             for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
-#                 print(word, *word_phonemes)
+        # Conditions to meet for liason check:
+        # 1) word 1 ends with a silent consonant
+        # 2) word 2 starts with a vowel (phoneme)
 
-#         Output::
+        last_char1 = word1.text[-1]
+        ends_silent_consonant = fr_has_silent_consonant(last_char1, word1.phonemes[-1])
+        starts_vowel = fr_is_vowel(word2.phonemes[0])
 
-#             he h ˈi
-#             wound w ˈaʊ n d
-#             it ˈɪ t
-#             around ɚ ˈaʊ n d
-#             the ð ə
-#             wound w ˈu n d
-#             , |
-#             saying s ˈeɪ ɪ ŋ
-#             i ˈaɪ
-#             read ɹ ˈɛ d
-#             it ˈɪ t
-#             was w ə z
-#             ten t ˈɛ n
-#             dollars d ˈɑ l ɚ z
-#             to t ə
-#             read ɹ ˈi d
-#             . ‖
-#     """
-#     global _TOKENIZER_CACHE_ARGS, _PHONEMIZER_CACHE_ARGS
+        if ends_silent_consonant and starts_vowel:
+            # Handle mandatory liason cases
+            # https://www.commeunefrancaise.com/blog/la-liaison
 
-#     lang = resolve_lang(lang)
+            if word1.text == "et":
+                # No liason
+                pass
+            elif word1.pos in {"DET", "NUM"}:
+                # Determiner/adjective -> noun
+                liason = True
+            elif (word1.pos == "PRON") and (word2.pos in {"AUX", "VERB"}):
+                # Pronoun -> verb
+                liason = True
+            elif (word1.pos == "ADP") or (word1.text == "très"):
+                # Preposition
+                liason = True
+            elif (word1.pos == "ADJ") and (word2.pos in {"NOUN", "PROPN"}):
+                # Adjective -> noun
+                liason = True
+            elif word1.pos in {"AUX", "VERB"}:
+                # Verb -> vowel
+                liason = True
 
-#     if inline_pronunciations:
-#         with _CACHE_LOCK:
-#             # Load phonemes for language
-#             lang_phonemes = _PHONEMES_CACHE.get(lang)
+        if liason:
+            # Apply liason
+            # s -> z
+            # p -> p
+            # d|t -> d
+            liason_pron = word1.phonemes
 
-#             if lang_phonemes is None:
-#                 lang_phonemes = gruut_ipa.Phonemes.from_language(lang)
-#                 assert lang_phonemes is not None, f"Unsupported language: {lang}"
-#                 _PHONEMES_CACHE[lang] = lang_phonemes
+            if last_char1 in {"s", "x", "z"}:
+                liason_pron.append("z")
+            elif last_char1 == "d":
+                liason_pron.append("t")
+            elif last_char1 in {"t", "p", "n"}:
+                # Final phoneme is same as char
+                liason_pron.append(last_char1)
 
-#         assert lang_phonemes is not None
 
-#         # Replace [[ p h o n e m e s ]] with __phonemes_<base32-phonemes>__
-#         text = encode_inline_pronunciations(text, lang_phonemes)
+def fr_has_silent_consonant(last_char: str, last_phoneme: str) -> bool:
+    """True if last consonant is silent in French"""
+    # Credit: https://github.com/Remiphilius/PoemesProfonds/blob/master/lecture.py
 
-#     # Get tokenizer
-#     tokenizer_args = tokenizer_args or {}
-#     if (tokenizer is None) and (not no_cache):
-#         with _CACHE_LOCK:
-#             if tokenizer_args != _TOKENIZER_CACHE_ARGS:
-#                 # Args changed; drop cache
-#                 _TOKENIZER_CACHE.pop(lang, None)
+    if last_char in {"d", "p", "t"}:
+        return last_phoneme != last_char
+    if last_char == "r":
+        return last_phoneme != "ʁ"
+    if last_char in {"s", "x", "z"}:
+        return last_phoneme not in {"s", "z"}
+    if last_char == "n":
+        return last_phoneme not in {"n", "ŋ"}
 
-#             tokenizer = _TOKENIZER_CACHE.get(lang)
+    return False
 
-#     if tokenizer is None:
-#         tokenizer = get_tokenizer(lang, **tokenizer_args)
 
-#         if not no_cache:
-#             with _CACHE_LOCK:
-#                 _TOKENIZER_CACHE[lang] = tokenizer
-#                 _TOKENIZER_CACHE_ARGS = tokenizer_args
+def fr_is_vowel(phoneme: str) -> bool:
+    """True if phoneme is a French vowel"""
+    return phoneme in {
+        "i",
+        "y",
+        "u",
+        "e",
+        "ø",
+        "o",
+        "ə",
+        "ɛ",
+        "œ",
+        "ɔ",
+        "a",
+        "ɔ̃",
+        "ɛ̃",
+        "ɑ̃",
+        "œ̃",
+    }
 
-#     # Get phonemizer
-#     phonemizer_args = phonemizer_args or {}
-#     if (phonemizer is None) and (not no_cache):
-#         with _CACHE_LOCK:
-#             if phonemizer_args != _PHONEMIZER_CACHE_ARGS:
-#                 # Args changed; drop cache
-#                 _PHONEMIZER_CACHE.pop(lang, None)
 
-#             phonemizer = _PHONEMIZER_CACHE.get(lang)
+DEFAULT_FR_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+    "post_process_sentence": fr_post_process_sentence,
+}
 
-#     if phonemizer is None:
-#         phonemizer = get_phonemizer(lang, **phonemizer_args)
 
-#         if not no_cache:
-#             _PHONEMIZER_CACHE[lang] = phonemizer
-#             _PHONEMIZER_CACHE_ARGS = tokenizer_args
+def make_fr_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_FR_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="fr_FR", **settings_args)
 
-#     # phonemize(**kwargs)
-#     phonemize_kwargs = {}
-#     if inline_pronunciations is not None:
-#         phonemize_kwargs["inline_pronunciations"] = inline_pronunciations
 
-#     sentences = tokenizer.tokenize(text)
+# -----------------------------------------------------------------------------
+# Spanish
+# -----------------------------------------------------------------------------
 
-#     if return_format == TextToPhonemesReturn.SENTENCES:
-#         return_sentences: SENTENCES_TYPE = []
-#         for sentence in sentences:
-#             sentence.phonemes = list(
-#                 phonemizer.phonemize(sentence.tokens, **phonemize_kwargs)
-#             )
-#             return_sentences.append(sentence)
+DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
 
-#         return return_sentences
 
-#     if return_format == TextToPhonemesReturn.WORD_PHONEMES:
-#         return_word_phonemes: WORD_PHONEMES_TYPE = []
+def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_ES_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="es_ES", **settings_args)
 
-#         for sentence in sentences:
-#             # Return phonemes grouped by word
-#             return_word_phonemes.extend(
-#                 phonemizer.phonemize(sentence.tokens, **phonemize_kwargs)
-#             )
 
-#         return return_word_phonemes
+# -----------------------------------------------------------------------------
+# Dutch
+# -----------------------------------------------------------------------------
 
-#     if return_format == TextToPhonemesReturn.SENTENCE_PHONEMES:
-#         # Return phonemes grouped by sentence only
-#         return_sentence_phonemes: SENTENCE_PHONEMES_TYPE = []
+DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
 
-#         for sentence in sentences:
-#             return_sentence_phonemes.append(
-#                 [
-#                     phoneme
-#                     for word_phonemes in phonemizer.phonemize(
-#                         sentence.tokens, **phonemize_kwargs
-#                     )
-#                     for phoneme in word_phonemes
-#                 ]
-#             )
 
-#         return return_sentence_phonemes
+def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_NL_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="nl", **settings_args)
 
-#     if return_format == TextToPhonemesReturn.SENTENCE_WORD_PHONEMES:
-#         # Return phonemes grouped by sentence and word
-#         return [
-#             list(phonemizer.phonemize(sentence.tokens, **phonemize_kwargs))
-#             for sentence in sentences
-#         ]
 
-#     if return_format == TextToPhonemesReturn.FLAT_PHONEMES:
-#         # Return flat list of phonemes
-#         return_flat_phonemes: FLAT_PHONEMES_TYPE = []
-#         for sentence in sentences:
-#             return_flat_phonemes.extend(
-#                 phoneme
-#                 for word_phonemes in phonemizer.phonemize(
-#                     sentence.tokens, **phonemize_kwargs
-#                 )
-#                 for phoneme in word_phonemes
-#             )
+# -----------------------------------------------------------------------------
+# Italian
+# -----------------------------------------------------------------------------
 
-#         return return_flat_phonemes
+DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+    "post_process_sentence": fr_post_process_sentence,
+}
 
-#     # if return_format == TextToPhonemesReturn.WORD_TUPLES:
-#     # Return tuples of (sentence index, word text, word phonemes)
-#     return_tuples: WORD_TUPLES_TYPE = []
 
-#     for sentence_idx, sentence in enumerate(sentences):
-#         return_tuples.extend(
-#             (sentence_idx, token.text, token_phonemes)
-#             for token, token_phonemes in zip(
-#                 sentence.tokens,
-#                 phonemizer.phonemize(sentence.tokens, **phonemize_kwargs),
-#             )
-#         )
-
-#     return return_tuples
+def make_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_IT_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="it_IT", **settings_args)
 
 
 # -----------------------------------------------------------------------------

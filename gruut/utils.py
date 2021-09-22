@@ -1,4 +1,6 @@
 """Utility methods for gruut"""
+import json
+import dataclasses
 import base64
 import itertools
 import logging
@@ -6,6 +8,7 @@ import os
 import re
 import typing
 import xml.etree.ElementTree as etree
+import collections.abc
 from enum import Enum
 from pathlib import Path
 

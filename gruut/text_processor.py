@@ -34,24 +34,14 @@ DEFAULT_SPLIT_PATTERN = re.compile(r"(\s+)")
 DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
 NORMALIZE_WHITESPACE_PATTERN = re.compile(r"\s+")
-
-TRAILING_WHITESPACE_PATTERN = re.compile(r"(\s+)$")
-
-
-def get_trailing_whitespace(s: str) -> str:
-    match = TRAILING_WHITESPACE_PATTERN.search(s)
-    if match is not None:
-        return match.group(1)
-
-    return ""
-
-
+SURROUNDING_WHITESPACE_PATTERN = re.compile(r"^(\s*)\S+(\s*)$")
 HAS_DIGIT_PATTERN = re.compile(r"[0-9]")
 
 
-def has_digit(s: str) -> bool:
-    """True if string contains at least one digit"""
-    return HAS_DIGIT_PATTERN.search(s) is not None
+GRAPH_TYPE = typing.Type[nx.DiGraph]
+NODE_TYPE = int
+DATA_PROP = "data"
+PHONEMES_TYPE = typing.Sequence[str]
 
 
 class InterpretAs(str, Enum):
@@ -110,223 +100,6 @@ class WordRole(str, Enum):
 
     LETTER = "gruut:letter"
     """Word should be pronounced as a letter (a = /eɪ/ instead of /ə/)"""
-
-
-# -----------------------------------------------------------------------------
-
-PHONEMES_TYPE = typing.Sequence[str]
-
-
-class LookupPhonemes(typing.Protocol):
-    """Look up phonemes for word/role in a lexicon"""
-
-    def __call__(
-        self, word: str, role: typing.Optional[str] = None
-    ) -> typing.Optional[PHONEMES_TYPE]:
-        pass
-
-
-class GuessPhonemes(typing.Protocol):
-    """Guess phonemes for word/role"""
-
-    def __call__(
-        self, word: str, role: typing.Optional[str] = None
-    ) -> typing.Optional[PHONEMES_TYPE]:
-        pass
-
-
-class GetPartsOfSpeech(typing.Protocol):
-    """Get part of speech tags for words"""
-
-    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
-        pass
-
-
-@dataclass
-class TextProcessorSettings:
-    lang: str
-
-    # Whitespace/tokenization
-    split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN
-    join_str: str = " "
-    keep_whitespace: bool = True
-
-    # Punctuations
-    begin_punctuations: typing.Optional[typing.Set[str]] = None
-    begin_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
-    end_punctuations: typing.Optional[typing.Set[str]] = None
-    end_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
-
-    # Replacements/abbreviations
-    replacements: typing.Sequence[typing.Tuple[REGEX_TYPE, str]] = field(
-        default_factory=list
-    )
-    abbreviations: typing.Dict[REGEX_TYPE, str] = field(default_factory=dict)
-    spell_out_words: typing.Dict[str, str] = field(default_factory=dict)
-
-    # Breaks
-    major_breaks: typing.Set[str] = field(default_factory=set)
-    major_breaks_pattern: typing.Optional[REGEX_TYPE] = None
-    minor_breaks: typing.Set[str] = field(default_factory=set)
-    minor_breaks_pattern: typing.Optional[REGEX_TYPE] = None
-    word_breaks: typing.Set[str] = field(default_factory=set)
-    word_breaks_pattern: typing.Optional[REGEX_TYPE] = None
-
-    # Numbers
-    is_maybe_number: typing.Optional[typing.Callable[[str], bool]] = has_digit
-    babel_locale: typing.Optional[str] = None
-    num2words_lang: typing.Optional[str] = None
-
-    # Currency
-    default_currency: str = "USD"
-    currencies: typing.MutableMapping[str, str] = field(default_factory=dict)
-    currency_symbols: typing.Sequence[str] = field(default_factory=list)
-    is_maybe_currency: typing.Optional[typing.Callable[[str], bool]] = has_digit
-
-    # Dates
-    dateparser_lang: typing.Optional[str] = None
-    is_maybe_date: typing.Optional[typing.Callable[[str], bool]] = has_digit
-    default_date_format: typing.Union[
-        str, InterpretAsFormat
-    ] = InterpretAsFormat.DATE_MDY_ORDINAL
-
-    # Part of speech (pos) tagging
-    get_parts_of_speech: typing.Optional[GetPartsOfSpeech] = None
-
-    # Initialisms (e.g, TTS or T.T.S.)
-    is_initialism: typing.Optional[typing.Callable[[str], bool]] = None
-    split_initialism: typing.Optional[
-        typing.Callable[[str], typing.Sequence[str]]
-    ] = None
-
-    # Phonemization
-    lookup_phonemes: typing.Optional[LookupPhonemes] = None
-    guess_phonemes: typing.Optional[GuessPhonemes] = None
-
-    def __post_init__(self):
-        # Languages/locales
-        if self.babel_locale is None:
-            if "-" in self.lang:
-                # en-us -> en_US
-                lang_parts = self.lang.split("-", maxsplit=1)
-                self.babel_locale = "_".join(
-                    [lang_parts[0].lower(), lang_parts[1].upper()]
-                )
-            else:
-                self.babel_locale = self.lang
-
-        if self.num2words_lang is None:
-            self.num2words_lang = self.babel_locale
-
-        if self.dateparser_lang is None:
-            # en_US -> en
-            self.dateparser_lang = self.babel_locale.split("_")[0]
-
-        # Pre-compiled regular expressions
-        self.replacements = [
-            (maybe_compile_regex(pattern), template)
-            for pattern, template in self.replacements
-        ]
-
-        compiled_abbreviations = {}
-        for pattern, template in self.abbreviations.items():
-            if isinstance(pattern, str):
-                if not pattern.endswith("$") and self.major_breaks:
-                    # Automatically add optional major break at the end
-                    break_pattern_str = "|".join(
-                        re.escape(b) for b in self.major_breaks
-                    )
-                    pattern = (
-                        f"{pattern}(?P<break>{break_pattern_str})?(?P<whitespace>\\s*)$"
-                    )
-                    template += r"\g<break>\g<whitespace>"
-
-                pattern = re.compile(pattern)
-
-            compiled_abbreviations[pattern] = template
-
-        self.abbreviations = compiled_abbreviations
-
-        # Pattern to split text into initial words
-        self.split_pattern = maybe_compile_regex(self.split_pattern)
-
-        # Strings that should be separated from words, but do not cause any breaks
-        if (self.begin_punctuations_pattern is None) and self.begin_punctuations:
-            pattern_str = "|".join(re.escape(b) for b in self.begin_punctuations)
-
-            # Match begin_punctuations only at start a word
-            self.begin_punctuations_pattern = f"\\B({pattern_str})"
-
-        if self.begin_punctuations_pattern is not None:
-            self.begin_punctuations_pattern = maybe_compile_regex(
-                self.begin_punctuations_pattern
-            )
-
-        if (self.end_punctuations_pattern is None) and self.end_punctuations:
-            pattern_str = "|".join(re.escape(b) for b in self.end_punctuations)
-
-            # Match end_punctuations only at end of a word
-            self.end_punctuations_pattern = f"({pattern_str})\\B"
-
-        if self.end_punctuations_pattern is not None:
-            self.end_punctuations_pattern = maybe_compile_regex(
-                self.end_punctuations_pattern
-            )
-
-        # Major breaks (split sentences)
-        if (self.major_breaks_pattern is None) and self.major_breaks:
-            pattern_str = "|".join(re.escape(b) for b in self.major_breaks)
-
-            # Match major break with either whitespace at the end or at the end of the text
-            self.major_breaks_pattern = f"((?:{pattern_str})(?:\\s+|$))"
-
-        if self.major_breaks_pattern is not None:
-            self.major_breaks_pattern = maybe_compile_regex(self.major_breaks_pattern)
-
-        # Minor breaks (don't split sentences)
-        if (self.minor_breaks_pattern is None) and self.minor_breaks:
-            pattern_str = "|".join(re.escape(b) for b in self.minor_breaks)
-
-            # Match minor break with optional whitespace after
-            self.minor_breaks_pattern = f"((?:{pattern_str})\\s*)"
-
-        if self.minor_breaks_pattern is not None:
-            self.minor_breaks_pattern = maybe_compile_regex(self.minor_breaks_pattern)
-
-        # Word breaks (break words apart into multiple words)
-        if (self.word_breaks_pattern is None) and self.word_breaks:
-            pattern_str = "|".join(re.escape(b) for b in self.word_breaks)
-            self.word_breaks_pattern = f"(?:{pattern_str})"
-
-        if self.word_breaks_pattern is not None:
-            self.word_breaks_pattern = maybe_compile_regex(self.word_breaks_pattern)
-
-        # Currency
-        if not self.currencies:
-            # Look up currencies for locale
-            locale_obj = babel.Locale(self.babel_locale)
-
-            # $ -> USD
-            self.currencies = {
-                babel.numbers.get_currency_symbol(cn): cn
-                for cn in locale_obj.currency_symbols
-            }
-
-        if not self.currency_symbols:
-            # Currency symbols (e.g., "$") by decreasing length
-            self.currency_symbols = sorted(
-                self.currencies, key=operator.length_hint, reverse=True
-            )
-
-    def normalize_whitespace(self, s: str) -> str:
-        return NORMALIZE_WHITESPACE_PATTERN.sub(self.join_str, s.strip())
-
-
-# -----------------------------------------------------------------------------
-
-GRAPH_TYPE = typing.Type[nx.DiGraph]
-NODE_TYPE = int
-DATA_PROP = "data"
 
 
 @dataclass
@@ -448,6 +221,249 @@ class Sentence:
 # -----------------------------------------------------------------------------
 
 
+def get_whitespace(s: str) -> typing.Tuple[str, str]:
+    """Returns leading and trailing whitespace of a string"""
+    leading_ws, trailing_ws = "", ""
+    match = SURROUNDING_WHITESPACE_PATTERN.match(s)
+    if match is not None:
+        leading_ws, trailing_ws = match.groups()
+
+    return leading_ws, trailing_ws
+
+
+def has_digit(s: str) -> bool:
+    """True if string contains at least one digit"""
+    return HAS_DIGIT_PATTERN.search(s) is not None
+
+
+# -----------------------------------------------------------------------------
+
+
+class LookupPhonemes(typing.Protocol):
+    """Look up phonemes for word/role in a lexicon"""
+
+    def __call__(
+        self, word: str, role: typing.Optional[str] = None
+    ) -> typing.Optional[PHONEMES_TYPE]:
+        pass
+
+
+class GuessPhonemes(typing.Protocol):
+    """Guess phonemes for word/role"""
+
+    def __call__(
+        self, word: str, role: typing.Optional[str] = None
+    ) -> typing.Optional[PHONEMES_TYPE]:
+        pass
+
+
+class GetPartsOfSpeech(typing.Protocol):
+    """Get part of speech tags for words"""
+
+    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
+        pass
+
+
+class PostProcessSentence(typing.Protocol):
+    """Post-process each sentence node after tokenization/phonemization"""
+
+    def __call__(
+        self,
+        graph: GRAPH_TYPE,
+        sentence_node: SentenceNode,
+        settings: "TextProcessorSettings",
+    ):
+        pass
+
+
+@dataclass
+class TextProcessorSettings:
+    lang: str
+
+    # Whitespace/tokenization
+    split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN
+    join_str: str = " "
+    keep_whitespace: bool = True
+
+    # Punctuations
+    begin_punctuations: typing.Optional[typing.Set[str]] = None
+    begin_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+    end_punctuations: typing.Optional[typing.Set[str]] = None
+    end_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+
+    # Replacements/abbreviations
+    replacements: typing.Sequence[typing.Tuple[REGEX_TYPE, str]] = field(
+        default_factory=list
+    )
+    abbreviations: typing.Dict[REGEX_TYPE, str] = field(default_factory=dict)
+    spell_out_words: typing.Dict[str, str] = field(default_factory=dict)
+
+    # Breaks
+    major_breaks: typing.Set[str] = field(default_factory=set)
+    major_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+    minor_breaks: typing.Set[str] = field(default_factory=set)
+    minor_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+    word_breaks: typing.Set[str] = field(default_factory=set)
+    word_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+
+    # Numbers
+    is_maybe_number: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    babel_locale: typing.Optional[str] = None
+    num2words_lang: typing.Optional[str] = None
+
+    # Currency
+    default_currency: str = "USD"
+    currencies: typing.MutableMapping[str, str] = field(default_factory=dict)
+    currency_symbols: typing.Sequence[str] = field(default_factory=list)
+    is_maybe_currency: typing.Optional[typing.Callable[[str], bool]] = has_digit
+
+    # Dates
+    dateparser_lang: typing.Optional[str] = None
+    is_maybe_date: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    default_date_format: typing.Union[
+        str, InterpretAsFormat
+    ] = InterpretAsFormat.DATE_MDY_ORDINAL
+
+    # Part of speech (pos) tagging
+    get_parts_of_speech: typing.Optional[GetPartsOfSpeech] = None
+
+    # Initialisms (e.g, TTS or T.T.S.)
+    is_initialism: typing.Optional[typing.Callable[[str], bool]] = None
+    split_initialism: typing.Optional[
+        typing.Callable[[str], typing.Sequence[str]]
+    ] = None
+
+    # Phonemization
+    lookup_phonemes: typing.Optional[LookupPhonemes] = None
+    guess_phonemes: typing.Optional[GuessPhonemes] = None
+
+    # Post-processing
+    post_process_sentence: typing.Optional[PostProcessSentence] = None
+
+    def __post_init__(self):
+        # Languages/locales
+        if self.babel_locale is None:
+            if "-" in self.lang:
+                # en-us -> en_US
+                lang_parts = self.lang.split("-", maxsplit=1)
+                self.babel_locale = "_".join(
+                    [lang_parts[0].lower(), lang_parts[1].upper()]
+                )
+            else:
+                self.babel_locale = self.lang
+
+        if self.num2words_lang is None:
+            self.num2words_lang = self.babel_locale
+
+        if self.dateparser_lang is None:
+            # en_US -> en
+            self.dateparser_lang = self.babel_locale.split("_")[0]
+
+        # Pre-compiled regular expressions
+        self.replacements = [
+            (maybe_compile_regex(pattern), template)
+            for pattern, template in self.replacements
+        ]
+
+        compiled_abbreviations = {}
+        for pattern, template in self.abbreviations.items():
+            if isinstance(pattern, str):
+                if not pattern.endswith("$") and self.major_breaks:
+                    # Automatically add optional major break at the end
+                    break_pattern_str = "|".join(
+                        re.escape(b) for b in self.major_breaks
+                    )
+                    pattern = (
+                        f"{pattern}(?P<break>{break_pattern_str})?(?P<whitespace>\\s*)$"
+                    )
+                    template += r"\g<break>\g<whitespace>"
+
+                pattern = re.compile(pattern)
+
+            compiled_abbreviations[pattern] = template
+
+        self.abbreviations = compiled_abbreviations
+
+        # Pattern to split text into initial words
+        self.split_pattern = maybe_compile_regex(self.split_pattern)
+
+        # Strings that should be separated from words, but do not cause any breaks
+        if (self.begin_punctuations_pattern is None) and self.begin_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.begin_punctuations)
+
+            # Match begin_punctuations only at start a word
+            self.begin_punctuations_pattern = f"^({pattern_str})"
+
+        if self.begin_punctuations_pattern is not None:
+            self.begin_punctuations_pattern = maybe_compile_regex(
+                self.begin_punctuations_pattern
+            )
+
+        if (self.end_punctuations_pattern is None) and self.end_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.end_punctuations)
+
+            # Match end_punctuations only at end of a word
+            self.end_punctuations_pattern = f"({pattern_str})$"
+
+        if self.end_punctuations_pattern is not None:
+            self.end_punctuations_pattern = maybe_compile_regex(
+                self.end_punctuations_pattern
+            )
+
+        # Major breaks (split sentences)
+        if (self.major_breaks_pattern is None) and self.major_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.major_breaks)
+
+            # Match major break with either whitespace at the end or at the end of the text
+            self.major_breaks_pattern = f"((?:{pattern_str})(?:\\s+|$))"
+
+        if self.major_breaks_pattern is not None:
+            self.major_breaks_pattern = maybe_compile_regex(self.major_breaks_pattern)
+
+        # Minor breaks (don't split sentences)
+        if (self.minor_breaks_pattern is None) and self.minor_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.minor_breaks)
+
+            # Match minor break with optional whitespace after
+            self.minor_breaks_pattern = f"((?:{pattern_str})\\s*)"
+
+        if self.minor_breaks_pattern is not None:
+            self.minor_breaks_pattern = maybe_compile_regex(self.minor_breaks_pattern)
+
+        # Word breaks (break words apart into multiple words)
+        if (self.word_breaks_pattern is None) and self.word_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.word_breaks)
+            self.word_breaks_pattern = f"(?:{pattern_str})"
+
+        if self.word_breaks_pattern is not None:
+            self.word_breaks_pattern = maybe_compile_regex(self.word_breaks_pattern)
+
+        # Currency
+        if not self.currencies:
+            # Look up currencies for locale
+            locale_obj = babel.Locale(self.babel_locale)
+
+            # $ -> USD
+            self.currencies = {
+                babel.numbers.get_currency_symbol(cn): cn
+                for cn in locale_obj.currency_symbols
+            }
+
+        if not self.currency_symbols:
+            # Currency symbols (e.g., "$") by decreasing length
+            self.currency_symbols = sorted(
+                self.currencies, key=operator.length_hint, reverse=True
+            )
+
+    def normalize_whitespace(self, s: str) -> str:
+        return NORMALIZE_WHITESPACE_PATTERN.sub(self.join_str, s.strip())
+
+
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+
+
 class TextProcessor:
     @dataclass
     class EndElement:
@@ -478,7 +494,10 @@ class TextProcessor:
         lang_settings = self.settings.get(lang)
 
         if lang_settings is None:
-            # TODO: Warning or failure here?
+            _LOGGER.warning(
+                "No settings for language %s. Creating default settings.", lang
+            )
+
             # Create default settings for language
             lang_settings = TextProcessorSettings(
                 lang=lang, **self.default_settings_kwargs
@@ -488,33 +507,26 @@ class TextProcessor:
         return lang_settings
 
     def __call__(
-        self, text: str, ssml: bool = False, pos: bool = True, phonemize: bool = True,
-    ) -> typing.Tuple[GRAPH_TYPE, Node]:
-        return self.process(text=text, ssml=ssml, pos=pos, phonemize=phonemize)
-
-    def process(
-        self, text: str, ssml: bool = False, pos: bool = True, phonemize: bool = True,
+        self,
+        text: str,
+        ssml: bool = False,
+        pos: bool = True,
+        phonemize: bool = True,
+        post_process: bool = True,
+        add_speak_tag: bool = True,
     ) -> typing.Tuple[GRAPH_TYPE, Node]:
         if not ssml:
             # Not XML
             text = saxutils.escape(text)
 
-        if not text.lstrip().startswith("<"):
+        if add_speak_tag and (not text.lstrip().startswith("<")):
             # Wrap in <speak> tag
             text = f"<speak>{text}</speak>"
 
         root_element = etree.fromstring(text)
         graph = nx.DiGraph()
 
-        return self._process_etree(root_element, graph, pos=pos, phonemize=phonemize)
-
-    def _process_etree(
-        self,
-        root_element: etree.Element,
-        graph: GRAPH_TYPE,
-        pos: bool = True,
-        phonemize: bool = True,
-    ) -> typing.Tuple[GRAPH_TYPE, Node]:
+        # Parse XML
         last_paragraph: typing.Optional[ParagraphNode] = None
         last_sentence: typing.Optional[SentenceNode] = None
         last_speak: typing.Optional[SpeakNode] = None
@@ -775,6 +787,9 @@ class TextProcessor:
         # Do replacements before minor/major breaks
         self.pipeline_split(self.split_replacements, graph, root)
 
+        # Split punctuations 1/2 (quotes, etc.) before breaks
+        self.pipeline_split(self.split_punctuations, graph, root)
+
         # Split on minor breaks (commas, etc.)
         self.pipeline_split(self.split_minor_breaks, graph, root)
 
@@ -787,14 +802,14 @@ class TextProcessor:
         # Split on major breaks (periods, etc.)
         self.pipeline_split(self.split_major_breaks, graph, root)
 
+        # Split punctuations 2/2 (quotes, etc.) after breaks
+        self.pipeline_split(self.split_punctuations, graph, root)
+
         # Break apart initialisms 2/2 (e.g., TTS. or T.T.S..) after major breaks
         self.pipeline_split(self.transform_initialism, graph, root)
 
         # Break apart sentences using BreakWordNodes
         self.break_sentences(graph, root)
-
-        # Split punctuations (quotes, etc.)
-        self.pipeline_split(self.split_punctuations, graph, root)
 
         # spell-out (e.g., abc -> a b c) before number expansion
         self.pipeline_split(self.split_spell_out, graph, root)
@@ -865,7 +880,25 @@ class TextProcessor:
             process_sentence(sentence_words)
             sentence_words = []
 
+        if post_process:
+            # Post-process sentences
+            for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
+                node = graph.nodes[dfs_node][DATA_PROP]
+                if isinstance(node, SentenceNode):
+                    sent_node = typing.cast(SentenceNode, node)
+                    sent_settings = self.get_settings(sent_node.lang)
+                    if sent_settings.post_process_sentence is not None:
+                        sent_settings.post_process_sentence(
+                            graph, sent_node, sent_settings
+                        )
+
+            # Post process entire graph
+            self.post_process_graph(graph, root)
+
         return graph, root
+
+    def post_process_graph(self, graph: GRAPH_TYPE, root: Node):
+        pass
 
     def break_sentences(self, graph: GRAPH_TYPE, root: Node):
         # Break sentences apart at BreakWordNode(break_type="major") nodes.
@@ -967,12 +1000,15 @@ class TextProcessor:
             # Didn't split
             return
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(word.text_with_ws)
+        # Preserve whitespace
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         last_part_idx = len(parts) - 1
 
         for part_idx, part_text in enumerate(parts):
             if settings.keep_whitespace:
+                if part_idx == 0:
+                    part_text = first_ws + part_text
+
                 if part_idx == last_part_idx:
                     part_text += last_ws
                 else:
@@ -1002,6 +1038,7 @@ class TextProcessor:
             return
 
         word_text = word.text
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         has_punctuation = False
 
         # Punctuations at the beginning of the word
@@ -1014,8 +1051,13 @@ class TextProcessor:
                 )
             )
 
+            first_word = True
             while word_text and (len(parts) == 2):
                 punct_text, word_text = parts
+                if first_word:
+                    # Preserve leadingwhitespace
+                    punct_text = first_ws + punct_text
+                    first_word = False
 
                 has_punctuation = True
                 yield PunctuationWordNode, {
@@ -1059,11 +1101,9 @@ class TextProcessor:
             # Leave word as-is
             return
 
-        last_ws = get_trailing_whitespace(word.text_with_ws)
-
         if settings.keep_whitespace and (not end_punctuations):
-            # Preserve final whitespace
-            word_text += last_ws
+            # Preserve trailing whitespace
+            word_text = word_text + last_ws
 
         if word_text:
             yield WordNode, {
@@ -1076,7 +1116,7 @@ class TextProcessor:
         last_punct_idx = len(end_punctuations) - 1
         for punct_idx, punct_text in enumerate(reversed(end_punctuations)):
             if settings.keep_whitespace and (punct_idx == last_punct_idx):
-                # Preserve whitespace at the end of the word
+                # Preserve trailing whitespace
                 punct_text += last_ws
 
             yield PunctuationWordNode, {
@@ -1183,10 +1223,10 @@ class TextProcessor:
         lang: typing.Optional[str] = None,
     ) -> typing.Optional[PHONEMES_TYPE]:
         if break_type == BreakType.MAJOR:
-            return IPA.BREAK_MAJOR.value
+            return [IPA.BREAK_MAJOR.value]
 
         if break_type == BreakType.MINOR:
-            return IPA.BREAK_MINOR.value
+            return [IPA.BREAK_MINOR.value]
 
         return None
 
@@ -1286,7 +1326,7 @@ class TextProcessor:
                             text=punct_word.text,
                             text_with_ws=punct_word.text_with_ws,
                             is_punctuation=True,
-                            lang=get_lang(word.lang),
+                            lang=get_lang(punct_word.lang),
                         )
                     )
 
@@ -1318,26 +1358,24 @@ class TextProcessor:
         settings = self.get_settings(lang)
         assert settings is not None
 
-        # Split into separate words/separators
-        groups = list(grouper(settings.split_pattern.split(text), 2))
+        # Split into separate words/separators.
+        # Drop empty words (leading whitespace is still preserved).
+        groups = [g for g in grouper(settings.split_pattern.split(text), 2) if g[0]]
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(text)
-        last_group_idx = len(groups) - 1
+        # Preserve whitespace.
+        # NOTE: Trailing whitespace will be included in split separator.
+        first_ws, _last_ws = get_whitespace(text)
 
         for group_idx, group in enumerate(groups):
             part_str, sep_str = group
-            if not part_str:
-                continue
-
             sep_str = sep_str or ""
             word_text = part_str
 
             if settings.keep_whitespace:
-                if group_idx == last_group_idx:
-                    word_text += last_ws
-                else:
-                    word_text += sep_str
+                if group_idx == 0:
+                    word_text = first_ws + word_text
+
+                word_text += sep_str
 
             word_node = WordNode(
                 node=len(graph),
@@ -1376,8 +1414,8 @@ class TextProcessor:
 
         settings = self.get_settings(word.lang)
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(word.text_with_ws)
+        # Preserve whitespace
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         last_char_idx = len(word.text) - 1
 
         for i, c in enumerate(word.text):
@@ -1398,6 +1436,9 @@ class TextProcessor:
                 continue
 
             if settings.keep_whitespace:
+                if i == 0:
+                    word_text = first_ws + word_text
+
                 if i == last_char_idx:
                     word_text += last_ws
                 else:
@@ -1631,8 +1672,8 @@ class TextProcessor:
         if not parts:
             return
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(word.text_with_ws)
+        # Preserve whitespace
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         last_part_idx = len(parts) - 1
 
         for part_idx, part_text in enumerate(parts):
@@ -1640,6 +1681,9 @@ class TextProcessor:
                 continue
 
             if settings.keep_whitespace:
+                if part_idx == 0:
+                    part_text = first_ws + part_text
+
                 if part_idx == last_part_idx:
                     part_text += last_ws
                 else:
@@ -1704,8 +1748,8 @@ class TextProcessor:
             # Split into separate words/separators
             groups = list(grouper(settings.split_pattern.split(num_str), 2))
 
-            # Preserve whitespace on final word
-            last_ws = get_trailing_whitespace(word.text_with_ws)
+            # Preserve whitespace
+            first_ws, last_ws = get_whitespace(word.text_with_ws)
             last_group_idx = len(groups) - 1
 
             # Split into separate words/separators
@@ -1718,6 +1762,9 @@ class TextProcessor:
                 number_word_text = part_str
 
                 if settings.keep_whitespace:
+                    if group_idx == 0:
+                        number_word_text = first_ws + number_word_text
+
                     if group_idx == last_group_idx:
                         number_word_text += last_ws
                     else:
@@ -1783,8 +1830,8 @@ class TextProcessor:
         # Split into separate words/separators
         groups = list(grouper(settings.split_pattern.split(date_str), 2))
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(word.text_with_ws)
+        # Preserve whitespace
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         last_group_idx = len(groups) - 1
 
         for group_idx, group in enumerate(groups):
@@ -1796,6 +1843,9 @@ class TextProcessor:
             date_word_text = part_str
 
             if settings.keep_whitespace:
+                if group_idx == 0:
+                    date_word_text = first_ws + date_word_text
+
                 if group_idx == last_group_idx:
                     date_word_text += last_ws
                 else:
@@ -1854,7 +1904,11 @@ class TextProcessor:
         # Custom separator so we can remove 'zero cents'
         num2words_kwargs["separator"] = "|"
 
-        num_str = num2words(float(decimal_num), **num2words_kwargs)
+        try:
+            num_str = num2words(float(decimal_num), **num2words_kwargs)
+        except Exception:
+            _LOGGER.exception("verbalize_currency: %s", word)
+            return
 
         # Post-process currency words
         if num_has_frac:
@@ -1870,8 +1924,8 @@ class TextProcessor:
         # Split into separate words/separators
         groups = list(grouper(settings.split_pattern.split(num_str), 2))
 
-        # Preserve whitespace on final word
-        last_ws = get_trailing_whitespace(word.text_with_ws)
+        # Preserve whitespace
+        first_ws, last_ws = get_whitespace(word.text_with_ws)
         last_group_idx = len(groups) - 1
 
         # Split into separate words
@@ -1884,6 +1938,9 @@ class TextProcessor:
             currency_word_text = part_str
 
             if settings.keep_whitespace:
+                if group_idx == 0:
+                    currency_word_text = first_ws + currency_word_text
+
                 if group_idx == last_group_idx:
                     currency_word_text += last_ws
                 else:
@@ -1937,7 +1994,8 @@ class TextProcessor:
     def print_graph(
         graph: GRAPH_TYPE,
         node: typing.Tuple[NODE_TYPE, Node],
-        indent: str = "-",
+        indent: str = "--",
+        level: int = 1,
         print_func=print,
     ):
         if isinstance(node, Node):
@@ -1947,8 +2005,8 @@ class TextProcessor:
             graph_node = node
             n_data = graph.nodes[graph_node][DATA_PROP]
 
-        print_func(indent, graph_node, n_data)
+        print_func(indent * level, graph_node, n_data)
         for succ_node in graph.successors(graph_node):
             TextProcessor.print_graph(
-                graph, succ_node, indent + indent, print_func=print_func
+                graph, succ_node, indent=indent, level=level + 1, print_func=print_func
             )

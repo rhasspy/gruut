@@ -1,11 +1,11 @@
 from gruut import sentences
 
-text = 'He wound it around the wound, saying "I read it was $10 to read".'
+text = 'He wound it around the wound, saying "I read it was $10 to read."'
 
-for sent in sentences(text, lang="en-us"):
-    for word in sent:
-        if word.phonemes:
-            print(word.text, *word.phonemes)
+# for sent in sentences(text, lang="en-us"):
+#     for word in sent:
+#         if word.phonemes:
+#             print(word.text, *word.phonemes)
 
 # he h ˈi
 # wound w ˈaʊ n d
@@ -29,10 +29,10 @@ for sent in sentences(text, lang="en-us"):
 
 print("\neSpeak:")
 
-for sent in sentences(text, lang="en-us", espeak=True):
-    for word in sent:
-        if word.phonemes:
-            print(word.text, *word.phonemes)
+# for sent in sentences(text, lang="en-us", espeak=True):
+#     for word in sent:
+#         if word.phonemes:
+#             print(word.text, *word.phonemes)
 
 # eSpeak:
 # he h ˈiː
@@ -52,3 +52,22 @@ for sent in sentences(text, lang="en-us", espeak=True):
 # to t ˈuː
 # read ɹ ˈiː d
 # . ‖
+
+# -----------------------------------------------------------------------------
+
+print("\nSSML:")
+ssml_text = """<speak lang="en_US">
+  <say-as interpret-as="number" format="ordinal">1</say-as> sentence.
+  <s lang="de_DE">
+    <say-as interpret-as="number" format="ordinal">2</say-as> Satz.
+  </s>
+  <s lang="fr_FR">
+    <say-as interpret-as="number" format="ordinal">3</say-as> phrase.
+  </s>
+</speak>
+"""
+
+for sent in sentences(ssml_text, ssml=True):
+    for word in sent:
+        if word.phonemes:
+            print(sent.idx, word.lang, word.text, *word.phonemes)
