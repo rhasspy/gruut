@@ -119,6 +119,22 @@ class PhonemizerTestCase(unittest.TestCase):
             ],
         )
 
+    def test_fa(self):
+        """Farsi test"""
+        self.assertEqual(
+            self.get_phonemes("هاورکرافت من پر مارماهى است", "fa"),
+            [
+                (
+                    "هاورکرافت",
+                    ["h", "ɒː", "v", "æ", "ɾ", "k", "æ", "ɾ", "ɒː", "f", "t"],
+                ),
+                ("من", ["m", "æ", "n"],),
+                ("پر", ["p", "o", "ɾ"]),
+                ("مارماهى", ["m", "ɒː", "ɾ", "æ", "m", "ɒː", "h", "e̞", "l"]),
+                ("است", ["æ", "s", "t"]),
+            ],
+        )
+
     def test_fr(self):
         """French test"""
         self.assertEqual(
@@ -162,6 +178,71 @@ class PhonemizerTestCase(unittest.TestCase):
                 ("zit", ["z", "ɪ", "t"]),
                 ("vol", ["v", "ɔ", "l"]),
                 ("paling", ["p", "a", "l", "ɪ", "ŋ"]),
+                (".", ["‖"]),
+            ],
+        )
+
+    def test_pt(self):
+        """Portuguese test"""
+        self.assertEqual(
+            self.get_phonemes("O meu hovercraft está cheio de enguias.", "pt"),
+            [
+                ("O", ["u"]),
+                ("meu", ["m", "ew"],),
+                ("hovercraft", ["o", "v", "e", "ɹ", "k", "ɾ", "ɐ", "f", "t", "ʃ"]),
+                ("está", ["e", "s", "t", "ɐ"]),
+                ("cheio", ["ʃ", "ej", "u"]),
+                ("de", ["d", "ʒ", "i"]),
+                ("enguias", ["ẽ", "ɡ", "j", "ɐ", "s"]),
+                (".", ["‖"]),
+            ],
+        )
+
+    def test_ru(self):
+        """Russian test"""
+        self.assertEqual(
+            self.get_phonemes("Моё судно на воздушной подушке полно угрей.", "ru_RU"),
+            [
+                ("Моё", ["m", "o", "j", "oː"]),
+                ("судно", ["s", "uː", "d", "n", "o"],),
+                ("на", ["n", "aː"]),
+                ("воздушной", ["v", "o", "z", "d", "uː", "ʂ", "n", "o", "j"]),
+                ("подушке", ["p", "o", "d", "uː", "ʂ", "kʲ", "e"]),
+                ("полно", ["p", "oː", "l", "n", "o"]),
+                ("угрей", ["u", "ɡ", "rʲ", "eː", "j"]),
+                (".", ["‖"]),
+            ],
+        )
+
+    def test_sv(self):
+        """Swedish test"""
+        self.assertEqual(
+            self.get_phonemes("Min svävare är full med ål.", "sv_SE"),
+            [
+                ("Min", ["m", "iː", "n"]),
+                ("svävare", ["²s", "v", "'ɛː", "v", "a", "r", "ɛ"],),
+                ("är", ["ɛː", "r"]),
+                ("full", ["f", "ɵ", "l"]),
+                ("med", ["m", "eː", "d"]),
+                ("ål", ["oː", "l"]),
+                (".", ["‖"]),
+            ],
+        )
+
+    def test_sw(self):
+        """Swahili test"""
+        self.assertEqual(
+            self.get_phonemes("Gari langu linaloangama limejaa na mikunga.", "sw"),
+            [
+                ("Gari", ["ɠ", "ɑ", "ɾ", "i"]),
+                ("langu", ["l", "ɑ", "ᵑg", "u"],),
+                (
+                    "linaloangama",
+                    ["l", "i", "n", "ɑ", "l", "ɔ", "ɑ", "ᵑg", "ɑ", "m", "ɑ"],
+                ),
+                ("limejaa", ["l", "i", "m", "ɛ", "ʄ", "ɑ", "ɑ"]),
+                ("na", ["n", "ɑ"]),
+                ("mikunga", ["m", "i", "k", "u", "ᵑg", "ɑ"]),
                 (".", ["‖"]),
             ],
         )

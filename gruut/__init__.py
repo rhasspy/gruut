@@ -17,6 +17,7 @@ from gruut.text_processor import (
     TextProcessorSettings,
     GetPartsOfSpeech,
     Sentence,
+    InterpretAsFormat,
 )
 from gruut.pos import PartOfSpeechTagger
 from gruut.g2p import GraphemesToPhonemes
@@ -193,6 +194,10 @@ def get_settings(
         # Spanish
         return make_es_settings(lang_dir, **settings_args)
 
+    if lang == "fa":
+        # Farsi
+        return make_fa_settings(lang_dir, **settings_args)
+
     if lang == "fr-fr":
         # French
         return make_fr_settings(lang_dir, **settings_args)
@@ -204,6 +209,22 @@ def get_settings(
     if lang == "nl":
         # Dutch
         return make_nl_settings(lang_dir, **settings_args)
+
+    if lang == "pt":
+        # Portuguese
+        return make_pt_settings(lang_dir, **settings_args)
+
+    if lang == "ru-ru":
+        # Russian
+        return make_ru_settings(lang_dir, **settings_args)
+
+    if lang == "sv-se":
+        # Swedish
+        return make_sv_settings(lang_dir, **settings_args)
+
+    if lang == "sw":
+        # Swahili
+        return make_sw_settings(lang_dir, **settings_args)
 
     # Default settings only
     return TextProcessorSettings(lang=lang, **settings_args)
@@ -284,7 +305,7 @@ DEFAULT_AR_SETTINGS: typing.Dict[str, typing.Any] = {
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -307,6 +328,8 @@ def make_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 EN_INITIALISM_PATTERN = re.compile(r"^[A-Z]{2,}$")
 EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:[a-zA-Z]\.){2,}$")
 
+EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
+
 
 def en_is_initialism(text: str) -> bool:
     """True if text is of the form TTS or T.T.S."""
@@ -319,28 +342,31 @@ DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
     "minor_breaks": {",", ";", ":"},
     "word_breaks": {"-", "_"},
-    "begin_punctuations": {'"', "“", "«", "[", "(", "<"},
-    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "*", "_"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">", "*", "_"},
     "default_currency": "USD",
-    "default_date_format": "moy",  # 4/1/2021 -> April first twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_MDY_ORDINAL,
     "is_initialism": en_is_initialism,
     "split_initialism": lambda text: list(text.replace(".", "")),
+    "is_non_word": lambda text: EN_NON_WORD_PATTERN.match(text) is not None,
     "replacements": [
+        ("’", "'"),  # normalize apostrophe
         ("\\B'", '"'),  # replace single quotes (left)
         ("'\\B", '"'),  # replace signed quotes (right)
     ],
     "abbreviations": {
-        r"^([cC])o\.": "\1ompany",  # co. -> company
-        r"^([dD])r\.": "\1octor",  # dr. -> doctor
-        r"^([dD])rs\.": "\1octors",  # drs. -> doctors
-        r"^([jJ])r\.": "\1unior",  # jr. -> junior
-        r"^([lL])td\.": "\1imited",  # -> ltd. -> limited
-        r"^([mM])r\.": "\1ister",  # -> mr. -> mister
-        r"^([mM])s\.": "\1iss",  # -> ms. -> miss
-        r"^([mM])rs\.": "\1isess",  # -> mrs. -> misess
-        r"^([sS])t\.": "\1treet",  # -> st. -> street
-        r"(.*\d)%": "\1 percent",  # % -> percent
-        r"^&$": "and",  # &-> and
+        r"^([cC])o\.": r"\1ompany",  # co. -> company
+        r"^([dD])r\.": r"\1octor",  # dr. -> doctor
+        r"^([dD])rs\.": r"\1octors",  # drs. -> doctors
+        r"^([jJ])r\.": r"\1unior",  # jr. -> junior
+        r"^([lL])td\.": r"\1imited",  # -> ltd. -> limited
+        r"^([mM])r\.": r"\1ister",  # -> mr. -> mister
+        r"^([mM])s\.": r"\1iss",  # -> ms. -> miss
+        r"^([mM])rs\.": r"\1isess",  # -> mrs. -> misess
+        r"^([sS])t\.": r"\1treet",  # -> st. -> street
+        r"^([vV])s\.?": r"\1ersus",  # -> vs. -> versus
+        r"(.*\d)%": r"\1 percent",  # % -> percent
+        r"^&\s*$": "and",  # &-> and
     },
     "spell_out_words": {
         ".": "dot",
@@ -369,7 +395,7 @@ DEFAULT_CS_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -394,7 +420,7 @@ DEFAULT_DE_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -419,7 +445,7 @@ DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -431,6 +457,30 @@ DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
 def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     settings_args = {**DEFAULT_ES_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="es_ES", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Farsi/Persian (fa, فارسی)
+# -----------------------------------------------------------------------------
+
+DEFAULT_FA_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "؟", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_fa_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_FA_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="fa", **settings_args)
 
 
 # -----------------------------------------------------------------------------
@@ -553,7 +603,7 @@ DEFAULT_FR_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -579,7 +629,7 @@ DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -605,7 +655,7 @@ DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
     "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
     "replacements": [
         ("’", "'"),  # normalize apostrophe
         ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -617,6 +667,104 @@ DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
 def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     settings_args = {**DEFAULT_NL_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="nl", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Portuguese (pt, Português)
+# -----------------------------------------------------------------------------
+
+DEFAULT_PT_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_pt_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_PT_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="pt", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Russian (ru, Русский)
+# -----------------------------------------------------------------------------
+
+DEFAULT_RU_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "RUB",
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_ru_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_RU_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="ru_RU", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Swedish (sv-se, svenska)
+# -----------------------------------------------------------------------------
+
+DEFAULT_SV_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_sv_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_SV_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="sv_SE", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Swahili (sw, Kiswahili)
+# -----------------------------------------------------------------------------
+
+DEFAULT_SW_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_sw_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_SW_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="sw", **settings_args)
 
 
 # -----------------------------------------------------------------------------

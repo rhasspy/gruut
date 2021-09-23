@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for French phonemization"""
+"""Tests for French"""
 import typing
 import unittest
 
@@ -40,8 +40,8 @@ from gruut import sentences
 # C`est incroyable!
 
 
-class FrenchPhonemizerTestCase(unittest.TestCase):
-    """Test cases for FrenchPhonemizer class"""
+class FrenchTestCase(unittest.TestCase):
+    """Test cases for French"""
 
     def test_liason_after_determiner(self):
         self._without_and_with_liason("Les arbres", "Les", ["l", "e"], ["l", "e", "z"])

@@ -31,7 +31,6 @@ from gruut.utils import (
 _LOGGER = logging.getLogger("gruut.text_processor")
 
 DEFAULT_SPLIT_PATTERN = re.compile(r"(\s+)")
-DEFAULT_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
 NORMALIZE_WHITESPACE_PATTERN = re.compile(r"\s+")
 SURROUNDING_WHITESPACE_PATTERN = re.compile(r"^(\s*)\S+(\s*)$")
@@ -111,6 +110,13 @@ class Node:
     voice: str = ""
     lang: str = ""
     implicit: bool = False
+
+
+@dataclass
+class IgnoreNode(Node):
+    """Node should be ignored"""
+
+    pass
 
 
 @dataclass
@@ -283,6 +289,13 @@ class PreProcessText(typing.Protocol):
         pass
 
 
+class IsNonWord(typing.Protocol):
+    """True if text is not a word"""
+
+    def __call__(self, text: str) -> bool:
+        pass
+
+
 @dataclass
 class TextProcessorSettings:
     lang: str
@@ -291,6 +304,7 @@ class TextProcessorSettings:
     split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN
     join_str: str = " "
     keep_whitespace: bool = True
+    is_non_word: typing.Optional[IsNonWord] = None
 
     # Punctuations
     begin_punctuations: typing.Optional[typing.Set[str]] = None
@@ -835,6 +849,9 @@ class TextProcessor:
         # Break apart words
         self.pipeline_split(self.break_words, graph, root)
 
+        # Ignore non-words
+        self.pipeline_split(self.ignore_non_words, graph, root)
+
         # Gather words from leaves of the tree, group by sentence
         def process_sentence(words: typing.List[WordNode]):
             if pos:
@@ -1342,6 +1359,23 @@ class TextProcessor:
 
         if words and (last_sentence_node is not None):
             yield make_sentence(last_sentence_node, words, sent_idx)
+
+    def ignore_non_words(self, graph: GRAPH_TYPE, node: Node):
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if word.interpret_as:
+            # Don't interpret words that are spoken for
+            return
+
+        settings = self.get_settings(word.lang)
+        if settings.is_non_word is None:
+            # No function for this language
+            return
+
+        if settings.is_non_word(word.text):
+            yield (IgnoreNode, {})
 
     def leaves(self, graph: GRAPH_TYPE, node: Node):
         """Iterate through the leaves of a graph in depth-first order"""
