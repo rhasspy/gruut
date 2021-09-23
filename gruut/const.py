@@ -15,6 +15,7 @@ LANG_ALIASES = {
     "de": "de-de",
     "en": "en-us",
     "es": "es-es",
+    "es-mx": "es-es",
     "fa": "fa",
     "fr": "fr-fr",
     "it": "it-it",
@@ -275,6 +276,7 @@ class Word:
     text_with_ws: str
     sent_idx: int
     lang: str = ""
+    voice: str = ""
     pos: typing.Optional[str] = None
     phonemes: typing.Optional[typing.Sequence[str]] = None
     is_break: bool = False

@@ -51,6 +51,7 @@ from gruut.utils import normalize_whitespace as default_normalize_whitespace
 from gruut.utils import (
     pipeline_split,
     pipeline_transform,
+    resolve_lang,
     tag_no_namespace,
     text_and_elements,
 )
@@ -361,13 +362,29 @@ class TextProcessor:
             settings = self.get_settings(node.lang)
             text_with_ws = "".join(w.text_with_ws for w in words)
             text = settings.normalize_whitespace(text_with_ws)
+            sent_voice = ""
+
+            # Get voice used across all words
+            for word in words:
+                if word.voice:
+                    if sent_voice and (sent_voice != word.voice):
+                        # Multiple voices
+                        sent_voice = ""
+                        break
+
+                    sent_voice = word.voice
+
+            if sent_voice:
+                # Set voice on all words
+                for word in words:
+                    word.voice = sent_voice
 
             return Sentence(
                 idx=sent_idx,
                 text=text,
                 text_with_ws=text_with_ws,
                 lang=get_lang(node.lang),
-                voice=node.voice,
+                voice=sent_voice,
                 words=words,
             )
 
@@ -379,8 +396,8 @@ class TextProcessor:
         for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
             node = graph.nodes[dfs_node][DATA_PROP]
             if isinstance(node, SentenceNode):
-                if words:
-                    yield make_sentence(node, words, sent_idx)
+                if words and (last_sentence_node is not None):
+                    yield make_sentence(last_sentence_node, words, sent_idx)
                     sent_idx += 1
                     word_idx = 0
                     words = []
@@ -389,7 +406,6 @@ class TextProcessor:
             elif graph.out_degree(dfs_node) == 0:
                 if isinstance(node, WordNode):
                     word = typing.cast(WordNode, node)
-
                     words.append(
                         Word(
                             idx=word_idx,
@@ -399,6 +415,7 @@ class TextProcessor:
                             phonemes=word.phonemes,
                             pos=word.pos,
                             lang=get_lang(node.lang),
+                            voice=node.voice,
                         )
                     )
 
@@ -454,16 +471,22 @@ class TextProcessor:
         lang = lang or self.default_lang
         lang_settings = self.settings.get(lang)
 
-        if lang_settings is None:
-            _LOGGER.warning(
-                "No settings for language %s. Creating default settings.", lang
-            )
+        if lang_settings is not None:
+            return lang_settings
 
-            # Create default settings for language
-            lang_settings = TextProcessorSettings(
-                lang=lang, **self.default_settings_kwargs
-            )
-            self.settings[lang] = lang_settings
+        # Try again with resolved language
+        resolved_lang = resolve_lang(lang)
+        lang_settings = self.settings.get(resolved_lang)
+        if lang_settings is not None:
+            # Patch for the future
+            self.settings[lang] = self.settings[resolved_lang]
+            return lang_settings
+
+        _LOGGER.warning("No settings for language %s. Creating default settings.", lang)
+
+        # Create default settings for language
+        lang_settings = TextProcessorSettings(lang=lang, **self.default_settings_kwargs)
+        self.settings[lang] = lang_settings
 
         return lang_settings
 
@@ -520,6 +543,9 @@ class TextProcessor:
         # Alias from <sub>
         last_alias: typing.Optional[str] = None
 
+        # Used to skip <metadata>
+        skip_elements: bool = False
+
         # Create __init__ args for new Node
         def scope_kwargs(target_class):
             scope = {}
@@ -539,8 +565,11 @@ class TextProcessor:
 
         # Process sub-elements and text chunks
         for elem_or_text in text_and_elements(root_element):
-            # print(elem_or_text, file=sys.stderr)
             if isinstance(elem_or_text, str):
+                if skip_elements:
+                    # Inside <metadata>
+                    continue
+
                 # Text chunk
                 text = typing.cast(str, elem_or_text)
 
@@ -643,7 +672,14 @@ class TextProcessor:
                     elif end_tag == "s":
                         # End of sub
                         last_alias = None
+                    elif end_tag == "metadata":
+                        # End of metadata
+                        skip_elements = False
             else:
+                if skip_elements:
+                    # Inside <metadata>
+                    continue
+
                 # Start of an element (e.g., <p>)
                 elem, elem_metadata = elem_or_text
                 elem = typing.cast(etree.Element, elem)
@@ -657,17 +693,19 @@ class TextProcessor:
 
                 if elem_tag == "speak":
                     # Explicit <speak>
-                    speak_node = SpeakNode(node=len(graph), element=elem)
+                    maybe_lang = attrib_no_namespace(elem, "lang")
+                    if maybe_lang:
+                        lang_stack.append((elem_tag, maybe_lang))
+                        current_lang = maybe_lang
+
+                    speak_node = SpeakNode(
+                        node=len(graph), element=elem, **scope_kwargs(SpeakNode)
+                    )
                     if root is None:
                         root = speak_node
 
                     graph.add_node(speak_node.node, data=root)
                     last_speak = root
-
-                    maybe_lang = attrib_no_namespace(elem, "lang")
-                    if maybe_lang:
-                        lang_stack.append((elem_tag, maybe_lang))
-                        current_lang = maybe_lang
                 elif elem_tag == "voice":
                     # Set voice scope
                     voice_name = attrib_no_namespace(elem, "name")
@@ -683,17 +721,17 @@ class TextProcessor:
 
                     assert last_speak is not None
 
+                    maybe_lang = attrib_no_namespace(elem, "lang")
+                    if maybe_lang:
+                        lang_stack.append((elem_tag, maybe_lang))
+                        current_lang = maybe_lang
+
                     p_node = ParagraphNode(
                         node=len(graph), element=elem, **scope_kwargs(ParagraphNode)
                     )
                     graph.add_node(p_node.node, data=p_node)
                     graph.add_edge(last_speak.node, p_node.node)
                     last_paragraph = p_node
-
-                    maybe_lang = attrib_no_namespace(elem, "lang")
-                    if maybe_lang:
-                        lang_stack.append((elem_tag, maybe_lang))
-                        current_lang = maybe_lang
                 elif elem_tag == "s":
                     # Explicit sentence
                     if last_speak is None:
@@ -715,15 +753,17 @@ class TextProcessor:
                         graph.add_edge(last_speak.node, p_node.node)
                         last_paragraph = p_node
 
-                    s_node = SentenceNode(node=len(graph), element=elem)
-                    graph.add_node(s_node.node, data=s_node)
-                    graph.add_edge(last_paragraph.node, s_node.node)
-                    last_sentence = s_node
-
                     maybe_lang = attrib_no_namespace(elem, "lang")
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
+
+                    s_node = SentenceNode(
+                        node=len(graph), element=elem, **scope_kwargs(SentenceNode)
+                    )
+                    graph.add_node(s_node.node, data=s_node)
+                    graph.add_edge(last_paragraph.node, s_node.node)
+                    last_sentence = s_node
                 elif elem_tag in {"w", "token"}:
                     # Explicit word
                     in_word = True
@@ -757,6 +797,9 @@ class TextProcessor:
                 elif elem_tag == "sub":
                     # Sub
                     last_alias = attrib_no_namespace(elem, "alias", "")
+                elif elem_tag == "metadata":
+                    # Metadata
+                    skip_elements = True
 
         assert root is not None
 
@@ -1131,14 +1174,20 @@ class TextProcessor:
             return
 
         word_part = parts[0]
-        yield WordNode, {
-            "text": word_part.strip(),
-            "text_with_ws": word_part,
-            "implicit": True,
-            "lang": word.lang,
-        }
-
         break_part = parts[1]
+
+        if word_part.strip():
+            # Only yield word if there's anything but whitespace
+            yield WordNode, {
+                "text": word_part.strip(),
+                "text_with_ws": word_part,
+                "implicit": True,
+                "lang": word.lang,
+            }
+        else:
+            # Keep leading whitespace
+            break_part = word_part + break_part
+
         yield BreakWordNode, {
             "break_type": BreakType.MAJOR,
             "text": break_part.strip(),

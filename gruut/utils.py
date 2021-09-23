@@ -41,13 +41,14 @@ def resolve_lang(lang: str) -> str:
     Returns:
         Resolved language name
     """
+    lang = lang.lower()
     lang = LANG_ALIASES.get(lang, lang)
 
     if lang not in KNOWN_LANGS:
         # Try with _ replaced by -
         if "_" in lang:
             lang_parts = lang.split("_")
-            maybe_lang = f"{lang_parts[0]}-{lang_parts[1].lower()}"
+            maybe_lang = f"{lang_parts[0]}-{lang_parts[1]}"
 
             if maybe_lang in KNOWN_LANGS:
                 lang = maybe_lang

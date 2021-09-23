@@ -188,7 +188,7 @@ def get_settings(
         # German
         return make_de_settings(lang_dir, **settings_args)
 
-    if lang == "es-es":
+    if lang in {"es-es", "es-mx"}:
         # Spanish
         return make_es_settings(lang_dir, **settings_args)
 
