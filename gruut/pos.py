@@ -166,6 +166,24 @@ class PartOfSpeechTagger:
         return base64.b64decode(s.encode("ascii")).decode()
 
 
+class DelayedPartOfSpeechTagger:
+    """POS tagger that loads on first use"""
+
+    def __init__(self, model_path: typing.Union[str, Path], **tagger_args):
+
+        self.model_path = Path(model_path)
+        self.tagger: typing.Optional[PartOfSpeechTagger] = None
+        self.tagger_args = tagger_args
+
+    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
+        if self.tagger is None:
+            _LOGGER.debug("Loading part of speech tagger from %s", self.model_path)
+            self.tagger = PartOfSpeechTagger(self.model_path, **self.tagger_args)
+
+        assert self.tagger is not None
+        return self.tagger(words)
+
+
 # -----------------------------------------------------------------------------
 
 
@@ -190,7 +208,7 @@ def train_model(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     _LOGGER.debug("Loading train file (%s)", conllu_path)
-    with open(conllu_path, "r") as conllu_file:
+    with open(conllu_path, "r", encoding="utf-8") as conllu_file:
         train_sents = conllu.parse(conllu_file.read())
 
     _LOGGER.debug("Training model for %s max iteration(s)", max_iterations)
@@ -264,7 +282,7 @@ def do_print_labels(args):
         raise e
 
     labels = set()
-    with open(args.conllu, "r") as conllu_file:
+    with open(args.conllu, "r", encoding="utf-8") as conllu_file:
         for sent in conllu.parse(conllu_file.read()):
             for token in sent:
                 token_label = token.get(args.label)
@@ -318,7 +336,7 @@ def do_test(args):
     num_words = 0
     sents_with_errors = 0
     total_errors = 0
-    with open(args.conllu, "r") as conllu_file:
+    with open(args.conllu, "r", encoding="utf-8") as conllu_file:
         for sent in conllu.parse(conllu_file.read()):
             words = [token["form"] for token in sent]
             actual_labels = [token.get(args.label) for token in sent]

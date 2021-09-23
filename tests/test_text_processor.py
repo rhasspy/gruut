@@ -3,6 +3,7 @@ import sys
 import unittest
 
 from gruut.text_processor import TextProcessor, Word, TextProcessorSettings, Sentence
+from gruut.utils import print_graph
 
 WORDS_KWARGS = {"explicit_lang": False, "break_phonemes": False}
 
@@ -678,10 +679,26 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
-    def print_graph(self, graph, root):
-        TextProcessor.print_graph(
-            graph, root, print_func=lambda *p: print(*p, file=sys.stderr)
+    def test_sub(self):
+        processor = TextProcessor(default_lang="en_US",)
+        graph, root = processor(
+            '<speak><sub alias="World Wide Web Consortium">W3C</sub></speak>', ssml=True
         )
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # Single word is replaced by multiple words
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="World", text_with_ws="World ",),
+                Word(idx=1, sent_idx=0, text="Wide", text_with_ws="Wide ",),
+                Word(idx=2, sent_idx=0, text="Web", text_with_ws="Web ",),
+                Word(idx=3, sent_idx=0, text="Consortium", text_with_ws="Consortium",),
+            ],
+        )
+
+    def print_graph(self, graph, root):
+        print_graph(graph, root, print_func=lambda *p: print(*p, file=sys.stderr))
 
 
 # -----------------------------------------------------------------------------

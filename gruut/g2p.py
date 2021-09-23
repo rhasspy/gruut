@@ -43,6 +43,8 @@ from pathlib import Path
 
 import pycrfsuite
 
+from gruut.const import PHONEMES_TYPE
+
 _LOGGER = logging.getLogger("gruut.g2p")
 
 # -----------------------------------------------------------------------------
@@ -158,6 +160,37 @@ class GraphemesToPhonemes:
         return base64.b64decode(s.encode("ascii")).decode()
 
 
+class DelayedGraphemesToPhonemes:
+    """Grapheme to phoneme guesser that loads on first use"""
+
+    def __init__(
+        self,
+        model_path: typing.Union[str, Path],
+        transform_func: typing.Optional[typing.Callable[[str], str]] = None,
+        **g2p_args,
+    ):
+        self.model_path = model_path
+        self.g2p: typing.Optional[GraphemesToPhonemes] = None
+        self.transform_func = transform_func
+        self.g2p_args = g2p_args
+
+    def __call__(
+        self, word: str, role: typing.Optional[str] = None
+    ) -> typing.Optional[PHONEMES_TYPE]:
+        if self.g2p is None:
+            _LOGGER.debug(
+                "Loading grapheme to phoneme CRF model from %s", self.model_path
+            )
+            self.g2p = GraphemesToPhonemes(self.model_path, **self.g2p_args)
+
+        assert self.g2p is not None
+
+        if self.transform_func is not None:
+            word = self.transform_func(word)
+
+        return self.g2p(word)
+
+
 # -----------------------------------------------------------------------------
 
 
@@ -182,7 +215,7 @@ def train(
 
     trainer = pycrfsuite.Trainer(verbose=False)
 
-    with open(corpus_path, "r") as corpus:
+    with open(corpus_path, "r", encoding="utf-8") as corpus:
         for i, line in enumerate(corpus):
             line = line.strip()
             if not line:

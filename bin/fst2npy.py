@@ -31,7 +31,7 @@ def main():
     _LOGGER.info("Converting %s to graph", args.fst_text)
     graph = fst2graph(args.fst_text)
     _LOGGER.info("Writing graph to %s", args.npz)
-    with open(args.npz, "wb") as npz_file:
+    with open(args.npz, "wb", encoding="utf-8") as npz_file:
         np.savez(npz_file, **graph)
 
 
@@ -54,7 +54,7 @@ def fst2graph(fst_path: typing.Union[str, Path]) -> typing.Dict[str, np.ndarray]
 
     to_nodes = set()
 
-    with open(fst_path, "r") as fst_file:
+    with open(fst_path, "r", encoding="utf-8") as fst_file:
         for line in fst_file:
             line = line.strip()
             if not line:

@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
 
     phone_map = {}
-    with open(args.map, "r") as map_file:
+    with open(args.map, "r", encoding="utf-8") as map_file:
         for line in map_file:
             line = line.strip()
             if (not line) or line.startswith("#"):

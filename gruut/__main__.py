@@ -2,20 +2,16 @@
 """Command-line interface to gruut"""
 import argparse
 import dataclasses
-import json
 import logging
 import os
 import sys
-import typing
 from pathlib import Path
 
 import jsonlines
-import networkx as nx
-from gruut_ipa import IPA
 
 from gruut import get_text_processor
-from gruut.lang import resolve_lang
-from gruut.utils import find_lang_dir
+from gruut.const import KNOWN_LANGS
+from gruut.utils import print_graph
 
 # -----------------------------------------------------------------------------
 
@@ -31,8 +27,6 @@ def main():
     """Main entry point"""
     if len(sys.argv) < 2:
         # Print known languages and exit
-        from gruut.lang import KNOWN_LANGS
-
         print("Languages:", *sorted(list(KNOWN_LANGS)))
         sys.exit(0)
     elif sys.argv[1] == "--version":
@@ -92,7 +86,7 @@ def main():
         )
 
         if args.debug:
-            text_processor.print_graph(
+            print_graph(
                 graph,
                 root,
                 print_func=lambda *print_args: _LOGGER.debug(

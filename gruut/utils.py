@@ -1,25 +1,58 @@
 """Utility methods for gruut"""
-import json
-import dataclasses
-import base64
 import itertools
 import logging
 import os
 import re
 import typing
 import xml.etree.ElementTree as etree
-import collections.abc
-from enum import Enum
 from pathlib import Path
 
-import gruut_ipa
+import networkx as nx
 
-from gruut.const import REGEX_MATCH, REGEX_PATTERN
+from gruut.const import (
+    DATA_PROP,
+    HAS_DIGIT_PATTERN,
+    KNOWN_LANGS,
+    LANG_ALIASES,
+    NODE_TYPE,
+    NORMALIZE_WHITESPACE_PATTERN,
+    REGEX_PATTERN,
+    SURROUNDING_WHITESPACE_PATTERN,
+    EndElement,
+    GraphType,
+    Node,
+)
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
 
 # -----------------------------------------------------------------------------
+# Language utilities
+# -----------------------------------------------------------------------------
+
+
+def resolve_lang(lang: str) -> str:
+    """
+    Try to resolve language using aliases.
+
+    Args:
+        lang: Language name or alias
+
+    Returns:
+        Resolved language name
+    """
+    lang = LANG_ALIASES.get(lang, lang)
+
+    if lang not in KNOWN_LANGS:
+        # Try with _ replaced by -
+        if "_" in lang:
+            lang_parts = lang.split("_")
+            maybe_lang = f"{lang_parts[0]}-{lang_parts[1].lower()}"
+
+            if maybe_lang in KNOWN_LANGS:
+                lang = maybe_lang
+
+    return lang
 
 
 def find_lang_dir(
@@ -86,6 +119,8 @@ def find_lang_dir(
 
 
 # -----------------------------------------------------------------------------
+# Regex
+# -----------------------------------------------------------------------------
 
 
 def maybe_compile_regex(
@@ -100,6 +135,8 @@ def maybe_compile_regex(
     return re.compile(str_or_pattern)
 
 
+# -----------------------------------------------------------------------------
+# Babel
 # -----------------------------------------------------------------------------
 
 
@@ -130,109 +167,6 @@ def get_currency_names(locale_str: str) -> typing.Dict[str, str]:
 
 
 # -----------------------------------------------------------------------------
-
-INLINE_PHONEMES_PATTERN = re.compile(r"\B\[\[([^\]]+)\]\]\B")
-ENCODED_PHONEMES_PATTERN = re.compile(r"^__phonemes_([^_]+)__$")
-
-INLINE_SOUNDSLIKE_PATTERN = re.compile(r"\B{{(.+)}}\B")
-ENCODED_SOUNDSLIKE_PATTERN = re.compile(r"^__soundslike_([^_]+)__$")
-
-SOUNDSLIKE_SEGMENTS_PATTERN = re.compile(r"({[^}]+)}")
-SOUNDSLIKE_SEGMENTS_TRANSLATE = str.maketrans({"{": None, "}": None})
-
-
-class InlinePronunciationType(str, Enum):
-    """Types of inline pronunciations in text"""
-
-    PHONEMES = "phonemes"
-    """Whitespace-separated [[ p h o n e m e s ]]"""
-
-    SOUNDS_LIKE = "sounds_like"
-    """{{ Words with optional s{eg}m{ent}s }}"""
-
-
-# Allow ' for primary stress and , for secondary stress
-# Allow : for elongation
-IPA_TRANSLATE = str.maketrans(
-    "',:",
-    "".join(
-        [
-            gruut_ipa.IPA.STRESS_PRIMARY.value,
-            gruut_ipa.IPA.STRESS_SECONDARY.value,
-            gruut_ipa.IPA.LONG,
-        ]
-    ),
-)
-
-
-def encode_inline_pronunciations(
-    text: str, phonemes: typing.Optional[gruut_ipa.Phonemes] = None
-) -> str:
-    """Encode inline phonemes in text using __phonemes_<base32-phonemes>__ format"""
-
-    def replace_phonemes(match: REGEX_MATCH) -> str:
-        ipa = match.group(1).strip()
-        ipa = ipa.translate(IPA_TRANSLATE)
-
-        # Normalize and separate with whitespace
-        norm_ipa = " ".join(p.text for p in phonemes.split(ipa))
-
-        # Base32 is used here because it's insensitive to case transformations
-        b32_ipa = base64.b32encode(norm_ipa.encode()).decode()
-
-        inline_key = f"__phonemes_{b32_ipa}__"
-
-        return inline_key
-
-    def replace_soundslike(match: REGEX_MATCH) -> str:
-        words = match.group(1).strip()
-
-        # Base32 is used here because it's insensitive to case transformations
-        b32_words = base64.b32encode(words.encode()).decode()
-
-        inline_key = f"__soundslike_{b32_words}__"
-
-        return inline_key
-
-    if phonemes is not None:
-        text = INLINE_PHONEMES_PATTERN.sub(replace_phonemes, text)
-
-    text = INLINE_SOUNDSLIKE_PATTERN.sub(replace_soundslike, text)
-
-    return text
-
-
-def decode_inline_pronunciation(
-    word: str,
-) -> typing.Optional[typing.Tuple[InlinePronunciationType, str]]:
-    """Return encoded inline phonemes from word encoded as __phonemes_<base32-phonemes>__"""
-    match = ENCODED_PHONEMES_PATTERN.match(word)
-    if match:
-        phonemes = base64.b32decode(match.group(1).upper().encode()).decode()
-        return (InlinePronunciationType.PHONEMES, phonemes)
-
-    match = ENCODED_SOUNDSLIKE_PATTERN.match(word)
-    if match:
-        sounds_like = base64.b32decode(match.group(1).upper().encode()).decode()
-        return (InlinePronunciationType.SOUNDS_LIKE, sounds_like)
-
-    return None
-
-
-def get_sounds_like_segments(word: str) -> typing.Iterable[typing.Tuple[int, int]]:
-    """Get start/end indexes for s{eg}m{ent}s of words"""
-    offset = 0
-    for match in SOUNDSLIKE_SEGMENTS_PATTERN.finditer(word):
-        yield (match.start(1) - offset, match.end(1) - offset - 1)
-        offset += 2  # for { and }
-
-
-def strip_sounds_like_segments(word: str) -> str:
-    """Remove { } markers from sounds-like word"""
-    return word.translate(SOUNDSLIKE_SEGMENTS_TRANSLATE)
-
-
-# -----------------------------------------------------------------------------
 # Iteration
 # -----------------------------------------------------------------------------
 
@@ -252,6 +186,7 @@ def grouper(iterable, n, fillvalue=None):
 
 
 def sliding_window(iterable, n=2):
+    """Returns a sliding window of size n over an iterable"""
     iterables = itertools.tee(iterable, n)
 
     for win_iter, num_skipped in zip(iterables, itertools.count()):
@@ -283,3 +218,116 @@ def attrib_no_namespace(
             return value
 
     return default
+
+
+def text_and_elements(element, is_last=False):
+    """Yields element, text, sub-elements, end element, and tail"""
+    element_metadata = None
+
+    if is_last:
+        # True if this is the last child element of a parent.
+        # Used to preserve whitespace.
+        element_metadata = {"is_last": True}
+
+    yield element, element_metadata
+
+    # Text before any tags (or end tag)
+    text = element.text if element.text is not None else ""
+    if text.strip():
+        yield text
+
+    children = list(element)
+    last_child_idx = len(children) - 1
+
+    for child_idx, child in enumerate(children):
+        # Sub-elements
+        is_last = child_idx == last_child_idx
+        yield from text_and_elements(child, is_last=is_last)
+
+    # End of current element
+    yield EndElement(element)
+
+    # Text after the current tag
+    tail = element.tail if element.tail is not None else ""
+    if tail.strip():
+        yield tail
+
+
+# -----------------------------------------------------------------------------
+# Text
+# -----------------------------------------------------------------------------
+
+
+def get_whitespace(s: str) -> typing.Tuple[str, str]:
+    """Returns leading and trailing whitespace of a string"""
+    leading_ws, trailing_ws = "", ""
+    match = SURROUNDING_WHITESPACE_PATTERN.match(s)
+    if match is not None:
+        leading_ws, trailing_ws = match.groups()
+
+    return leading_ws, trailing_ws
+
+
+def has_digit(s: str) -> bool:
+    """True if string contains at least one digit"""
+    return HAS_DIGIT_PATTERN.search(s) is not None
+
+
+def normalize_whitespace(s: str) -> str:
+    """Replace multiple spaces with single space"""
+    return NORMALIZE_WHITESPACE_PATTERN.sub(" ", s.strip())
+
+
+# -----------------------------------------------------------------------------
+# Graph
+# -----------------------------------------------------------------------------
+
+
+def print_graph(
+    graph: GraphType,
+    node: typing.Union[NODE_TYPE, Node],
+    indent: str = "--",
+    level: int = 1,
+    print_func=print,
+):
+    """Prints a graph to the console"""
+    if isinstance(node, Node):
+        n_data = node
+        graph_node = node.node
+    else:
+        graph_node = node
+        n_data = typing.cast(Node, graph.nodes[graph_node][DATA_PROP])
+
+    print_func(indent * level, graph_node, n_data)
+    for succ_node in graph.successors(graph_node):
+        print_graph(
+            graph, succ_node, indent=indent, level=level + 1, print_func=print_func
+        )
+
+
+def leaves(graph: GraphType, node: Node):
+    """Iterate through the leaves of a graph in depth-first order"""
+    for dfs_node in nx.dfs_preorder_nodes(graph, node.node):
+        if not graph.out_degree(dfs_node) == 0:
+            continue
+
+        yield graph.nodes[dfs_node][DATA_PROP]
+
+
+def pipeline_split(
+    split_func, graph: GraphType, parent_node: Node,
+):
+    """Splits leaf nodes of tree into zero or more sub-nodes"""
+    for leaf_node in list(leaves(graph, parent_node)):
+        for node_class, node_kwargs in split_func(graph, leaf_node):
+            new_node = node_class(node=len(graph), **node_kwargs)
+            graph.add_node(new_node.node, data=new_node)
+            graph.add_edge(leaf_node.node, new_node.node)
+
+
+def pipeline_transform(
+    transform_func, graph: GraphType, parent_node: Node,
+):
+    """Transforms leaves of tree with a custom function"""
+    for leaf_node in list(leaves(graph, parent_node)):
+        transform_func(graph, leaf_node)

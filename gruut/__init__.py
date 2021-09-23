@@ -1,35 +1,30 @@
 """gruut module"""
 import itertools
-import sqlite3
+import logging
 import re
+import sqlite3
 import threading
 import typing
-import logging
 from enum import Enum
 from pathlib import Path
 
 import gruut_ipa
-
 import networkx as nx
-from gruut.lang import KNOWN_LANGS, resolve_lang
+
+from gruut.const import KNOWN_LANGS, PHONEMES_TYPE, GraphType, SentenceNode
+from gruut.g2p import DelayedGraphemesToPhonemes
+from gruut.phonemize import DelayedSqlitePhonemizer
+from gruut.pos import DelayedPartOfSpeechTagger
 from gruut.text_processor import (
+    GetPartsOfSpeech,
+    InterpretAsFormat,
+    Sentence,
     TextProcessor,
     TextProcessorSettings,
-    GetPartsOfSpeech,
-    Sentence,
-    InterpretAsFormat,
 )
-from gruut.pos import PartOfSpeechTagger
-from gruut.g2p import GraphemesToPhonemes
-from gruut.phonemize import SqlitePhonemizer
-from gruut.utils import find_lang_dir
-from gruut.const import PHONEMES_TYPE
+from gruut.utils import find_lang_dir, resolve_lang
 
-# from .const import WORD_PHONEMES, Sentence, Token, TokenFeatures, WordPronunciation
-# from .lang import KNOWN_LANGS, get_phonemizer, get_tokenizer, resolve_lang
-# from .phonemize import Phonemizer, SqlitePhonemizer, UnknownWordError
-# from .toksen import RegexTokenizer, Tokenizer
-# from .utils import encode_inline_pronunciations
+# -----------------------------------------------------------------------------
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut")
@@ -45,6 +40,7 @@ __all__ = [
 
 # -----------------------------------------------------------------------------
 
+# Cache of text processor settings
 SETTINGS: typing.Dict[str, TextProcessorSettings] = {}
 SETTINGS_LOCK = threading.RLock()
 
@@ -59,6 +55,7 @@ def sentences(
     punctuations: bool = True,
     **process_args,
 ) -> typing.Iterable[Sentence]:
+    """Process text and return sentences"""
     model_prefix = "" if (not espeak) else "espeak"
     settings = {}
 
@@ -116,6 +113,7 @@ def get_settings(
     load_g2p_guesser: bool = True,
     **settings_args,
 ) -> TextProcessorSettings:
+    """Get settings for a specific language"""
     lang = resolve_lang(lang)
 
     if lang_dir is None:
@@ -142,7 +140,7 @@ def get_settings(
         if load_phoneme_lexicon:
             lexicon_db_path = lang_dir / model_prefix / "lexicon.db"
             if lexicon_db_path.is_file():
-                # TODO: Remove non-word chars in locale
+                # Lower-case word if it can't be found in the lexicon
                 phonemizer_args = {"word_transform_funcs": [str.lower]}
 
                 settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
@@ -244,6 +242,7 @@ def get_text_processor(
     load_g2p_guesser: bool = True,
     **settings_args,
 ) -> TextProcessor:
+    """Get a text process for one or more languages"""
     if languages is None:
         languages = itertools.chain(KNOWN_LANGS, [default_lang])
 
@@ -299,6 +298,28 @@ def get_text_processor(
 # Arabic (ar, اَلْعَرَبِيَّةُ)
 # -----------------------------------------------------------------------------
 
+
+class ArabicPreProcessText:
+    """Pre-processes text using mishkal"""
+
+    def __call__(self, text: str) -> str:
+        try:
+            import mishkal.tashkeel
+
+            # Load vocalizer
+            if not hasattr(self, "vocalizer"):
+                vocalizer = mishkal.tashkeel.TashkeelClass()
+                setattr(self, "vocalizer", vocalizer)
+
+            # Add diacritics
+            text = vocalizer.tashkeel(text)
+        except ImportError:
+            _LOGGER.warning("mishkal is highly recommended for language 'ar'")
+            _LOGGER.warning("pip install 'mishkal>=0.4.0'")
+
+        return text
+
+
 DEFAULT_AR_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "؟", "!"},
     "minor_breaks": {"،", ";", ":"},
@@ -311,10 +332,12 @@ DEFAULT_AR_SETTINGS: typing.Dict[str, typing.Any] = {
         ("\\B['‘]", '"'),  # replace single quotes (left)
         ("['’]\\B", '"'),  # replace signed quotes (right)
     ],
+    "pre_process_text": ArabicPreProcessText(),
 }
 
 
 def make_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Arabic"""
     settings_args = {**DEFAULT_AR_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="ar", **settings_args)
 
@@ -340,7 +363,7 @@ def en_is_initialism(text: str) -> bool:
 
 DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "*", "_"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">", "*", "_"},
@@ -380,6 +403,7 @@ DEFAULT_EN_US_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for English"""
     settings_args = {**DEFAULT_EN_US_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="en_US", **settings_args)
 
@@ -405,6 +429,7 @@ DEFAULT_CS_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Czech"""
     settings_args = {**DEFAULT_CS_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="cs_CZ", **settings_args)
 
@@ -415,7 +440,7 @@ def make_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_DE_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
@@ -430,6 +455,7 @@ DEFAULT_DE_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for German"""
     settings_args = {**DEFAULT_DE_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="de_DE", **settings_args)
 
@@ -440,7 +466,7 @@ def make_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -455,6 +481,7 @@ DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Spanish"""
     settings_args = {**DEFAULT_ES_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="es_ES", **settings_args)
 
@@ -462,6 +489,64 @@ def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 # -----------------------------------------------------------------------------
 # Farsi/Persian (fa, فارسی)
 # -----------------------------------------------------------------------------
+
+
+class FarsiPartOfSpeechTagger:
+    """Add POS tags with hazm"""
+
+    def __init__(self, lang_dir: Path):
+        self.lang_dir = lang_dir
+
+    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
+        pos_tags = []
+
+        try:
+            import hazm
+
+            # Load normalizer
+            if not hasattr(self, "normalizer"):
+                normalizer = hazm.Normalizer()
+                setattr(self, "normalizer", normalizer)
+
+            # Load tagger
+            if not hasattr(self, "tagger"):
+                # Load part of speech tagger
+                model_path = self.lang_dir / "pos" / "postagger.model"
+                tagger = hazm.POSTagger(model=str(model_path))
+                setattr(self, "tagger", tagger)
+
+            text = " ".join(words)
+            for sentence in hazm.sent_tokenize(normalizer.normalize(text)):
+                for _word, pos in tagger.tag(hazm.word_tokenize(sentence)):
+                    pos_tags.append(pos)
+        except ImportError:
+            _LOGGER.warning("hazm is highly recommended for language 'fa'")
+            _LOGGER.warning("pip install 'hazm>=0.7.0'")
+
+        return pos_tags
+
+
+def fa_post_process_sentence(
+    graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
+):
+    """Add e̞ for genitive case"""
+    from gruut.text_processor import DATA_PROP, WordNode
+    from gruut.utils import sliding_window
+
+    for dfs_node in nx.dfs_preorder_nodes(graph, sent_node.node):
+        if not graph.out_degree(dfs_node) == 0:
+            # Only leave
+            continue
+
+        node = graph.nodes[dfs_node][DATA_PROP]
+        if isinstance(node, WordNode):
+            word = typing.cast(WordNode, node)
+            if word.phonemes and (word.pos == "Ne"):
+                if isinstance(word.phonemes, list):
+                    word.phonemes.append("e̞")
+                else:
+                    word.phonemes = list(word.phonemes) + ["e̞"]
+
 
 DEFAULT_FA_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "؟", "!"},
@@ -475,11 +560,17 @@ DEFAULT_FA_SETTINGS: typing.Dict[str, typing.Any] = {
         ("\\B['‘]", '"'),  # replace single quotes (left)
         ("['’]\\B", '"'),  # replace signed quotes (right)
     ],
+    "post_process_sentence": fa_post_process_sentence,
 }
 
 
 def make_fa_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Farsi"""
     settings_args = {**DEFAULT_FA_SETTINGS, **settings_args}
+
+    if (lang_dir is not None) and ("get_parts_of_speech" not in settings_args):
+        settings_args["get_parts_of_speech"] = FarsiPartOfSpeechTagger(lang_dir)
+
     return TextProcessorSettings(lang="fa", **settings_args)
 
 
@@ -488,7 +579,10 @@ def make_fa_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 # -----------------------------------------------------------------------------
 
 
-def fr_post_process_sentence(graph, sent_node, settings):
+def fr_post_process_sentence(
+    graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
+):
+    """Add liasons to phonemes"""
     from gruut.text_processor import DATA_PROP, WordNode
     from gruut.utils import sliding_window
 
@@ -598,7 +692,7 @@ def fr_is_vowel(phoneme: str) -> bool:
 
 DEFAULT_FR_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -614,6 +708,7 @@ DEFAULT_FR_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_fr_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for French"""
     settings_args = {**DEFAULT_FR_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="fr_FR", **settings_args)
 
@@ -624,7 +719,7 @@ def make_fr_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -640,6 +735,7 @@ DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Italian"""
     settings_args = {**DEFAULT_IT_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="it_IT", **settings_args)
 
@@ -650,7 +746,7 @@ def make_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -665,6 +761,7 @@ DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Dutch"""
     settings_args = {**DEFAULT_NL_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="nl", **settings_args)
 
@@ -675,7 +772,7 @@ def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_PT_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -690,6 +787,7 @@ DEFAULT_PT_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_pt_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create default settings for Portuguese"""
     settings_args = {**DEFAULT_PT_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="pt", **settings_args)
 
@@ -715,6 +813,7 @@ DEFAULT_RU_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_ru_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Russian"""
     settings_args = {**DEFAULT_RU_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="ru_RU", **settings_args)
 
@@ -725,7 +824,7 @@ def make_ru_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 DEFAULT_SV_SETTINGS: typing.Dict[str, typing.Any] = {
     "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
+    "minor_breaks": {",", ";", ":", "..."},
     "word_breaks": {"-", "_"},
     "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
     "end_punctuations": {'"', "”", "»", "]", ")", ">"},
@@ -739,6 +838,7 @@ DEFAULT_SV_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_sv_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Swedish"""
     settings_args = {**DEFAULT_SV_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="sv_SE", **settings_args)
 
@@ -763,6 +863,7 @@ DEFAULT_SW_SETTINGS: typing.Dict[str, typing.Any] = {
 
 
 def make_sw_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Swahili"""
     settings_args = {**DEFAULT_SW_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="sw", **settings_args)
 
@@ -778,70 +879,3 @@ def is_language_supported(lang: str) -> bool:
 def get_supported_languages() -> typing.Set[str]:
     """Set of supported gruut languages"""
     return set(KNOWN_LANGS)
-
-
-# -----------------------------------------------------------------------------
-
-
-class DelayedPartOfSpeechTagger:
-    def __init__(self, model_path: typing.Union[str, Path], **tagger_args):
-
-        self.model_path = Path(model_path)
-        self.tagger: typing.Optional[PartOfSpeechTagger] = None
-        self.tagger_args = tagger_args
-
-    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
-        if self.tagger is None:
-            _LOGGER.debug("Loading part of speech tagger from %s", self.model_path)
-            self.tagger = PartOfSpeechTagger(self.model_path, **self.tagger_args)
-
-        assert self.tagger is not None
-        return self.tagger(words)
-
-
-class DelayedSqlitePhonemizer:
-    def __init__(self, db_path: typing.Union[str, Path], **phonemizer_args):
-
-        self.db_path = Path(db_path)
-        self.phonemizer: typing.Optional[SqlitePhonemizer] = None
-        self.phonemizer_args = phonemizer_args
-
-    def __call__(
-        self, word: str, role: typing.Optional[str] = None
-    ) -> typing.Optional[PHONEMES_TYPE]:
-        if self.phonemizer is None:
-            _LOGGER.debug("Connecting to lexicon database at %s", self.db_path)
-            db_conn = sqlite3.connect(self.db_path)
-            self.phonemizer = SqlitePhonemizer(db_conn=db_conn, **self.phonemizer_args)
-
-        assert self.phonemizer is not None
-        return self.phonemizer(word, role=role)
-
-
-class DelayedGraphemesToPhonemes:
-    def __init__(
-        self,
-        model_path: typing.Union[str, Path],
-        transform_func: typing.Optional[typing.Callable[[str], str]] = None,
-        **g2p_args,
-    ):
-        self.model_path = model_path
-        self.g2p: typing.Optional[GraphemesToPhonemes] = None
-        self.transform_func = transform_func
-        self.g2p_args = g2p_args
-
-    def __call__(
-        self, word: str, role: typing.Optional[str] = None
-    ) -> typing.Optional[PHONEMES_TYPE]:
-        if self.g2p is None:
-            _LOGGER.debug(
-                "Loading grapheme to phoneme CRF model from %s", self.model_path
-            )
-            self.g2p = GraphemesToPhonemes(self.model_path, **self.g2p_args)
-
-        assert self.g2p is not None
-
-        if self.transform_func is not None:
-            word = self.transform_func(word)
-
-        return self.g2p(word)

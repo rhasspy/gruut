@@ -49,7 +49,7 @@ for line in sys.stdin:
     num_prons[word] += 1
 
 print("Loading alignments...", file=sys.stderr)
-with open(aligned_path, "r") as aligned_file:
+with open(aligned_path, "r", encoding="utf-8") as aligned_file:
     for line in aligned_file:
         line = line.strip()
         if not line:
