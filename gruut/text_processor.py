@@ -276,6 +276,13 @@ class PostProcessSentence(typing.Protocol):
         pass
 
 
+class PreProcessText(typing.Protocol):
+    """Pre-process input text before tokenization"""
+
+    def __call__(self, text: str) -> str:
+        pass
+
+
 @dataclass
 class TextProcessorSettings:
     lang: str
@@ -337,7 +344,8 @@ class TextProcessorSettings:
     lookup_phonemes: typing.Optional[LookupPhonemes] = None
     guess_phonemes: typing.Optional[GuessPhonemes] = None
 
-    # Post-processing
+    # Pre/post-processing
+    pre_process_text: typing.Optional[PreProcessText] = None
     post_process_sentence: typing.Optional[PostProcessSentence] = None
 
     def __post_init__(self):
@@ -1356,7 +1364,11 @@ class TextProcessor:
             lang = scope_kwargs.get("lang", lang)
 
         settings = self.get_settings(lang)
-        assert settings is not None
+        assert settings is not None, f"No settings for {lang}"
+
+        if settings.pre_process_text is not None:
+            # Pre-process text
+            text = settings.pre_process_text(text)
 
         # Split into separate words/separators.
         # Drop empty words (leading whitespace is still preserved).

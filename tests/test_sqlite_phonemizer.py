@@ -21,6 +21,20 @@ class PhonemizerTestCase(unittest.TestCase):
             ],
         )
 
+    def test_cs(self):
+        """Czech test"""
+        self.assertEqual(
+            self.get_phonemes("Moje vznášedlo je plné úhořů.", "cs-cz"),
+            [
+                ("Moje", ["m", "o", "j", "ɛ"]),
+                ("vznášedlo", ["v", "z", "n", "aː", "ʃ", "ɛ", "d", "l", "o"]),
+                ("je", ["j", "ɛ"]),
+                ("plné", ["p", "l", "n", "ɛː"]),
+                ("úhořů", ["uː", "ɦ", "o", "r̝", "uː"]),
+                (".", ["‖"]),
+            ],
+        )
+
     def test_de_us(self):
         """German test"""
         self.assertEqual(
@@ -68,6 +82,39 @@ class PhonemizerTestCase(unittest.TestCase):
                 ("full", ["f", "ˈʊ", "l"]),
                 ("of", ["ə", "v"]),
                 ("eels", ["ˈi", "l", "z"]),
+                (".", ["‖"]),
+            ],
+        )
+
+    def test_es(self):
+        """Spanish test"""
+        self.assertEqual(
+            self.get_phonemes("Mi aerodeslizador está lleno de anguilas.", "es_ES"),
+            [
+                ("Mi", ["m", "i"]),
+                (
+                    "aerodeslizador",
+                    [
+                        "a",
+                        "e",
+                        "ɾ",
+                        "o",
+                        "d",
+                        "e",
+                        "s",
+                        "l",
+                        "i",
+                        "θ",
+                        "a",
+                        "d",
+                        "o",
+                        "ɾ",
+                    ],
+                ),
+                ("está", ["e", "s", "t", "a"]),
+                ("lleno", ["ʎ", "e", "n", "o"]),
+                ("de", ["d", "e"]),
+                ("anguilas", ["a", "n", "g", "i", "l", "a", "s"]),
                 (".", ["‖"]),
             ],
         )

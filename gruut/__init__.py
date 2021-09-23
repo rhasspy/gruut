@@ -177,6 +177,10 @@ def get_settings(
         # Arabic
         return make_ar_settings(lang_dir, **settings_args)
 
+    if lang == "cs-cz":
+        # Czech
+        return make_cs_settings(lang_dir, **settings_args)
+
     if lang in {"en-us", "en-gb"}:
         # English
         return make_en_us_settings(lang_dir, **settings_args)
@@ -185,21 +189,21 @@ def get_settings(
         # German
         return make_de_settings(lang_dir, **settings_args)
 
-    if lang == "fr-fr":
-        # French
-        return make_fr_settings(lang_dir, **settings_args)
-
     if lang == "es-es":
         # Spanish
         return make_es_settings(lang_dir, **settings_args)
 
-    if lang == "nl":
-        # Dutch
-        return make_nl_settings(lang_dir, **settings_args)
+    if lang == "fr-fr":
+        # French
+        return make_fr_settings(lang_dir, **settings_args)
 
     if lang == "it-it":
         # Italian
         return make_it_settings(lang_dir, **settings_args)
+
+    if lang == "nl":
+        # Dutch
+        return make_nl_settings(lang_dir, **settings_args)
 
     # Default settings only
     return TextProcessorSettings(lang=lang, **settings_args)
@@ -271,7 +275,7 @@ def get_text_processor(
 
 
 # -----------------------------------------------------------------------------
-# Arabic
+# Arabic (ar, اَلْعَرَبِيَّةُ)
 # -----------------------------------------------------------------------------
 
 DEFAULT_AR_SETTINGS: typing.Dict[str, typing.Any] = {
@@ -295,7 +299,7 @@ def make_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 
 # -----------------------------------------------------------------------------
-# English
+# English (en-us, en-gb)
 # -----------------------------------------------------------------------------
 
 
@@ -355,7 +359,32 @@ def make_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings
 
 
 # -----------------------------------------------------------------------------
-# German
+# Czech (cs-cz, čeština)
+# -----------------------------------------------------------------------------
+
+DEFAULT_CS_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_CS_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="cs_CZ", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# German (de-de)
 # -----------------------------------------------------------------------------
 
 DEFAULT_DE_SETTINGS: typing.Dict[str, typing.Any] = {
@@ -380,7 +409,32 @@ def make_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 
 # -----------------------------------------------------------------------------
-# French
+# Spanish (es-es, Español)
+# -----------------------------------------------------------------------------
+
+DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_ES_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="es_ES", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# French (fr-fr, Français)
 # -----------------------------------------------------------------------------
 
 
@@ -515,57 +569,7 @@ def make_fr_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 
 # -----------------------------------------------------------------------------
-# Spanish
-# -----------------------------------------------------------------------------
-
-DEFAULT_ES_SETTINGS: typing.Dict[str, typing.Any] = {
-    "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
-    "word_breaks": {"-", "_"},
-    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
-    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-    "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
-    "replacements": [
-        ("’", "'"),  # normalize apostrophe
-        ("\\B['‘]", '"'),  # replace single quotes (left)
-        ("['’]\\B", '"'),  # replace signed quotes (right)
-    ],
-}
-
-
-def make_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
-    settings_args = {**DEFAULT_ES_SETTINGS, **settings_args}
-    return TextProcessorSettings(lang="es_ES", **settings_args)
-
-
-# -----------------------------------------------------------------------------
-# Dutch
-# -----------------------------------------------------------------------------
-
-DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
-    "major_breaks": {".", "?", "!"},
-    "minor_breaks": {",", ";", ":"},
-    "word_breaks": {"-", "_"},
-    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
-    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-    "default_currency": "EUR",
-    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
-    "replacements": [
-        ("’", "'"),  # normalize apostrophe
-        ("\\B['‘]", '"'),  # replace single quotes (left)
-        ("['’]\\B", '"'),  # replace signed quotes (right)
-    ],
-}
-
-
-def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
-    settings_args = {**DEFAULT_NL_SETTINGS, **settings_args}
-    return TextProcessorSettings(lang="nl", **settings_args)
-
-
-# -----------------------------------------------------------------------------
-# Italian
+# Italian (it-it, Italiano)
 # -----------------------------------------------------------------------------
 
 DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
@@ -588,6 +592,31 @@ DEFAULT_IT_SETTINGS: typing.Dict[str, typing.Any] = {
 def make_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     settings_args = {**DEFAULT_IT_SETTINGS, **settings_args}
     return TextProcessorSettings(lang="it_IT", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Dutch (nl, Nederlands)
+# -----------------------------------------------------------------------------
+
+DEFAULT_NL_SETTINGS: typing.Dict[str, typing.Any] = {
+    "major_breaks": {".", "?", "!"},
+    "minor_breaks": {",", ";", ":"},
+    "word_breaks": {"-", "_"},
+    "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+    "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+    "default_currency": "EUR",
+    "default_date_format": "omy",  # 4/1/2021 -> first April twenty twenty-one
+    "replacements": [
+        ("’", "'"),  # normalize apostrophe
+        ("\\B['‘]", '"'),  # replace single quotes (left)
+        ("['’]\\B", '"'),  # replace signed quotes (right)
+    ],
+}
+
+
+def make_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    settings_args = {**DEFAULT_NL_SETTINGS, **settings_args}
+    return TextProcessorSettings(lang="nl", **settings_args)
 
 
 # -----------------------------------------------------------------------------
