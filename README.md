@@ -82,16 +82,16 @@ See [the documentation](https://rhasspy.github.io/gruut/) for more details.
 ## Installation
 
 ```sh
-pip install -f 'https://synesthesiam.github.io/prebuilt-apps/' gruut
+pip install gruut
 ```
-
-The extra pip repo is needed for an updated [num2words fork](https://github.com/rhasspy/num2words) that includes support for more languages.
 
 Languages besides English can be added during installation. For example, with French and Italian support:
 
 ```sh
 pip install -f 'https://synesthesiam.github.io/prebuilt-apps/' gruut[fr,it]
 ```
+
+The extra pip repo is needed for an updated [num2words fork](https://github.com/rhasspy/num2words) that includes support for more languages.
 
 You may also [manually download language files](https://github.com/rhasspy/gruut/releases/latest) and use put them in `$XDG_CONFIG_HOME/gruut/` (`$HOME/.config/gruut` by default).
 
