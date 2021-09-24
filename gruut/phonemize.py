@@ -105,24 +105,3 @@ class SqlitePhonemizer:
 
         # Not in lexicon
         return None
-
-
-class DelayedSqlitePhonemizer:
-    """Phonemizer that loads on first use"""
-
-    def __init__(self, db_path: typing.Union[str, Path], **phonemizer_args):
-
-        self.db_path = Path(db_path)
-        self.phonemizer: typing.Optional[SqlitePhonemizer] = None
-        self.phonemizer_args = phonemizer_args
-
-    def __call__(
-        self, word: str, role: typing.Optional[str] = None
-    ) -> typing.Optional[PHONEMES_TYPE]:
-        if self.phonemizer is None:
-            _LOGGER.debug("Connecting to lexicon database at %s", self.db_path)
-            db_conn = sqlite3.connect(self.db_path)
-            self.phonemizer = SqlitePhonemizer(db_conn=db_conn, **self.phonemizer_args)
-
-        assert self.phonemizer is not None
-        return self.phonemizer(word, role=role)

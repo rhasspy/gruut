@@ -9,8 +9,8 @@ from pathlib import Path
 
 import jsonlines
 
-from gruut import get_text_processor
 from gruut.const import KNOWN_LANGS
+from gruut.text_processor import TextProcessor
 from gruut.utils import print_graph
 
 # -----------------------------------------------------------------------------
@@ -49,12 +49,9 @@ def main():
 
     # -------------------------------------------------------------------------
 
-    text_processor = get_text_processor(
+    text_processor = TextProcessor(
         default_lang=args.language,
         languages=[args.language] if not args.ssml else None,
-        load_pos_tagger=(not args.no_pos),
-        load_phoneme_lexicon=(not args.no_lexicon),
-        load_g2p_guesser=(not args.no_g2p),
         model_prefix=args.model_prefix,
         lang_dir=args.lang_dir,
     )

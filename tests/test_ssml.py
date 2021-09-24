@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Tests for SSML"""
-import sys
 import unittest
 
 from gruut import sentences
-from gruut.const import Word, Sentence
 
 
 class SSMLTestCase(unittest.TestCase):
     """Test cases for SSML"""
 
     def test_wikipedia_example(self):
+        """Test SSML example from Wikipedia"""
         text = """<?xml version="1.0"?>
 <speak xmlns="http://www.w3.org/2001/10/synthesis"
        xmlns:dc="http://purl.org/dc/elements/1.1/"

@@ -16,7 +16,7 @@ if [[ -z "${no_venv}" ]]; then
     fi
 fi
 
-python_files=("${src_dir}/gruut/"*.py)
+python_files=("${src_dir}/gruut/"*.py "${src_dir}/tests/"*.py)
 
 # Add bin scripts selectively
 bin_scripts=('clean-metadata' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'reorder_lexicon' 'espeak_word')

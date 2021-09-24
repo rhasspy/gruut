@@ -166,24 +166,6 @@ class PartOfSpeechTagger:
         return base64.b64decode(s.encode("ascii")).decode()
 
 
-class DelayedPartOfSpeechTagger:
-    """POS tagger that loads on first use"""
-
-    def __init__(self, model_path: typing.Union[str, Path], **tagger_args):
-
-        self.model_path = Path(model_path)
-        self.tagger: typing.Optional[PartOfSpeechTagger] = None
-        self.tagger_args = tagger_args
-
-    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
-        if self.tagger is None:
-            _LOGGER.debug("Loading part of speech tagger from %s", self.model_path)
-            self.tagger = PartOfSpeechTagger(self.model_path, **self.tagger_args)
-
-        assert self.tagger is not None
-        return self.tagger(words)
-
-
 # -----------------------------------------------------------------------------
 
 

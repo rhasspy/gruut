@@ -1,5 +1,6 @@
 """Shared classes, types, and enums"""
 import itertools
+import operator
 import re
 import typing
 import xml.etree.ElementTree as etree
@@ -8,18 +9,23 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
+import babel
+import babel.numbers
+
 # alias -> full language name
 LANG_ALIASES = {
     "ar": "ar",
     "cs": "cs-cz",
     "de": "de-de",
     "en": "en-us",
+    "en-gb": "en-us",
     "es": "es-es",
     "es-mx": "es-es",
     "fa": "fa",
     "fr": "fr-fr",
     "it": "it-it",
     "nl": "nl",
+    "nl-nl": "nl",
     "pt-br": "pt",
     "ru": "ru-ru",
     "sv": "sv-se",
@@ -47,7 +53,10 @@ except AttributeError:
 # Phonemes for a single word
 PHONEMES_TYPE = typing.Sequence[str]
 
+# Type of nodes in a text graph
 NODE_TYPE = int
+
+# Property used to hold node data in text graph
 DATA_PROP = "data"
 
 
@@ -351,3 +360,294 @@ class EndElement:
     """Wrapper for end of an XML element (used in TextProcessor)"""
 
     element: etree.Element
+
+
+# -----------------------------------------------------------------------------
+
+
+def has_digit(s: str) -> bool:
+    """True if string contains at least one digit"""
+    return HAS_DIGIT_PATTERN.search(s) is not None
+
+
+def default_get_whitespace(s: str) -> typing.Tuple[str, str]:
+    """Returns leading and trailing whitespace of a string"""
+    leading_ws, trailing_ws = "", ""
+    match = SURROUNDING_WHITESPACE_PATTERN.match(s)
+    if match is not None:
+        leading_ws, trailing_ws = match.groups()
+
+    return leading_ws, trailing_ws
+
+
+def default_normalize_whitespace(s: str) -> str:
+    """Replace multiple spaces with single space"""
+    return NORMALIZE_WHITESPACE_PATTERN.sub(" ", s.strip())
+
+
+def maybe_compile_regex(
+    str_or_pattern: typing.Union[str, REGEX_PATTERN]
+) -> REGEX_PATTERN:
+    """Compile regex pattern if it's a string"""
+    if isinstance(str_or_pattern, REGEX_PATTERN):
+        return str_or_pattern
+
+    assert isinstance(str_or_pattern, str)
+
+    return re.compile(str_or_pattern)
+
+
+# -----------------------------------------------------------------------------
+
+
+@dataclass
+class TextProcessorSettings:
+    """Language specific settings for text processing"""
+
+    lang: str
+    """Language code that these settings apply to (e.g., en_US)"""
+
+    # Whitespace/tokenization
+    split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN
+    """Regex used to split text into initial words"""
+
+    join_str: str = " "
+    """String used to combine text from words"""
+
+    keep_whitespace: bool = True
+    """True if original whitespace should be retained"""
+
+    is_non_word: typing.Optional[typing.Callable[[str], bool]] = None
+    """Returns true if text is not a word (and should be ignored in final output)"""
+
+    get_whitespace: typing.Callable[
+        [str], typing.Tuple[str, str]
+    ] = default_get_whitespace
+    """Returns leading, trailing whitespace from a string"""
+
+    normalize_whitespace: typing.Callable[[str], str] = default_normalize_whitespace
+    """Normalizes whitespace in a string"""
+
+    # Punctuations
+    begin_punctuations: typing.Optional[typing.Set[str]] = None
+    """Strings that should be split off from the beginning of a word"""
+
+    begin_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+    """Regex that overrides begin_punctuations"""
+
+    end_punctuations: typing.Optional[typing.Set[str]] = None
+    """Strings that should be split off from the end of a word"""
+
+    end_punctuations_pattern: typing.Optional[REGEX_TYPE] = None
+    """Regex that overrides end_punctuations"""
+
+    # Replacements/abbreviations
+    replacements: typing.Sequence[typing.Tuple[REGEX_TYPE, str]] = field(
+        default_factory=list
+    )
+    """Regex, replacement template pairs that are applied in order right after tokenization on each word"""
+
+    abbreviations: typing.Dict[REGEX_TYPE, str] = field(default_factory=dict)
+    """Regex, replacement template pairs that may expand words after minor breaks are matched"""
+
+    spell_out_words: typing.Dict[str, str] = field(default_factory=dict)
+    """Written form, spoken form pairs that are applied with interpret-as="spell-out" in <say-as>"""
+
+    # Breaks
+    major_breaks: typing.Set[str] = field(default_factory=set)
+    """Set of strings that occur at the end of a word and should break apart sentences."""
+
+    major_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+    """Regex that overrides major_breaks"""
+
+    minor_breaks: typing.Set[str] = field(default_factory=set)
+    """Set of strings that occur at the end of a word and should break apart phrases."""
+
+    minor_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+    """Regex that overrides minor_breaks"""
+
+    word_breaks: typing.Set[str] = field(default_factory=set)
+    word_breaks_pattern: typing.Optional[REGEX_TYPE] = None
+    """Regex that overrides word_breaks"""
+
+    # Numbers
+    is_maybe_number: typing.Optional[
+        typing.Callable[[str], bool]
+    ] = lambda s: HAS_DIGIT_PATTERN.search(s) is not None
+    """True if a word may be a number (parsing will be attempted)"""
+
+    babel_locale: typing.Optional[str] = None
+    """Locale used to parse numbers/dates/currencies (defaults to lang)"""
+
+    num2words_lang: typing.Optional[str] = None
+    """Language used to verbalize numbers (defaults to lang)"""
+
+    # Currency
+    default_currency: str = "USD"
+    """Currency name to use when interpret-as="currency" but no currency symbol is present"""
+
+    currencies: typing.MutableMapping[str, str] = field(default_factory=dict)
+    """Mapping from currency symbol ($) to currency name (USD)"""
+
+    currency_symbols: typing.Sequence[str] = field(default_factory=list)
+    """Ordered list of currency symbols (decreasing length)"""
+
+    is_maybe_currency: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    """True if a word may be an amount of currency (parsing will be attempted)"""
+
+    # Dates
+    dateparser_lang: typing.Optional[str] = None
+    """Language used to parse dates (defaults to lang)"""
+
+    is_maybe_date: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    """True if a word may be a date (parsing will be attempted)"""
+
+    default_date_format: typing.Union[
+        str, InterpretAsFormat
+    ] = InterpretAsFormat.DATE_MDY_ORDINAL
+    """Format used to verbalize a date unless set with the format attribute of <say-as>"""
+
+    # Part of speech (pos) tagging
+    get_parts_of_speech: typing.Optional[GetPartsOfSpeech] = None
+    """Optional function to get part of speech for a word"""
+
+    # Initialisms (e.g, TTS or T.T.S.)
+    is_initialism: typing.Optional[typing.Callable[[str], bool]] = None
+    """True if a word is an initialism (will be split with split_initialism)"""
+
+    split_initialism: typing.Optional[
+        typing.Callable[[str], typing.Sequence[str]]
+    ] = None
+    """Function to break apart an initialism into multiple words (called if is_initialism is True)"""
+
+    # Phonemization
+    lookup_phonemes: typing.Optional[LookupPhonemes] = None
+    """Optional function to look up phonemes for a word/role (without guessing)"""
+
+    guess_phonemes: typing.Optional[GuessPhonemes] = None
+    """Optional function to guess phonemes for a word/role"""
+
+    # Pre/post-processing
+    pre_process_text: typing.Optional[typing.Callable[[str], str]] = None
+    """Optional function to process text during tokenization"""
+
+    post_process_sentence: typing.Optional[PostProcessSentence] = None
+    """Optional function to post-process each sentence in the graph before post_process_graph"""
+
+    def __post_init__(self):
+        # Languages/locales
+        if self.babel_locale is None:
+            if "-" in self.lang:
+                # en-us -> en_US
+                lang_parts = self.lang.split("-", maxsplit=1)
+                self.babel_locale = "_".join(
+                    [lang_parts[0].lower(), lang_parts[1].upper()]
+                )
+            else:
+                self.babel_locale = self.lang
+
+        if self.num2words_lang is None:
+            self.num2words_lang = self.babel_locale
+
+        if self.dateparser_lang is None:
+            # en_US -> en
+            self.dateparser_lang = self.babel_locale.split("_")[0]
+
+        # Pre-compiled regular expressions
+        self.replacements = [
+            (maybe_compile_regex(pattern), template)
+            for pattern, template in self.replacements
+        ]
+
+        compiled_abbreviations = {}
+        for pattern, template in self.abbreviations.items():
+            if isinstance(pattern, str):
+                if not pattern.endswith("$") and self.major_breaks:
+                    # Automatically add optional major break at the end
+                    break_pattern_str = "|".join(
+                        re.escape(b) for b in self.major_breaks
+                    )
+                    pattern = (
+                        f"{pattern}(?P<break>{break_pattern_str})?(?P<whitespace>\\s*)$"
+                    )
+                    template += r"\g<break>\g<whitespace>"
+
+                pattern = re.compile(pattern)
+
+            compiled_abbreviations[pattern] = template
+
+        self.abbreviations = compiled_abbreviations
+
+        # Pattern to split text into initial words
+        self.split_pattern = maybe_compile_regex(self.split_pattern)
+
+        # Strings that should be separated from words, but do not cause any breaks
+        if (self.begin_punctuations_pattern is None) and self.begin_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.begin_punctuations)
+
+            # Match begin_punctuations only at start a word
+            self.begin_punctuations_pattern = f"^({pattern_str})"
+
+        if self.begin_punctuations_pattern is not None:
+            self.begin_punctuations_pattern = maybe_compile_regex(
+                self.begin_punctuations_pattern
+            )
+
+        if (self.end_punctuations_pattern is None) and self.end_punctuations:
+            pattern_str = "|".join(re.escape(b) for b in self.end_punctuations)
+
+            # Match end_punctuations only at end of a word
+            self.end_punctuations_pattern = f"({pattern_str})$"
+
+        if self.end_punctuations_pattern is not None:
+            self.end_punctuations_pattern = maybe_compile_regex(
+                self.end_punctuations_pattern
+            )
+
+        # Major breaks (split sentences)
+        if (self.major_breaks_pattern is None) and self.major_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.major_breaks)
+
+            # Match major break with either whitespace at the end or at the end of the text
+            self.major_breaks_pattern = f"((?:{pattern_str})(?:\\s+|$))"
+
+        if self.major_breaks_pattern is not None:
+            self.major_breaks_pattern = maybe_compile_regex(self.major_breaks_pattern)
+
+        # Minor breaks (don't split sentences)
+        if (self.minor_breaks_pattern is None) and self.minor_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.minor_breaks)
+
+            # Match minor break with optional whitespace after
+            self.minor_breaks_pattern = f"((?:{pattern_str})\\s*)"
+
+        if self.minor_breaks_pattern is not None:
+            self.minor_breaks_pattern = maybe_compile_regex(self.minor_breaks_pattern)
+
+        # Word breaks (break words apart into multiple words)
+        if (self.word_breaks_pattern is None) and self.word_breaks:
+            pattern_str = "|".join(re.escape(b) for b in self.word_breaks)
+            self.word_breaks_pattern = f"(?:{pattern_str})"
+
+        if self.word_breaks_pattern is not None:
+            self.word_breaks_pattern = maybe_compile_regex(self.word_breaks_pattern)
+
+        # Currency
+        if not self.currencies:
+            # Look up currencies for locale
+            locale_obj = babel.Locale(self.babel_locale)
+
+            # $ -> USD
+            self.currencies = {
+                babel.numbers.get_currency_symbol(cn): cn
+                for cn in locale_obj.currency_symbols
+            }
+
+        if not self.currency_symbols:
+            # Currency symbols (e.g., "$") by decreasing length
+            self.currency_symbols = sorted(
+                self.currencies, key=operator.length_hint, reverse=True
+            )
+
+
+# -----------------------------------------------------------------------------

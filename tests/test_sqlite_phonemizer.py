@@ -14,7 +14,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_ar(self):
         """Arabic test"""
         self.assertEqual(
-            self.get_phonemes("حَوّامتي مُمْتِلئة", "ar"),
+            get_phonemes("حَوّامتي مُمْتِلئة", "ar"),
             [
                 ("حَوَّامَتُي", ["ħ", "a", "u", "aː", "m", "t", "iː"]),
                 ("مُمْتِلِئَة", ["m", "u", "m", "t", "i", "l", "i", "ʔ", "i"],),
@@ -24,7 +24,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_cs(self):
         """Czech test"""
         self.assertEqual(
-            self.get_phonemes("Moje vznášedlo je plné úhořů.", "cs-cz"),
+            get_phonemes("Moje vznášedlo je plné úhořů.", "cs-cz"),
             [
                 ("Moje", ["m", "o", "j", "ɛ"]),
                 ("vznášedlo", ["v", "z", "n", "aː", "ʃ", "ɛ", "d", "l", "o"]),
@@ -38,7 +38,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_de_us(self):
         """German test"""
         self.assertEqual(
-            self.get_phonemes("Mein Luftkissenfahrzeug ist voller Aale.", "de_DE"),
+            get_phonemes("Mein Luftkissenfahrzeug ist voller Aale.", "de_DE"),
             [
                 ("Mein", ["m", "aɪ̯", "n"]),
                 (
@@ -74,7 +74,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_en_us(self):
         """English test"""
         self.assertEqual(
-            self.get_phonemes("My hovercraft is full of eels.", "en_US"),
+            get_phonemes("My hovercraft is full of eels.", "en_US"),
             [
                 ("My", ["m", "ˈaɪ"]),
                 ("hovercraft", ["h", "ˈʌ", "v", "ɚ", "k", "ɹ", "ˌæ", "f", "t"],),
@@ -89,7 +89,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_es(self):
         """Spanish test"""
         self.assertEqual(
-            self.get_phonemes("Mi aerodeslizador está lleno de anguilas.", "es_ES"),
+            get_phonemes("Mi aerodeslizador está lleno de anguilas.", "es_ES"),
             [
                 ("Mi", ["m", "i"]),
                 (
@@ -122,7 +122,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_fa(self):
         """Farsi test"""
         self.assertEqual(
-            self.get_phonemes("هاورکرافت من پر مارماهى است", "fa"),
+            get_phonemes("هاورکرافت من پر مارماهى است", "fa"),
             [
                 (
                     "هاورکرافت",
@@ -138,7 +138,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_fr(self):
         """French test"""
         self.assertEqual(
-            self.get_phonemes("Mon aéroglisseur est plein d'anguilles.", "fr_FR"),
+            get_phonemes("Mon aéroglisseur est plein d'anguilles.", "fr_FR"),
             [
                 ("Mon", ["m", "ɔ̃", "n"]),
                 ("aéroglisseur", ["a", "e", "ʁ", "ɔ", "ɡ", "l", "i", "s", "œ", "ʁ"],),
@@ -152,7 +152,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_it(self):
         """Italian test"""
         self.assertEqual(
-            self.get_phonemes("Il mio hovercraft è pieno di anguille.", "it_IT"),
+            get_phonemes("Il mio hovercraft è pieno di anguille.", "it_IT"),
             [
                 ("Il", ["i", "l"]),
                 ("mio", ["ˈm", "i", "o"],),
@@ -168,7 +168,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_nl(self):
         """Dutch test"""
         self.assertEqual(
-            self.get_phonemes("Mijn luchtkussenboot zit vol paling.", "nl"),
+            get_phonemes("Mijn luchtkussenboot zit vol paling.", "nl"),
             [
                 ("Mijn", ["m", "ɛi", "n"]),
                 (
@@ -185,7 +185,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_pt(self):
         """Portuguese test"""
         self.assertEqual(
-            self.get_phonemes("O meu hovercraft está cheio de enguias.", "pt"),
+            get_phonemes("O meu hovercraft está cheio de enguias.", "pt"),
             [
                 ("O", ["u"]),
                 ("meu", ["m", "ew"],),
@@ -201,7 +201,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_ru(self):
         """Russian test"""
         self.assertEqual(
-            self.get_phonemes("Моё судно на воздушной подушке полно угрей.", "ru_RU"),
+            get_phonemes("Моё судно на воздушной подушке полно угрей.", "ru_RU"),
             [
                 ("Моё", ["m", "o", "j", "oː"]),
                 ("судно", ["s", "uː", "d", "n", "o"],),
@@ -217,7 +217,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_sv(self):
         """Swedish test"""
         self.assertEqual(
-            self.get_phonemes("Min svävare är full med ål.", "sv_SE"),
+            get_phonemes("Min svävare är full med ål.", "sv_SE"),
             [
                 ("Min", ["m", "iː", "n"]),
                 ("svävare", ["²s", "v", "'ɛː", "v", "a", "r", "ɛ"],),
@@ -232,7 +232,7 @@ class PhonemizerTestCase(unittest.TestCase):
     def test_sw(self):
         """Swahili test"""
         self.assertEqual(
-            self.get_phonemes("Gari langu linaloangama limejaa na mikunga.", "sw"),
+            get_phonemes("Gari langu linaloangama limejaa na mikunga.", "sw"),
             [
                 ("Gari", ["ɠ", "ɑ", "ɾ", "i"]),
                 ("langu", ["l", "ɑ", "ᵑg", "u"],),
@@ -247,10 +247,11 @@ class PhonemizerTestCase(unittest.TestCase):
             ],
         )
 
-    def get_phonemes(self, text, lang):
-        """Return (text, phonemes) for each word"""
-        sentence = next(sentences(text, lang=lang))
-        return [(w.text, w.phonemes) for w in sentence if w.phonemes]
+
+def get_phonemes(text, lang):
+    """Return (text, phonemes) for each word"""
+    sentence = next(sentences(text, lang=lang))
+    return [(w.text, w.phonemes) for w in sentence if w.phonemes]
 
 
 # -----------------------------------------------------------------------------

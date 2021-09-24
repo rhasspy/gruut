@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
+"""Tests for TextProcessor"""
 import sys
 import unittest
 
-from gruut.text_processor import TextProcessor, Word, TextProcessorSettings, Sentence
+from gruut.text_processor import Sentence, TextProcessor, TextProcessorSettings, Word
 from gruut.utils import print_graph
 
-WORDS_KWARGS = {"explicit_lang": False, "break_phonemes": False}
+WORDS_KWARGS = {"explicit_lang": False, "phonemes": False}
 
 
 class TextProcessorTestCase(unittest.TestCase):
     """Tests for TextProcessor"""
 
     def test_whitespace(self):
+        """Text whitespace preservation"""
         processor = TextProcessor()
         graph, root = processor("This is  a   test    ")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -28,6 +30,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_no_whitespace(self):
+        """Test disabling of whitespace preservation"""
         processor = TextProcessor(keep_whitespace=False)
         graph, root = processor("This is  a   test    ")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -44,6 +47,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_punctuation(self):
+        """Test splitting of punctuation from around words"""
         processor = TextProcessor(
             begin_punctuations={'"', "«"},
             end_punctuations={'"', "»"},
@@ -79,6 +83,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_punctuation_with_inner_break(self):
+        """Test break inside of punctuation"""
         processor = TextProcessor(
             begin_punctuations={'"'}, end_punctuations={'"'}, major_breaks={"."},
         )
@@ -107,6 +112,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_replacements(self):
+        """Test regex replacements during tokenization"""
         processor = TextProcessor(
             minor_breaks={","},
             major_breaks={"."},
@@ -134,6 +140,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_abbreviations(self):
+        """Test expansion of abbreviations (with case preservation)"""
         processor = TextProcessor(
             minor_breaks={","},
             major_breaks={".", "?"},
@@ -167,6 +174,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_multiple_sentences(self):
+        """Test sentence break"""
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("First  sentence. Second sentence! ")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -229,6 +237,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_explicit_sentence(self):
+        """Test <s> in SSML for avoiding sentence break"""
         processor = TextProcessor(major_breaks={".", "!"})
         graph, root = processor("<s>First sentence. Second sentence!</s>", ssml=True)
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -247,6 +256,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_minor_breaks(self):
+        """Test minor (phrase) break"""
         processor = TextProcessor(minor_breaks={","})
         graph, root = processor("this, is a test")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -264,6 +274,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_word_breaks(self):
+        """Test inner-word break"""
         processor = TextProcessor(word_breaks={"-"})
         graph, root = processor("ninety-nine")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -278,6 +289,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_spell_out(self):
+        """Test interpret-as="spell-out" in SSML"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
             '<say-as interpret-as="spell-out">test123</say-as>', ssml=True
@@ -299,6 +311,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_initialisms(self):
+        """Test initialism spell out"""
         processor = TextProcessor(
             major_breaks={"."},
             is_initialism=lambda s: s.isalpha() and s.isupper(),
@@ -319,6 +332,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_numbers_one_language(self):
+        """Test number verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor("1 2 3")
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -334,11 +348,12 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_numbers_multiple_languages(self):
+        """Test number verbalization (SSML, multiple languages)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
             '1 <w lang="es_ES">2</w> <w lang="de_DE">3</w>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False))
 
         # Numbers should be verbalized
         self.assertEqual(
@@ -351,6 +366,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_currency_one_language(self):
+        """Test currency verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor("$10")
         words = list(processor.words(graph, root))
@@ -371,9 +387,12 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_currency_multiple_language(self):
+        """Test currency verbalization (SSML, multiple languages)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
-            '€10 <w lang="fr_FR">€10</w> <w lang="nl_NL">€10</w>', ssml=True
+            '€10 <w lang="fr_FR">€10</w> <w lang="nl_NL">€10</w>',
+            ssml=True,
+            phonemize=False,
         )
         words = list(processor.words(graph, root))
 
@@ -397,6 +416,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_currency_default(self):
+        """Test default currency use when no currency symbol (interpret-as="currency")"""
         processor = TextProcessor(default_lang="en_US", default_currency="USD")
         graph, root = processor(
             '<say-as interpret-as="currency">10</say-as>', ssml=True
@@ -419,6 +439,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_date_one_language(self):
+        """Test date verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
         graph, root = processor("4/1/1999")
         words = list(processor.words(graph, root))
@@ -452,9 +473,13 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_date_multiple_languages(self):
+        """Test date verbalization (SSML, multiple languages)"""
         processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
         graph, root = processor(
-            '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s></speak>', ssml=True
+            '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s></speak>',
+            ssml=True,
+            pos=False,
+            phonemize=False,
         )
         words = list(processor.words(graph, root))
 
@@ -524,6 +549,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_date_format_ordinal(self):
+        """Test date format in SSML (ordinal)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
             '<say-as interpret-as="date" format="md">4/1</say-as>', ssml=True
@@ -542,6 +568,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_date_format_cardinal(self):
+        """Test date format in SSML (cardinal)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
             '<say-as interpret-as="date" format="dmy">4/1/2000</say-as>', ssml=True
@@ -568,6 +595,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_part_of_speech_tagging(self):
+        """Test part-of-speech tagging"""
         processor = TextProcessor(
             # Made-up tagger that just gives the UPPER of the word back
             get_parts_of_speech=lambda words: [w.upper() for w in words],
@@ -585,12 +613,13 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_phonemize_one_language(self):
+        """Test phonemizer (single language)"""
         processor = TextProcessor(
             # Made-up phonemizer that just gives back the letters
             lookup_phonemes=lambda word, role: list(word),
         )
         graph, root = processor("test")
-        words = list(processor.words(graph, root, **WORDS_KWARGS))
+        words = list(processor.words(graph, root, pos=False, explicit_lang=False))
 
         # Single word is "phonemized"
         self.assertEqual(
@@ -607,6 +636,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_phonemize_one_language_multiple_roles(self):
+        """Test phonemizer (SSML, multiple word roles)"""
         processor = TextProcessor(
             # Made-up phonemizer that gives back upper-case letters if a role is provided
             lookup_phonemes=lambda word, role: list(word)
@@ -618,7 +648,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<speak>test <w role="some_role">test</w></speak>', ssml=True
         )
-        words = list(processor.words(graph, root, **WORDS_KWARGS))
+        words = list(processor.words(graph, root, pos=False, explicit_lang=False))
 
         # Single word is phonemized two different manners depending on role
         self.assertEqual(
@@ -642,6 +672,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_phonemize_multiple_languages(self):
+        """Test phonemizer (SSML, multiple languages)"""
         processor = TextProcessor(
             default_lang="en_US",
             lookup_phonemes=lambda word, role: list(word),
@@ -680,6 +711,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
 
     def test_sub(self):
+        """Test SSML substitution"""
         processor = TextProcessor(default_lang="en_US",)
         graph, root = processor(
             '<speak><sub alias="World Wide Web Consortium">W3C</sub></speak>', ssml=True
@@ -697,8 +729,10 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
-    def print_graph(self, graph, root):
-        print_graph(graph, root, print_func=lambda *p: print(*p, file=sys.stderr))
+
+def print_graph_stderr(graph, root):
+    """Print graph to stderr"""
+    print_graph(graph, root, print_func=lambda *p: print(*p, file=sys.stderr))
 
 
 # -----------------------------------------------------------------------------

@@ -11,13 +11,9 @@ import networkx as nx
 
 from gruut.const import (
     DATA_PROP,
-    HAS_DIGIT_PATTERN,
     KNOWN_LANGS,
     LANG_ALIASES,
     NODE_TYPE,
-    NORMALIZE_WHITESPACE_PATTERN,
-    REGEX_PATTERN,
-    SURROUNDING_WHITESPACE_PATTERN,
     EndElement,
     GraphType,
     Node,
@@ -29,6 +25,8 @@ _LOGGER = logging.getLogger("gruut.utils")
 # -----------------------------------------------------------------------------
 # Language utilities
 # -----------------------------------------------------------------------------
+
+LANG_SPLIT_PATTERN = re.compile(r"[-_]")
 
 
 def resolve_lang(lang: str) -> str:
@@ -81,7 +79,7 @@ def find_lang_dir(
         Path to the language model directory or None if it can't be found
     """
     try:
-        base_lang = lang.split("-")[0].lower()
+        base_lang = LANG_SPLIT_PATTERN.split(lang)[0].lower()
         lang_module_name = f"gruut_lang_{base_lang}"
         lang_module = __import__(lang_module_name)
 
@@ -117,23 +115,6 @@ def find_lang_dir(
             return lang_dir
 
     return None
-
-
-# -----------------------------------------------------------------------------
-# Regex
-# -----------------------------------------------------------------------------
-
-
-def maybe_compile_regex(
-    str_or_pattern: typing.Union[str, REGEX_PATTERN]
-) -> REGEX_PATTERN:
-    """Compile regex pattern if it's a string"""
-    if isinstance(str_or_pattern, REGEX_PATTERN):
-        return str_or_pattern
-
-    assert isinstance(str_or_pattern, str)
-
-    return re.compile(str_or_pattern)
 
 
 # -----------------------------------------------------------------------------
@@ -257,26 +238,6 @@ def text_and_elements(element, is_last=False):
 # -----------------------------------------------------------------------------
 # Text
 # -----------------------------------------------------------------------------
-
-
-def get_whitespace(s: str) -> typing.Tuple[str, str]:
-    """Returns leading and trailing whitespace of a string"""
-    leading_ws, trailing_ws = "", ""
-    match = SURROUNDING_WHITESPACE_PATTERN.match(s)
-    if match is not None:
-        leading_ws, trailing_ws = match.groups()
-
-    return leading_ws, trailing_ws
-
-
-def has_digit(s: str) -> bool:
-    """True if string contains at least one digit"""
-    return HAS_DIGIT_PATTERN.search(s) is not None
-
-
-def normalize_whitespace(s: str) -> str:
-    """Replace multiple spaces with single space"""
-    return NORMALIZE_WHITESPACE_PATTERN.sub(" ", s.strip())
 
 
 # -----------------------------------------------------------------------------

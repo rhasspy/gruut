@@ -44,9 +44,11 @@ class FrenchTestCase(unittest.TestCase):
     """Test cases for French"""
 
     def test_liason_after_determiner(self):
+        """Test liason after determiner (e.g., le)"""
         self._without_and_with_liason("Les arbres", "Les", ["l", "e"], ["l", "e", "z"])
 
-    def test_liason_adjective_nount(self):
+    def test_liason_adjective_noun(self):
+        """Test liason between adjective and noun"""
         self._without_and_with_liason(
             "J’ai des petites oreilles.",
             "petites",
@@ -55,9 +57,11 @@ class FrenchTestCase(unittest.TestCase):
         )
 
     def test_liason_pronoun_verb(self):
+        """Test liason between pronoun and verb"""
         self._without_and_with_liason("On est là!", "On", ["ɔ̃"], ["ɔ̃", "n"])
 
     def test_liason_tres(self):
+        """Test liason with très"""
         self._without_and_with_liason(
             "C’est très amusant!", "très", ["t", "ʁ", "ɛ"], ["t", "ʁ", "ɛ", "z"]
         )
@@ -72,12 +76,12 @@ class FrenchTestCase(unittest.TestCase):
         """Get pronunciation of a sentence with and without liason enabled"""
 
         # Verify no liason
-        sentence = next(sentences(text, lang="fr_FR", post_process=False))
+        sentence = next(iter(sentences(text, lang="fr_FR", post_process=False)))
         word = next(w for w in sentence if w.text == liason_word)
         self.assertEqual(word.phonemes, without_phonemes)
 
         # Verify liason
-        sentence = next(sentences(text, lang="fr_FR", post_process=True))
+        sentence = next(iter(sentences(text, lang="fr_FR", post_process=True)))
         word = next(w for w in sentence if w.text == liason_word)
         self.assertEqual(word.phonemes, with_phonemes)
 
