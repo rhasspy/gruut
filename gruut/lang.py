@@ -24,13 +24,15 @@ def get_settings(
     lang: str,
     search_dirs: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None,
     lang_dir: typing.Optional[typing.Union[str, Path]] = None,
-    model_prefix: str = "",
+    model_prefix: typing.Optional[str] = None,
     load_pos_tagger: bool = True,
     load_phoneme_lexicon: bool = True,
     load_g2p_guesser: bool = True,
     **settings_args,
 ) -> TextProcessorSettings:
     """Get settings for a specific language"""
+    model_prefix = model_prefix or ""
+
     # Resolve language
     if model_prefix:
         # espeak
@@ -60,7 +62,7 @@ def get_settings(
         lang_dir = Path(lang_dir)
 
         # Part of speech tagger
-        if load_pos_tagger:
+        if load_pos_tagger and ("get_parts_of_speech" not in settings_args):
             pos_model_path = lang_dir / "pos" / "model.crf"
             if pos_model_path.is_file():
                 # POS tagger model will load on first use
@@ -73,7 +75,7 @@ def get_settings(
                 )
 
         # Phonemizer
-        if load_phoneme_lexicon:
+        if load_phoneme_lexicon and ("lookup_phonemes" not in settings_args):
             lexicon_db_path = lang_dir / model_prefix / "lexicon.db"
             if lexicon_db_path.is_file():
                 # Lower-case word if it can't be found in the lexicon
@@ -90,7 +92,7 @@ def get_settings(
                 )
 
         # Grapheme to phoneme model
-        if load_g2p_guesser:
+        if load_g2p_guesser and ("guess_phonemes" not in settings_args):
             g2p_model_path = lang_dir / model_prefix / "g2p" / "model.crf"
             if g2p_model_path.is_file():
                 settings_args["guess_phonemes"] = DelayedGraphemesToPhonemes(
@@ -160,6 +162,10 @@ def get_settings(
         # Swahili
         return get_sw_settings(lang_dir, **settings_args)
 
+    if lang_only == "zh-cn":
+        # Chinese
+        return get_zh_settings(lang_dir, **settings_args)
+
     # Default settings only
     return TextProcessorSettings(lang=lang, **settings_args)
 
@@ -202,7 +208,7 @@ def get_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "word_breaks": {"-", "_"},
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -228,7 +234,7 @@ def get_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
         "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -245,8 +251,8 @@ def get_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 
 # TTS and T.T.S.
-EN_INITIALISM_PATTERN = re.compile(r"^[A-Z]{2,}$")
-EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:[a-zA-Z]\.){2,}$")
+EN_INITIALISM_PATTERN = re.compile(r"^\s*[A-Z]{2,}\s*$")
+EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){2,}\s*$")
 
 EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
@@ -343,7 +349,7 @@ def get_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -423,7 +429,7 @@ def get_fa_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "word_breaks": {"-", "_"},
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -590,7 +596,7 @@ def get_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -616,7 +622,7 @@ def get_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -641,7 +647,7 @@ def get_pt_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -666,7 +672,7 @@ def get_ru_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "RUB",
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -690,7 +696,7 @@ def get_sv_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "word_breaks": {"-", "_"},
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -714,7 +720,7 @@ def get_sw_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "word_breaks": {"-", "_"},
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
-        "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
+        "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"),  # normalize apostrophe
             ("\\B['‘]", '"'),  # replace single quotes (left)
@@ -723,6 +729,28 @@ def get_sw_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         **settings_args,
     }
     return TextProcessorSettings(lang="sw", **settings_args)
+
+
+# -----------------------------------------------------------------------------
+# Chinese (zh-cn, 汉语)
+# -----------------------------------------------------------------------------
+
+
+def get_zh_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Chinese"""
+
+    # https://en.wikipedia.org/wiki/Chinese_punctuation
+    settings_args = {
+        "major_breaks": {"。", "！", "？"},
+        "minor_breaks": {"；", "：", "，", "、", "……"},
+        "begin_punctuations": {"（", "［", "【", "「", "﹁", '"', "《", "〈"},
+        "end_punctuations": {"）", "］", " 】", "」", "﹂", '"', "》", "〉"},
+        "word_breaks": {"‧"},
+        "split_words": list,
+        "join_str": "",
+        **settings_args,
+    }
+    return TextProcessorSettings(lang="zh_CN", **settings_args)
 
 
 # -----------------------------------------------------------------------------

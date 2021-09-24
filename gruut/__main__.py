@@ -44,16 +44,10 @@ def main():
 
     _LOGGER.debug(args)
 
-    if args.lang_dir:
-        args.lang_dir = Path(args.lang_dir)
-
     # -------------------------------------------------------------------------
 
     text_processor = TextProcessor(
-        default_lang=args.language,
-        languages=[args.language] if not args.ssml else None,
-        model_prefix=args.model_prefix,
-        lang_dir=args.lang_dir,
+        default_lang=args.language, model_prefix=args.model_prefix,
     )
 
     if args.debug:
@@ -171,9 +165,6 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",
-    )
-    parser.add_argument(
-        "--lang-dir", help="Directory with language-specific data files"
     )
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"

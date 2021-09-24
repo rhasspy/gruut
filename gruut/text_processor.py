@@ -13,7 +13,7 @@ import babel
 import babel.numbers
 import dateparser
 import networkx as nx
-from gruut_ipa import IPA
+from gruut_ipa import IPA, Pronunciation
 from num2words import num2words
 
 from gruut.const import (
@@ -42,7 +42,6 @@ from gruut.const import (
 from gruut.lang import get_settings
 from gruut.utils import (
     attrib_no_namespace,
-    grouper,
     leaves,
     pipeline_split,
     pipeline_transform,
@@ -82,7 +81,10 @@ class TextProcessor:
         if lang_dirs is None:
             lang_dirs = {}
 
-        self.lang_dirs = lang_dirs
+        # Convert to Paths
+        self.lang_dirs = {
+            dir_lang: Path(dir_path) for dir_lang, dir_path in lang_dirs.items()
+        }
 
         if settings is None:
             settings = {}
@@ -313,6 +315,9 @@ class TextProcessor:
         # Used to skip <metadata>
         skip_elements: bool = False
 
+        # Phonemes to use for next word(s)
+        word_phonemes: typing.Optional[typing.List[typing.List[str]]] = None
+
         # Create __init__ args for new Node
         def scope_kwargs(target_class):
             scope = {}
@@ -388,18 +393,26 @@ class TextProcessor:
                     ):
                         word_text += settings.join_str
 
+                    word_kwargs = scope_kwargs(WordNode)
+                    if word_phonemes:
+                        word_kwargs["phonemes"] = word_phonemes.pop()
+
                     word_node = WordNode(
                         node=len(graph),
                         text=word_text.strip(),
                         text_with_ws=word_text,
-                        **scope_kwargs(WordNode),
+                        **word_kwargs,
                     )
                     graph.add_node(word_node.node, data=word_node)
                     graph.add_edge(last_sentence.node, word_node.node)
                 else:
                     # Split by whitespace
                     self._pipeline_tokenize(
-                        graph, last_sentence, text, scope_kwargs=scope_kwargs(WordNode),
+                        graph,
+                        last_sentence,
+                        text,
+                        word_phonemes=word_phonemes,
+                        scope_kwargs=scope_kwargs(WordNode),
                     )
 
             elif isinstance(elem_or_text, EndElement):
@@ -439,9 +452,12 @@ class TextProcessor:
                     elif end_tag == "s":
                         # End of sub
                         last_alias = None
-                    elif end_tag == "metadata":
+                    elif end_tag in {"metadata", "meta"}:
                         # End of metadata
                         skip_elements = False
+                    elif end_tag == "phoneme":
+                        # End of phoneme
+                        word_phonemes = None
             else:
                 if skip_elements:
                     # Inside <metadata>
@@ -564,9 +580,36 @@ class TextProcessor:
                 elif elem_tag == "sub":
                     # Sub
                     last_alias = attrib_no_namespace(elem, "alias", "")
-                elif elem_tag == "metadata":
+                elif elem_tag in {"metadata", "meta"}:
                     # Metadata
                     skip_elements = True
+                elif elem_tag == "phoneme":
+                    # Phonemes
+                    word_phonemes_strs = attrib_no_namespace(elem, "ph", "").split()
+                    word_phonemes_alphabet = (
+                        attrib_no_namespace(elem, "alphabet", "").strip().lower()
+                    )
+
+                    if word_phonemes_strs:
+                        if word_phonemes_alphabet == "ipa":
+                            # Split IPA intelligently (grouping elongation, stress, etc.)
+                            word_phonemes = [
+                                [p.text for p in Pronunciation.from_string(phoneme_str)]
+                                for phoneme_str in word_phonemes_strs
+                            ]
+                        else:
+                            # Assume graphemes = phonemes
+                            word_phonemes = [
+                                list(phoneme_str) for phoneme_str in word_phonemes_strs
+                            ]
+                    else:
+                        word_phonemes = None
+                elif elem_tag == "lang":
+                    # Set language
+                    maybe_lang = attrib_no_namespace(elem, "lang", "")
+                    if maybe_lang:
+                        lang_stack.append((elem_tag, maybe_lang))
+                        current_lang = maybe_lang
 
         assert root is not None
 
@@ -808,6 +851,10 @@ class TextProcessor:
         last_part_idx = len(parts) - 1
 
         for part_idx, part_text in enumerate(parts):
+            part_text_norm = settings.normalize_whitespace(part_text)
+            if not part_text_norm:
+                continue
+
             if settings.keep_whitespace:
                 if part_idx == 0:
                     part_text = first_ws + part_text
@@ -818,7 +865,7 @@ class TextProcessor:
                     part_text += settings.join_str
 
             yield WordNode, {
-                "text": part_text.strip(),
+                "text": part_text_norm,
                 "text_with_ws": part_text,
                 "implicit": True,
                 "lang": word.lang,
@@ -1039,7 +1086,12 @@ class TextProcessor:
     # -------------------------------------------------------------------------
 
     def _pipeline_tokenize(
-        self, graph, parent_node, text, scope_kwargs=None,
+        self,
+        graph,
+        parent_node,
+        text,
+        word_phonemes: typing.Optional[typing.List[typing.List[str]]] = None,
+        scope_kwargs=None,
     ):
         """Splits text into word nodes"""
         if scope_kwargs is None:
@@ -1056,31 +1108,25 @@ class TextProcessor:
             # Pre-process text
             text = settings.pre_process_text(text)
 
-        # Split into separate words/separators.
-        # Drop empty words (leading whitespace is still preserved).
-        groups = [g for g in grouper(settings.split_pattern.split(text), 2) if g[0]]
+        # Split into separate words (preseving whitespace).
+        for word_text in settings.split_words(text):
+            word_text_norm = settings.normalize_whitespace(word_text)
+            if not word_text_norm:
+                continue
 
-        # Preserve whitespace.
-        # NOTE: Trailing whitespace will be included in split separator.
-        first_ws, _last_ws = settings.get_whitespace(text)
+            if not settings.keep_whitespace:
+                word_text = word_text_norm
 
-        for group_idx, group in enumerate(groups):
-            part_str, sep_str = group
-            sep_str = sep_str or ""
-            word_text = part_str
-
-            if settings.keep_whitespace:
-                if group_idx == 0:
-                    word_text = first_ws + word_text
-
-                word_text += sep_str
+            word_kwargs = scope_kwargs
+            if word_phonemes:
+                word_kwargs = {**scope_kwargs, "phonemes": word_phonemes.pop()}
 
             word_node = WordNode(
                 node=len(graph),
-                text=word_text.strip(),
+                text=word_text_norm,
                 text_with_ws=word_text,
                 implicit=True,
-                **scope_kwargs,
+                **word_kwargs,
             )
             graph.add_node(word_node.node, data=word_node)
             graph.add_edge(parent_node.node, word_node.node)
@@ -1131,7 +1177,7 @@ class TextProcessor:
                     word_text += settings.join_str
 
             yield WordNode, {
-                "text": word_text.strip(),
+                "text": settings.normalize_whitespace(word_text),
                 "text_with_ws": word_text,
                 "implicit": True,
                 "lang": word.lang,
@@ -1166,17 +1212,19 @@ class TextProcessor:
 
         if matched:
             # Tokenize new text
-            for part_str, sep_str in grouper(settings.split_pattern.split(new_text), 2):
-                if settings.keep_whitespace:
-                    part_str += sep_str or ""
+            for part_text in settings.split_words(new_text):
+                part_text_norm = settings.normalize_whitespace(part_text)
 
-                if not part_str.strip():
+                if not settings.keep_whitespace:
+                    part_text = part_text_norm
+
+                if not part_text_norm:
                     # Ignore empty words
                     continue
 
                 yield WordNode, {
-                    "text": settings.normalize_whitespace(part_str),
-                    "text_with_ws": part_str,
+                    "text": part_text_norm,
+                    "text_with_ws": part_text,
                     "implicit": True,
                     "lang": word.lang,
                 }
@@ -1208,17 +1256,17 @@ class TextProcessor:
 
         if new_text is not None:
             # Tokenize new text
-            for part_str, sep_str in grouper(settings.split_pattern.split(new_text), 2):
-                if settings.keep_whitespace:
-                    part_str += sep_str or ""
-
-                if not part_str.strip():
-                    # Ignore empty words
+            for part_text in settings.split_words(new_text):
+                part_text_norm = settings.normalize_whitespace(part_text)
+                if not part_text_norm:
                     continue
 
+                if not settings.keep_whitespace:
+                    part_text = part_text_norm
+
                 yield WordNode, {
-                    "text": settings.normalize_whitespace(part_str),
-                    "text_with_ws": part_str,
+                    "text": part_text_norm,
+                    "text_with_ws": part_text,
                     "implicit": True,
                     "lang": word.lang,
                 }
@@ -1251,30 +1299,21 @@ class TextProcessor:
             # Not an initialism
             return
 
-        # Split according to language-specific function
         parts = settings.split_initialism(word.text)
-        if not parts:
-            return
-
-        # Preserve whitespace
-        first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
         last_part_idx = len(parts) - 1
 
+        # Split according to language-specific function
         for part_idx, part_text in enumerate(parts):
-            if not part_text:
+            part_text_norm = settings.normalize_whitespace(part_text)
+            if not part_text_norm:
                 continue
 
             if settings.keep_whitespace:
-                if part_idx == 0:
-                    part_text = first_ws + part_text
-
-                if part_idx == last_part_idx:
-                    part_text += last_ws
-                else:
+                if 0 <= part_idx < last_part_idx:
                     part_text += settings.join_str
 
             yield WordNode, {
-                "text": part_text.strip(),
+                "text": part_text_norm,
                 "text_with_ws": part_text,
                 "implicit": True,
                 "lang": word.lang,
@@ -1464,36 +1503,24 @@ class TextProcessor:
             # Remove all non-word characters
             num_str = re.sub(r"\W", settings.join_str, num_str).strip()
 
-            # Split into separate words/separators
-            groups = list(grouper(settings.split_pattern.split(num_str), 2))
-
-            # Preserve whitespace
+            # Add original whitespace back in
             first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
-            last_group_idx = len(groups) - 1
+            num_str = first_ws + num_str + last_ws
 
-            # Split into separate words/separators
-            for group_idx, group in enumerate(groups):
-                part_str, sep_str = group
-                if not part_str:
+            # Split into separate words
+            for number_word_text in settings.split_words(num_str):
+                number_word_text_norm = settings.normalize_whitespace(number_word_text)
+                if not number_word_text_norm:
                     continue
 
-                sep_str = sep_str or ""
-                number_word_text = part_str
-
-                if settings.keep_whitespace:
-                    if group_idx == 0:
-                        number_word_text = first_ws + number_word_text
-
-                    if group_idx == last_group_idx:
-                        number_word_text += last_ws
-                    else:
-                        number_word_text += sep_str
+                if not settings.keep_whitespace:
+                    number_word_text = number_word_text_norm
 
                 number_word = WordNode(
                     node=len(graph),
                     implicit=True,
                     lang=word.lang,
-                    text=number_word_text.strip(),
+                    text=number_word_text_norm,
                     text_with_ws=number_word_text,
                 )
                 graph.add_node(number_word.node, data=number_word)
@@ -1537,8 +1564,14 @@ class TextProcessor:
             day_ord_str = num2words(date.day, **num2words_kwargs)
 
         if "Y" in date_format:
-            num2words_kwargs["to"] = "year"
-            year_str = num2words(date.year, **num2words_kwargs)
+            try:
+                num2words_kwargs["to"] = "year"
+                year_str = num2words(date.year, **num2words_kwargs)
+            except Exception:
+                # Fall back to use cardinal number for year
+                _LOGGER.exception("num2words(to=year)")
+                num2words_kwargs["to"] = "cardinal"
+                year_str = num2words(date.year, **num2words_kwargs)
 
         # Transform into Python format string
         # MDY -> {M} {D} {Y}
@@ -1547,29 +1580,18 @@ class TextProcessor:
             **{"M": month_str, "D": day_card_str, "O": day_ord_str, "Y": year_str}
         )
 
-        # Split into separate words/separators
-        groups = list(grouper(settings.split_pattern.split(date_str), 2))
-
-        # Preserve whitespace
+        # Add original whitespace back in
         first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
-        last_group_idx = len(groups) - 1
+        date_str = first_ws + date_str + last_ws
 
-        for group_idx, group in enumerate(groups):
-            part_str, sep_str = group
-            if not part_str:
+        # Split into separate words
+        for date_word_text in settings.split_words(date_str):
+            date_word_text_norm = settings.normalize_whitespace(date_word_text)
+            if not date_word_text_norm:
                 continue
 
-            sep_str = sep_str or ""
-            date_word_text = part_str
-
-            if settings.keep_whitespace:
-                if group_idx == 0:
-                    date_word_text = first_ws + date_word_text
-
-                if group_idx == last_group_idx:
-                    date_word_text += last_ws
-                else:
-                    date_word_text += sep_str
+            if not settings.keep_whitespace:
+                date_word_text = date_word_text_norm
 
             if not date_word_text:
                 continue
@@ -1578,7 +1600,7 @@ class TextProcessor:
                 node=len(graph),
                 implicit=True,
                 lang=word.lang,
-                text=date_word_text.strip(),
+                text=date_word_text_norm,
                 text_with_ws=date_word_text,
             )
             graph.add_node(date_word.node, data=date_word)
@@ -1642,36 +1664,24 @@ class TextProcessor:
         # Remove all non-word characters
         num_str = re.sub(r"\W", settings.join_str, num_str).strip()
 
-        # Split into separate words/separators
-        groups = list(grouper(settings.split_pattern.split(num_str), 2))
-
-        # Preserve whitespace
+        # Add original whitespace back in
         first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
-        last_group_idx = len(groups) - 1
+        num_str = first_ws + num_str + last_ws
 
         # Split into separate words
-        for group_idx, group in enumerate(groups):
-            part_str, sep_str = group
-            if not part_str:
+        for currency_word_text in settings.split_words(num_str):
+            currency_word_text_norm = settings.normalize_whitespace(currency_word_text)
+            if not currency_word_text_norm:
                 continue
 
-            sep_str = sep_str or ""
-            currency_word_text = part_str
-
-            if settings.keep_whitespace:
-                if group_idx == 0:
-                    currency_word_text = first_ws + currency_word_text
-
-                if group_idx == last_group_idx:
-                    currency_word_text += last_ws
-                else:
-                    currency_word_text += sep_str
+            if not settings.keep_whitespace:
+                currency_word_text = currency_word_text_norm
 
             currency_word = WordNode(
                 node=len(graph),
                 implicit=True,
                 lang=word.lang,
-                text=currency_word_text.strip(),
+                text=currency_word_text_norm,
                 text_with_ws=currency_word_text,
             )
             graph.add_node(currency_word.node, data=currency_word)

@@ -10,6 +10,7 @@ from decimal import Decimal
 from enum import Enum
 
 import babel
+import babel.core
 import babel.numbers
 
 # alias -> full language name
@@ -30,6 +31,7 @@ LANG_ALIASES = {
     "ru": "ru-ru",
     "sv": "sv-se",
     "sw": "sw",
+    "zh": "zh-cn",
 }
 
 ENGLISH_LANGS = {"en-us", "en-gb"}
@@ -370,6 +372,14 @@ def has_digit(s: str) -> bool:
     return HAS_DIGIT_PATTERN.search(s) is not None
 
 
+DEFAULT_WORD_PATTERN = re.compile(r"(\s*\S+(?:\s+|$))")
+
+
+def default_split_words(s: str) -> typing.Iterable[str]:
+    """Split text on whitespace"""
+    yield from filter(None, DEFAULT_WORD_PATTERN.findall(s))
+
+
 def default_get_whitespace(s: str) -> typing.Tuple[str, str]:
     """Returns leading and trailing whitespace of a string"""
     leading_ws, trailing_ws = "", ""
@@ -408,8 +418,8 @@ class TextProcessorSettings:
     """Language code that these settings apply to (e.g., en_US)"""
 
     # Whitespace/tokenization
-    split_pattern: REGEX_TYPE = DEFAULT_SPLIT_PATTERN
-    """Regex used to split text into initial words"""
+    split_words: typing.Callable[[str], typing.Iterable[str]] = default_split_words
+    """Split text into words and separators"""
 
     join_str: str = " "
     """String used to combine text from words"""
@@ -578,9 +588,6 @@ class TextProcessorSettings:
 
         self.abbreviations = compiled_abbreviations
 
-        # Pattern to split text into initial words
-        self.split_pattern = maybe_compile_regex(self.split_pattern)
-
         # Strings that should be separated from words, but do not cause any breaks
         if (self.begin_punctuations_pattern is None) and self.begin_punctuations:
             pattern_str = "|".join(re.escape(b) for b in self.begin_punctuations)
@@ -634,14 +641,18 @@ class TextProcessorSettings:
 
         # Currency
         if not self.currencies:
-            # Look up currencies for locale
-            locale_obj = babel.Locale(self.babel_locale)
+            try:
+                # Look up currencies for locale
+                locale_obj = babel.Locale(self.babel_locale)
 
-            # $ -> USD
-            self.currencies = {
-                babel.numbers.get_currency_symbol(cn): cn
-                for cn in locale_obj.currency_symbols
-            }
+                # $ -> USD
+                self.currencies = {
+                    babel.numbers.get_currency_symbol(cn): cn
+                    for cn in locale_obj.currency_symbols
+                }
+            except babel.core.UnknownLocaleError:
+                # No automatic currencies
+                pass
 
         if not self.currency_symbols:
             # Currency symbols (e.g., "$") by decreasing length

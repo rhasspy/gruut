@@ -6,7 +6,7 @@ import unittest
 from gruut.text_processor import Sentence, TextProcessor, TextProcessorSettings, Word
 from gruut.utils import print_graph
 
-WORDS_KWARGS = {"explicit_lang": False, "phonemes": False}
+WORDS_KWARGS = {"explicit_lang": False, "phonemes": False, "pos": False}
 
 
 class TextProcessorTestCase(unittest.TestCase):
@@ -369,7 +369,7 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test currency verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US")
         graph, root = processor("$10")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Currency should be verbalized
         self.assertEqual(
@@ -394,7 +394,7 @@ class TextProcessorTestCase(unittest.TestCase):
             ssml=True,
             phonemize=False,
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Currencies should be verbalized
         self.assertEqual(
@@ -421,7 +421,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<say-as interpret-as="currency">10</say-as>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Currency should be verbalized, despite lack of "$" symbol
         self.assertEqual(
@@ -442,7 +442,7 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test date verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
         graph, root = processor("4/1/1999")
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Date should be verbalized
         self.assertEqual(
@@ -478,10 +478,9 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s></speak>',
             ssml=True,
-            pos=False,
-            phonemize=False,
+            phonemize=False,  # ensure French year is split
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Date should be verbalized
         self.assertEqual(
@@ -514,15 +513,15 @@ class TextProcessorTestCase(unittest.TestCase):
                     lang="fr_FR",
                     idx=0,
                     sent_idx=1,
-                    text="janvier",
-                    text_with_ws="janvier ",
+                    text="quatrième",
+                    text_with_ws="quatrième ",
                 ),
                 Word(
                     lang="fr_FR",
                     idx=1,
                     sent_idx=1,
-                    text="quatrième",
-                    text_with_ws="quatrième ",
+                    text="janvier",
+                    text_with_ws="janvier ",
                 ),
                 Word(
                     lang="fr_FR", idx=2, sent_idx=1, text="mille", text_with_ws="mille "
@@ -554,7 +553,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<say-as interpret-as="date" format="md">4/1</say-as>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Date is forced to be interpreted and format using day ordinal (first)
         self.assertEqual(
@@ -573,7 +572,7 @@ class TextProcessorTestCase(unittest.TestCase):
         graph, root = processor(
             '<say-as interpret-as="date" format="dmy">4/1/2000</say-as>', ssml=True
         )
-        words = list(processor.words(graph, root))
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
 
         # Date is forced to be interpreted and format using day ordinal (first)
         self.assertEqual(
@@ -601,7 +600,7 @@ class TextProcessorTestCase(unittest.TestCase):
             get_parts_of_speech=lambda words: [w.upper() for w in words],
         )
         graph, root = processor("a test")
-        words = list(processor.words(graph, root, **WORDS_KWARGS))
+        words = list(processor.words(graph, root, explicit_lang=False, phonemes=False))
 
         # Fake POS tags are added
         self.assertEqual(
@@ -616,7 +615,7 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test phonemizer (single language)"""
         processor = TextProcessor(
             # Made-up phonemizer that just gives back the letters
-            lookup_phonemes=lambda word, role: list(word),
+            lookup_phonemes=lambda word, role=None: list(word),
         )
         graph, root = processor("test")
         words = list(processor.words(graph, root, pos=False, explicit_lang=False))
@@ -637,16 +636,18 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_phonemize_one_language_multiple_roles(self):
         """Test phonemizer (SSML, multiple word roles)"""
+
+        def lookup_phonemes(word, role=None):
+            return list(word) if not role else list(word.upper())
+
         processor = TextProcessor(
             # Made-up phonemizer that gives back upper-case letters if a role is provided
-            lookup_phonemes=lambda word, role: list(word)
-            if not role
-            else list(word.upper()),
+            lookup_phonemes=lookup_phonemes
         )
 
         # Use made-up role
         graph, root = processor(
-            '<speak>test <w role="some_role">test</w></speak>', ssml=True
+            '<speak>test <w role="some_role">test</w></speak>', ssml=True, pos=False
         )
         words = list(processor.words(graph, root, pos=False, explicit_lang=False))
 
@@ -675,10 +676,11 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test phonemizer (SSML, multiple languages)"""
         processor = TextProcessor(
             default_lang="en_US",
-            lookup_phonemes=lambda word, role: list(word),
+            lookup_phonemes=lambda word, role=None: list(word),
             settings={
                 "de_DE": TextProcessorSettings(
-                    lang="de_DE", lookup_phonemes=lambda word, role: list(word.upper())
+                    lang="de_DE",
+                    lookup_phonemes=lambda word, role=None: list(word.upper()),
                 )
             },
         )
