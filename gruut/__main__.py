@@ -44,6 +44,9 @@ def main():
 
     _LOGGER.debug(args)
 
+    if args.espeak:
+        args.model_prefix = "espeak"
+
     # -------------------------------------------------------------------------
 
     text_processor = TextProcessor(
@@ -162,6 +165,9 @@ def get_args() -> argparse.Namespace:
     )
 
     # Miscellaneous
+    parser.add_argument(
+        "--espeak", action="store_true", help="Use eSpeak versions of lexicons (overrides --model-prefix)",
+    )
     parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",

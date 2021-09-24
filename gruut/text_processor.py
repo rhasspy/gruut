@@ -1569,7 +1569,6 @@ class TextProcessor:
                 year_str = num2words(date.year, **num2words_kwargs)
             except Exception:
                 # Fall back to use cardinal number for year
-                _LOGGER.exception("num2words(to=year)")
                 num2words_kwargs["to"] = "cardinal"
                 year_str = num2words(date.year, **num2words_kwargs)
 

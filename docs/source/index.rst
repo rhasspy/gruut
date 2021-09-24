@@ -7,17 +7,17 @@ A tokenizer and `IPA <https://en.wikipedia.org/wiki/International_Phonetic_Alpha
 
 .. code-block:: python
 
-    from gruut import text_to_phonemes
+    from gruut import sentences
 
     text = 'He wound it around the wound, saying "I read it was $10 to read."'
 
-    for sent_idx, word, word_phonemes in text_to_phonemes(text, lang="en-us"):
-        print(word, *word_phonemes)
-
+    for sent in sentences(text, lang="en-us"):
+        if word.phonemes:
+            print(word.text, *word.phonemes)
 
 Output::
 
-    he h ˈi
+    He h ˈi
     wound w ˈaʊ n d
     it ˈɪ t
     around ɚ ˈaʊ n d
@@ -25,7 +25,7 @@ Output::
     wound w ˈu n d
     , |
     saying s ˈeɪ ɪ ŋ
-    i ˈaɪ
+    I ˈaɪ
     read ɹ ˈɛ d
     it ˈɪ t
     was w ə z
@@ -36,7 +36,7 @@ Output::
     . ‖
 
 
-Note that "wound" and "read" have different pronunciations in different contexts (see :ref:`features` for more details).
+Note that "wound" and "read" have different pronunciations in different contexts.
 
 Installation
 ------------
@@ -48,8 +48,9 @@ To install gruut with U.S. English support only::
 
 Additional languages can be added during installation. For example, with French and Italian support::
 
-    pip install gruut[fr,it]
+    pip install -f 'https://synesthesiam.github.io/prebuilt-apps/' gruut[fr,it]
 
+The extra pip repo is needed for an updated `num2words fork <https://github.com/rhasspy/num2words>`_ that includes support for more languages.
 
 Supported Languages
 ^^^^^^^^^^^^^^^^^^^
@@ -74,30 +75,24 @@ Usage
 -----
 
 gruut performs two main functions: tokenization and phonemization.
-The :py:meth:`gruut.text_to_phonemes` method does everything for you. See the :py:class:`~gruut.TextToPhonemesReturn` enum for ways to adjust the ``return_format``.
+The :py:meth:`gruut.sentences` method does everything for you, including creating a :py:class:`~gruut.text_processor.TextProcessor` instance for you.
 
-If you need more control, see the language-specific classes in :py:mod:`gruut.lang` as well as :py:class:`~gruut.toksen.RegexTokenizer` and :py:class:`~gruut.lang.SqlitePhonemizer`.
+If you need more control, see the language-specific settings in :py:mod:`gruut.lang` and create a :py:class:`gruut.text_processor.TextProcessor` with your custom settings.
 
 Tokenziation operates on text and does the following:
 
 * Splits text into words by whitespace
-* Expands user-defined abbreviations
+* Expands user-defined abbreviations and initialisms (TTS/T.T.S.)
 * Breaks apart words and sentences further by punctuation (periods, commas, etc.)
-* Drops empty/non-word tokens
-* Expands numbers into words (100 -> one hundred)
-* Applies upper/lower case filter
+* Expands numbers, dates, and currency amounts into words (100 -> one hundred)
 * Predicts part of speech tags (see :py:mod:`gruut.pos`)
 
 Once tokenized, phonemization predicts the phonetic pronunciation for each word by:
 
-* Looking up each word in an SQLite database
+* Looking up each word in an SQLite database or
 * Guessing the pronunciation with a pre-trained model (see :py:mod:`gruut.g2p`)
 
-In cases where more than one pronunciation is possible for a word, the "best" pronunciation is:
-
-* Specified by the user with word indexes enabled and a word of the form "word_N" where N is the 1-based pronunciation index
-* Whichever pronunciation has the most compatible :ref:`features`.
-* The first pronunciation
+In cases where more than one pronunciation is possible for a word, the "role" of a word is used to disambiguate. This is normally derived from the word's part of speech (e.g., `gruut:NN`), but can be manually set in SSML with `<w role="...">`.
 
 Command-Line
 ^^^^^^^^^^^^
@@ -106,53 +101,100 @@ gruut tokenization and phonemization can be done externally with a command-line 
 
 .. code-block:: bash
 
-   gruut en-us tokenize 'This is a test.' | gruut en-us phonemize | jq -r .pronunciation_text
-   ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+   gruut --language en-us 'This is a test.'
 
-The combined ``text2phonemes`` command will perform tokenization/phonemization in one step::
+which outputs:
 
-   gruut en-us text2phonemes 'This is a test.' | jq -r .pronunciation_text
-   ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+.. code-block:: json
 
-See ``gruut <LANG> <COMMAND> --help`` for more options.
+    {
+        "idx": 0,
+        "text": "This is a test.",
+        "text_with_ws": "This is a test.",
+        "lang": "en-us",
+        "voice": "",
+        "words": [
+            {
+            "idx": 0,
+            "text": "This",
+            "text_with_ws": "This ",
+            "sent_idx": 0,
+            "lang": "en-us",
+            "voice": "",
+            "pos": "DT",
+            "phonemes": [
+                "ð",
+                "ˈɪ",
+                "s"
+            ],
+            "is_break": false,
+            "is_punctuation": false
+            },
+            {
+            "idx": 1,
+            "text": "is",
+            "text_with_ws": "is ",
+            "sent_idx": 0,
+            "lang": "en-us",
+            "voice": "",
+            "pos": "VBZ",
+            "phonemes": [
+                "ˈɪ",
+                "z"
+            ],
+            "is_break": false,
+            "is_punctuation": false
+            },
+            {
+            "idx": 2,
+            "text": "a",
+            "text_with_ws": "a ",
+            "sent_idx": 0,
+            "lang": "en-us",
+            "voice": "",
+            "pos": "DT",
+            "phonemes": [
+                "ə"
+            ],
+            "is_break": false,
+            "is_punctuation": false
+            },
+            {
+            "idx": 3,
+            "text": "test",
+            "text_with_ws": "test",
+            "sent_idx": 0,
+            "lang": "en-us",
+            "voice": "",
+            "pos": "NN",
+            "phonemes": [
+                "t",
+                "ˈɛ",
+                "s",
+                "t"
+            ],
+            "is_break": false,
+            "is_punctuation": false
+            },
+            {
+            "idx": 4,
+            "text": ".",
+            "text_with_ws": ".",
+            "sent_idx": 0,
+            "lang": "en-us",
+            "voice": "",
+            "pos": null,
+            "phonemes": [
+                "‖"
+            ],
+            "is_break": true,
+            "is_punctuation": false
+            }
+        ]
+    }
 
-.. _features:
 
-Features
-^^^^^^^^
-
-gruut tokens can contain arbitrary features. For now, only part of speech tags are implemented for English and French.
-
-When determining the "best" pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain "preferred" parts of speech. Words like "wind" may be pronounced differently depending on their use as a verb or noun. If a token "wind" is predicted to be a noun during tokenization, then the pronunciation "w ˈɪ n d" is selected instead of "w ˈaɪ n d".
-
-French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence "J’ai des petites oreilles.", "petites" will be pronounced "p ə t i t z" instead of "p ə t i t".
-
-Inline Pronunciations
-^^^^^^^^^^^^^^^^^^^^^
-
-If you want more control over a word's pronunciation, you can include inline pronunciations in your sentences (enable with ``inline_pronunciations=True`` or ``--inline`` on the command-line). There are two different syntaxes, with different purposes:
-
-* Brackets - ``[[ p h o n e m e s ]]``
-* Curly Braces - ``{{ words with s{eg}m{ent}s }}``
-
-The "brackets" syntax allows you to directly insert phonemes for a word. See `gruut-ipa <https://github.com/rhasspy/gruut-ipa>`_ for the list of phonemes in your desired language. Some substitutions are automatically made for you:
-
-#. Primary and secondary stress can be given with the apostrophe (``'``) and comma (``,``)
-#. Elongation can be given with a colon (``:``)
-#. Ties will be added, if necessary (e.g., ``tʃ`` becomes ``t͡ʃ``)
-
-The "curly brackets" syntax lets you sound out a word using other words (or segments of other words). For example, "Beyoncé" could be written as ``{{ bee yawn say }}``. From the curly brackets, gruut will look up each word's pronunciation in the lexicon (or guess it), and combine all of the resulting phonemes. You may include phonemes inside the curly brackets as well with the syntax ``/p h o n e m e s/`` alongside other words.
-
-An even more useful aspect of the "curly brackets" syntax is using **word segments**. For most words in the lexicon, gruut has an alignment between its graphemes and phonemes. This enables you do insert *partial* pronunciations of words, such as the "zure" in "azure", with ``a{zure}``. You can even have multiple segments from a single word! For example, ``{{ {mic}roph{one} }}`` will produce phonemes sounding like "mike own".
-
-.. code-block:: bash
-
-   # raxacoricofallipatorius
-   gruut en-us text2phonemes --inline \
-     '{{ racks uh core {i}t {co}de {fall}{i}ble {pu}n tore s{ee} us }}' | jq -r .pronunciation_text
-   ɹ ˈæ k s ˈʌ k ˈɔ ɹ ˈɪ k ˈoʊ f ˈæ l ə p ˈʌ t ˈɔ ɹ ˈi ˈʌ s
-
-.. _database:
+See ``gruut --help`` for more options.
 
 Database
 --------------------------
@@ -164,14 +206,7 @@ Word pronunciations and other metadata are stored in SQLite databases with the f
     * word TEXT - word text
     * pron_order INTEGER - priority of pronunciation (lowest is first)
     * phonemes TEXT - whitespace-separated phonemes
-* feature_names - names of extra pronunciation features (like part of speech)
-    * id INTEGER - primary key
-    * feature_id INTEGER - id of feature (linked to pron_features)
-    * feature TEXT - name of feature (e.g., "pos")
-* pron_features - extra pronunciation features
-    * id INTEGER - primary key
-    * pron_id INTEGER - id from word_phonemes
-    * feature_id INTEGER - feature_id from feature_names
+    * role TEXT - role used to disambiguate pronunciations (e.g., "gruut:NN")
 * g2p_alignments - grapheme/phoneme alignments from Phonetisaurus
     * id INTEGER - primary key
     * word TEXT - word from lexicon
@@ -187,10 +222,12 @@ by simply running::
 
     python3 -m gruut.lexicon2db --casing lower --lexicon lexicon.txt --database lexicon.db
 
-If your lexicon has part of speech (POS) tags, you can add the ``--pos`` flag. In this case, your lexicon must have the following format::
+If your lexicon has word roles, you can add the ``--role`` flag. In this case, your lexicon must have the following format::
 
-    word POS phoneme ...
-    word POS phoneme phoneme ...
+    word ROLE phoneme ...
+    word ROLE phoneme phoneme ...
+
+Word roles that do not contain a ":" will be formatted as "gruut:<ROLE>".
 
 .. _g2p:
 
@@ -241,37 +278,33 @@ eSpeak Phonemes
 
 Most languages include an additional lexicon and pre-trained grapheme to phoneme model with IPA generated from `espeak-ng <https://github.com/espeak-ng/espeak-ng>`_.
 
-These additional lexicons can be accessed via the ``model_prefix`` argument to :py:meth:`gruut.get_phonemizer` or the ``--model-prefix`` command-line argument to ``gruut <LANG> phonemize``.
-
 .. code-block:: python
 
-    from gruut import text_to_phonemes
+    from gruut import sentences
 
-    text = uHe wound it around the wound, saying "I read it was $10 to read."u
-
-    for sent_idx, word, word_phonemes in text_to_phonemes(
-        text, lang="en-us", phonemizer_args={"model_prefix": "espeak"}
-    ):
-        print(word, *word_phonemes)
+    for sent in sentences(text, lang="en-us", espeak=True):
+        for word in sent:
+            if word.phonemes:
+                print(word.text, *word.phonemes)
 
 
 Output::
 
-    he h ˈiː
-    wound w ˈaʊ n d
-    it ˈɪ t
-    around ɚ ɹ ˈaʊ n d
-    the ð ˈə
+    He h iː
+    wound w ˈa ʊ n d
+    it ɪ ɾ
+    around ɚ ɹ ˈa ʊ n d
+    the ð ə
     wound w ˈuː n d
     , |
-    saying s ˈeɪ ɪ ŋ
-    i ˈaɪ
+    saying s ˈe ɪ ɪ ŋ
+    I ˈa ɪ
     read ɹ ˈɛ d
-    it ˈɪ t
+    it ɪ ɾ
     was w ʌ z
     ten t ˈɛ n
     dollars d ˈɑː l ɚ z
-    to t ˈuː
+    to t ə
     read ɹ ˈiː d
     . ‖
 

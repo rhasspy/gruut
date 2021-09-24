@@ -49,14 +49,9 @@ def get_settings(
     # en_US -> en-us
     lang_only = resolve_lang(lang_only)
 
-    if lang_model_prefix:
-        lang_with_prefix = f"{lang_only}/{lang_model_prefix}"
-    else:
-        lang_with_prefix = lang_only
-
     if lang_dir is None:
         # Search for language data files
-        lang_dir = find_lang_dir(lang_with_prefix, search_dirs=search_dirs)
+        lang_dir = find_lang_dir(lang_only, search_dirs=search_dirs)
 
     if lang_dir is not None:
         lang_dir = Path(lang_dir)

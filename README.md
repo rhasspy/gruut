@@ -1,6 +1,6 @@
 # Gruut
 
-A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages.
+A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages that supports [SSML](#ssml).
 
 ```python
 from gruut import sentences
@@ -41,16 +41,40 @@ A [subset of SSML](#ssml) is also supported:
 ```python
 from gruut import sentences
 
-ssml = '''<speak lang="en_US">
-  <s>
-    <say-as interpret-as="ordinal">1</say-as> sentence.
-  </s>
-</speak>
-'''
+ssml_text = """<?xml version="1.0" encoding="ISO-8859-1"?>
+<speak version="1.1" xmlns="http://www.w3.org/2001/10/synthesis"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+    xml:lang="en-US">
+<s>Today, 2/1/2000.</s>
+<s xml:lang="it">Un mese fà, 2/1/2000.</s>
+</speak>"""
 
-for sent in sentences(text, ssml=True):
-    if word.phonemes:
-        print(word.lang, word.text, *word.phonemes)
+for sent in sentences(ssml_text, ssml=True):
+    for word in sent:
+        if word.phonemes:
+            print(sent.idx, word.lang, word.text, *word.phonemes)
+```
+
+with the output:
+
+```
+0 en-US Today t ə d ˈeɪ
+0 en-US , |
+0 en-US February f ˈɛ b j u ˌɛ ɹ i
+0 en-US first f ˈɚ s t
+0 en-US two t ˈu
+0 en-US thousand θ ˈaʊ z ə n d
+0 en-US . ‖
+1 it Un u n
+1 it mese ˈm e s e
+1 it fà f a
+1 it , |
+1 it due d j u
+1 it gennaio d͡ʒ e n n ˈa j o
+1 it duemila d u e ˈm i l a
+1 it . ‖
 ```
 
 See [the documentation](https://rhasspy.github.io/gruut/) for more details.
@@ -58,27 +82,26 @@ See [the documentation](https://rhasspy.github.io/gruut/) for more details.
 ## Installation
 
 ```sh
-pip install gruut
+pip install -f 'https://synesthesiam.github.io/prebuilt-apps/' gruut
 ```
 
-Additional languages can be added during installation. For example, with French and Italian support:
+The extra pip repo is needed for an updated [num2words fork](https://github.com/rhasspy/num2words) that includes support for more languages.
+
+Languages besides English can be added during installation. For example, with French and Italian support:
 
 ```sh
-pip install gruut[fr,it]
+pip install -f 'https://synesthesiam.github.io/prebuilt-apps/' gruut[fr,it]
 ```
 
-You may also [manually download language files](https://github.com/rhasspy/gruut/releases/latest) and use the `--lang-dir` option:
+You may also [manually download language files](https://github.com/rhasspy/gruut/releases/latest) and use put them in `$XDG_CONFIG_HOME/gruut/` (`$HOME/.config/gruut` by default).
 
-```sh
-gruut --language <lang> <text> --lang-dir /path/to/language-files/
-```
-
-Extracting the files to `$HOME/.config/gruut/` will allow gruut to automatically make use of them. gruut will look for language files in the directory `$HOME/.config/gruut/<lang>/` if the corresponding Python package is not installed. Note that `<lang>` here is the **full** language name, e.g. `de-de` instead of just `de`. 
+gruut will look for language files in the directory `$XDG_CONFIG_HOME/gruut/<lang>/` if the corresponding Python package is not installed. Note that `<lang>` here is the **full** language name, e.g. `de-de` instead of just `de`. 
 
 ## Supported Languages
 
 gruut currently supports:
 
+* Arabic (`ar`)
 * Czech (`cs` or `cs-cz`)
 * German (`de` or `de-de`)
 * English (`en` or `en-us`)
@@ -88,14 +111,14 @@ gruut currently supports:
 * Italian (`it` or `it-it`)
 * Dutch (`nl`)
 * Russian (`ru` or `ru-ru`)
-* Swahili (`sw`)
 * Swedish (`sv` or `sv-se`)
+* Swahili (`sw`)
 
 The goal is to support all of [voice2json's languages](https://github.com/synesthesiam/voice2json-profiles#supported-languages)
 
 ## Dependencies
 
-* Python 3.6 or higher
+* Python 3.7 or higher
 * Linux
     * Tested on Debian Bullseye
 * [num2words fork](https://github.com/rhasspy/num2words) and [Babel](https://pypi.org/project/Babel/)
@@ -216,9 +239,31 @@ See `python3 -m gruut <LANGUAGE> --help` for more options.
 
 ### SSML
 
-A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported in the input text with:
+A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
 
+* `<speak>` - wrap around SSML text
+    * `lang` - set language for document
+* `<p>` - paragraph
+    * `lang` - set language for paragraph
+* `<s>` - sentence (disables automatic sentence breaking)
+    * `lang` - set language for sentence
+* `<w>` / `<token>` - word (disables automatic tokenization)
+    * `lang` - set language for word
+    * `role` - set word role (see [word roles](#word-roles))
+* `<lang lang="...">` - set language inner text
+* `<say-as interpret-as="">` - force interpretation of inner text
+    * `interpret-as` one of "spell-out", "date", "number", or "currency"
+    * `format` - way to format text depending on `interpret-as`
+        * number - one of "cardinal", "ordinal", "digits", "year"
+        * date - string with "d" (cardinal day), "o" (ordinal day), "m" (month), or "y" (year)
+* `<sub alias="">` - substitute `alias` for inner text
+* `<phoneme ph="...">` - supply phonemes for inner text
+    * `ph` - phonemes for each word of inner text, separated by whitespace
+    * `alphabet` - if "ipa", phonemes are intelligently split ("aːˈb" -> "aː", "ˈb")
 
+#### Word Roles
+
+During phonemization, word roles are used to disambiguate pronunciations. Unless manually specified, a word's role is derived from its part of speech tag as `gruut:<TAG>`. For initialisms and `spell-out`, the role `gruut:letter` is used to indicate that e.g., "a" should be spoken as `/eɪ/` instead of `/ə/`.
 
 ## Intended Audience
 
