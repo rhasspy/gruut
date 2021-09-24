@@ -71,7 +71,7 @@ def get_settings(
 
         # Phonemizer
         if load_phoneme_lexicon and ("lookup_phonemes" not in settings_args):
-            lexicon_db_path = lang_dir / model_prefix / "lexicon.db"
+            lexicon_db_path = lang_dir / lang_model_prefix / "lexicon.db"
             if lexicon_db_path.is_file():
                 # Lower-case word if it can't be found in the lexicon
                 phonemizer_args = {"word_transform_funcs": [str.lower]}
@@ -88,7 +88,7 @@ def get_settings(
 
         # Grapheme to phoneme model
         if load_g2p_guesser and ("guess_phonemes" not in settings_args):
-            g2p_model_path = lang_dir / model_prefix / "g2p" / "model.crf"
+            g2p_model_path = lang_dir / lang_model_prefix / "g2p" / "model.crf"
             if g2p_model_path.is_file():
                 settings_args["guess_phonemes"] = DelayedGraphemesToPhonemes(
                     g2p_model_path, transform_func=str.lower

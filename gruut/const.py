@@ -481,9 +481,7 @@ class TextProcessorSettings:
     """Regex that overrides word_breaks"""
 
     # Numbers
-    is_maybe_number: typing.Optional[
-        typing.Callable[[str], bool]
-    ] = lambda s: HAS_DIGIT_PATTERN.search(s) is not None
+    is_maybe_number: typing.Optional[typing.Callable[[str], bool]] = has_digit
     """True if a word may be a number (parsing will be attempted)"""
 
     babel_locale: typing.Optional[str] = None

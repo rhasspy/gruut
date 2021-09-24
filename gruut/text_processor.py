@@ -262,7 +262,11 @@ class TextProcessor:
     # Processing
     # -------------------------------------------------------------------------
 
-    def __call__(
+    def __call__(self, *args, **kwargs):
+        """Processes text or SSML"""
+        return self.process(*args, **kwargs)
+
+    def process(
         self,
         text: str,
         lang: typing.Optional[str] = None,
@@ -272,7 +276,22 @@ class TextProcessor:
         post_process: bool = True,
         add_speak_tag: bool = True,
     ) -> typing.Tuple[GraphType, Node]:
-        """Processes text and SSML"""
+        """
+        Processes text or SSML
+
+        Args:
+            text: input text or SSML (ssml=True)
+            lang: default language of input text
+            ssml: True if input text is SSML
+            pos: False if part of speech tagging should be disabled
+            phonemize: False if phonemization should be disabled
+            post_process: False if sentence/graph post-processing should be disabled
+            add_speak_tag: False if <speak> should not automatically be added to input text
+
+        Returns:
+            graph, root: text graph and root node
+
+        """
         if not ssml:
             # Not XML
             text = saxutils.escape(text)

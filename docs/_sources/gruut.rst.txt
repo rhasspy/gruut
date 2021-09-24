@@ -4,14 +4,6 @@ gruut package
 Submodules
 ----------
 
-gruut.commands module
----------------------
-
-.. automodule:: gruut.commands
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 gruut.const module
 ------------------
 
@@ -76,10 +68,10 @@ gruut.pos module
    :undoc-members:
    :show-inheritance:
 
-gruut.toksen module
--------------------
+gruut.text\_processor module
+----------------------------
 
-.. automodule:: gruut.toksen
+.. automodule:: gruut.text_processor
    :members:
    :undoc-members:
    :show-inheritance:

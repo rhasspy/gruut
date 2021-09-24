@@ -196,6 +196,8 @@ which outputs:
 
 See ``gruut --help`` for more options.
 
+.. _database:
+
 Database
 --------------------------
 

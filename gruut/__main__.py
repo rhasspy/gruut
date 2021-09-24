@@ -166,7 +166,9 @@ def get_args() -> argparse.Namespace:
 
     # Miscellaneous
     parser.add_argument(
-        "--espeak", action="store_true", help="Use eSpeak versions of lexicons (overrides --model-prefix)",
+        "--espeak",
+        action="store_true",
+        help="Use eSpeak versions of lexicons (overrides --model-prefix)",
     )
     parser.add_argument(
         "--model-prefix",

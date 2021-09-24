@@ -44,7 +44,23 @@ def sentences(
     punctuations: bool = True,
     **process_args,
 ) -> typing.Iterable[Sentence]:
-    """Process text and return sentences"""
+    """
+    Process text and return sentences
+
+    Args:
+        text: input text or SSML (ssml=True)
+        lang: default language of input text
+        ssml: True if input text is SSML
+        ssml: True if eSpeak phonemes should be used
+        major_breaks: False if no sentence-breaking symbols in output
+        minor_breaks: False if no phrase-breaking symbols in output
+        punctuations: False if no word-surrounding symbols in output
+        **process_args: keyword arguments passed to TextProcessor.process
+
+    Returns:
+        sentences: iterable of Sentence objects
+
+    """
     model_prefix = "" if (not espeak) else "espeak"
 
     with _PROCESSORS_LOCK:
