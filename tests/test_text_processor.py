@@ -131,6 +131,7 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
         graph, root = processor("\"This,\" [is] <a> (test) 'sentence.'")
+        print_graph(graph, root)
         words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Quotes and brackets are discarded

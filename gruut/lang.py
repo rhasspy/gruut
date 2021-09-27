@@ -253,18 +253,15 @@ def get_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 # TTS and T.T.S.
 EN_INITIALISM_PATTERN = re.compile(r"^\s*[A-Z]{2,}\s*$")
-EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){2,}\s*$")
-EN_INITIALISM_SINGLE_PATTERN = re.compile(r"^(?:\s*[A-Z]\.)\s*$")
+EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){1,}\s*$")
 
 EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
 
 def en_is_initialism(text: str) -> bool:
     """True if text is of the form TTS or T.T.S."""
-    return (
-        (EN_INITIALISM_PATTERN.match(text) is not None)
-        or (EN_INITIALISM_DOTS_PATTERN.match(text) is not None)
-        or (EN_INITIALISM_SINGLE_PATTERN.match(text) is not None)
+    return (EN_INITIALISM_PATTERN.match(text) is not None) or (
+        EN_INITIALISM_DOTS_PATTERN.match(text) is not None
     )
 
 
@@ -274,23 +271,19 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "major_breaks": {".", "?", "!"},
         "minor_breaks": {",", ";", ":", "..."},
         "word_breaks": {"-", "_"},
-        "begin_punctuations": {'"', "“", "«", "[", "(", "<", "*", "_"},
-        "end_punctuations": {'"', "”", "»", "]", ")", ">", "*", "_"},
+        "begin_punctuations": {'"', "'", "“", "«", "[", "(", "<", "*", "_"},
+        "end_punctuations": {'"', "'", "”", "»", "]", ")", ">", "*", "_"},
         "default_currency": "USD",
         "default_date_format": InterpretAsFormat.DATE_MDY_ORDINAL,
         "is_initialism": en_is_initialism,
         "split_initialism": lambda text: list(text.replace(".", "")),
         "is_non_word": lambda text: EN_NON_WORD_PATTERN.match(text) is not None,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B'", '"'),  # replace single quotes (left)
-            ("'\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'"),],  # normalize apostrophe
         "abbreviations": {
             r"^([cC])o\.": r"\1ompany",  # co. -> company
             r"^([dD])r\.": r"\1octor",  # dr. -> doctor
             r"^([dD])rs\.": r"\1octors",  # drs. -> doctors
-            r"^([jJ])r\.": r"\1unior",  # jr. -> junior
+            r"^([jJ])r\.('s)?": r"\1unior\2",  # jr. -> junior
             r"^([lL])td\.": r"\1imited",  # -> ltd. -> limited
             r"^([mM])r\.": r"\1ister",  # -> mr. -> mister
             r"^([mM])s\.": r"\1iss",  # -> ms. -> miss
@@ -298,7 +291,8 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             r"^([sS])t\.": r"\1treet",  # -> st. -> street
             r"^([vV])s\.?": r"\1ersus",  # -> vs. -> versus
             r"(.*\d)%": r"\1 percent",  # % -> percent
-            r"^&\s*$": "and",  # &-> and
+            r"^&(\s*)$": r"and\1",  # &-> and
+            r"^([mM])t\.": r"\1ount",  # -> mt. -> mount
         },
         "spell_out_words": {
             ".": "dot",

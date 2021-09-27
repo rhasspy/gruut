@@ -114,6 +114,9 @@ def main():
             pos=(not args.no_pos),
             phonemize=(not (args.no_lexicon and args.no_g2p)),
             post_process=(not args.no_post_process),
+            verbalize_numbers=(not args.no_numbers),
+            verbalize_currency=(not args.no_currency),
+            verbalize_dates=(not args.no_dates),
         )
 
         if args.debug:

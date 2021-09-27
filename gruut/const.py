@@ -646,7 +646,8 @@ class TextProcessorSettings:
             pattern_str = "|".join(re.escape(b) for b in self.major_breaks)
 
             # Match major break with either whitespace at the end or at the end of the text
-            self.major_breaks_pattern = f"((?:{pattern_str})(?:\\s+|$))"
+            # Allow for multiple punctuation symbols (e.g., !?)
+            self.major_breaks_pattern = f"((?:{pattern_str})+(?:\\s+|$))"
 
         if self.major_breaks_pattern is not None:
             self.major_breaks_pattern = maybe_compile_regex(self.major_breaks_pattern)

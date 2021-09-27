@@ -279,6 +279,9 @@ class TextProcessor:
         phonemize: bool = True,
         post_process: bool = True,
         add_speak_tag: bool = True,
+        verbalize_numbers: bool = True,
+        verbalize_currency: bool = True,
+        verbalize_dates: bool = True,
     ) -> typing.Tuple[GraphType, Node]:
         """
         Processes text or SSML
@@ -678,14 +681,17 @@ class TextProcessor:
         pipeline_transform(self._transform_date, graph, root)
 
         # Verbalize known classes
-        pipeline_transform(self._verbalize_number, graph, root)
-        pipeline_transform(self._verbalize_currency, graph, root)
-        pipeline_transform(self._verbalize_date, graph, root)
+        if verbalize_numbers:
+            pipeline_transform(self._verbalize_number, graph, root)
+
+        if verbalize_currency:
+            pipeline_transform(self._verbalize_currency, graph, root)
+
+        if verbalize_dates:
+            pipeline_transform(self._verbalize_date, graph, root)
 
         # Break apart words
-        pipeline_split(
-            functools.partial(self._break_words, phonemize=phonemize), graph, root
-        )
+        pipeline_split(self._break_words, graph, root)
 
         # Ignore non-words
         pipeline_split(self._split_ignore_non_words, graph, root)
@@ -840,7 +846,7 @@ class TextProcessor:
             graph.remove_edges_from(edges_to_move)
             graph.add_edges_from([(new_s_node.node, v) for (u, v) in edges_to_move])
 
-    def _break_words(self, graph: GraphType, node: Node, phonemize: bool = True):
+    def _break_words(self, graph: GraphType, node: Node):
         """Break apart words according to work breaks pattern"""
         if not isinstance(node, WordNode):
             return
@@ -1239,7 +1245,7 @@ class TextProcessor:
                 matched = True
 
         if matched:
-            # Tokenize new text
+            # Tokenize new text (whitespace is preserved by regex)
             for part_text in settings.split_words(new_text):
                 part_text_norm = settings.normalize_whitespace(part_text)
 
@@ -1284,7 +1290,7 @@ class TextProcessor:
                 break
 
         if new_text is not None:
-            # Tokenize new text
+            # Tokenize new text (whitespace should be preserved by regex)
             for part_text in settings.split_words(new_text):
                 part_text_norm = settings.normalize_whitespace(part_text)
                 if not part_text_norm:
@@ -1321,18 +1327,30 @@ class TextProcessor:
             # Not an initialism
             return
 
+        first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
         parts = settings.split_initialism(word.text)
         last_part_idx = len(parts) - 1
 
         # Split according to language-specific function
         for part_idx, part_text in enumerate(parts):
+            if part_idx == 0:
+                part_text = first_ws + part_text
+
+            if part_idx == last_part_idx:
+                part_text += last_ws
+
             part_text_norm = settings.normalize_whitespace(part_text)
             if not part_text_norm:
                 continue
 
             if settings.keep_whitespace:
+                if part_idx == 0:
+                    part_text = first_ws + part_text
+
                 if 0 <= part_idx < last_part_idx:
                     part_text += settings.join_str
+                elif part_idx == last_part_idx:
+                    part_text += last_ws
 
             yield WordNode, {
                 "text": part_text_norm,
