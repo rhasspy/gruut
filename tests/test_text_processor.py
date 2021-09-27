@@ -625,9 +625,13 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_part_of_speech_tagging(self):
         """Test part-of-speech tagging"""
+
+        def get_parts_of_speech(words, *args, **kwargs):
+            return [w.upper() for w in words]
+
         processor = TextProcessor(
             # Made-up tagger that just gives the UPPER of the word back
-            get_parts_of_speech=lambda words: [w.upper() for w in words],
+            get_parts_of_speech=get_parts_of_speech
         )
         graph, root = processor("a test")
         words = list(processor.words(graph, root, explicit_lang=False, phonemes=False))
@@ -643,9 +647,13 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_phonemize_one_language(self):
         """Test phonemizer (single language)"""
+
+        def lookup_phonemes(word: str, *args, **kwargs):
+            return list(word)
+
         processor = TextProcessor(
             # Made-up phonemizer that just gives back the letters
-            lookup_phonemes=lambda word, role=None: list(word),
+            lookup_phonemes=lookup_phonemes,
         )
         graph, root = processor("test")
         words = list(processor.words(graph, root, pos=False, explicit_lang=False))
@@ -667,7 +675,7 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_phonemize_one_language_multiple_roles(self):
         """Test phonemizer (SSML, multiple word roles)"""
 
-        def lookup_phonemes(word, role=None):
+        def lookup_phonemes(word, role=None, **kwargs):
             return list(word) if not role else list(word.upper())
 
         processor = TextProcessor(
@@ -704,13 +712,19 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_phonemize_multiple_languages(self):
         """Test phonemizer (SSML, multiple languages)"""
+
+        def en_lookup_phonemes(word: str, *args, **kwargs):
+            return list(word)
+
+        def de_lookup_phonemes(word: str, *args, **kwargs):
+            return list(word.upper())
+
         processor = TextProcessor(
             default_lang="en_US",
-            lookup_phonemes=lambda word, role=None: list(word),
+            lookup_phonemes=en_lookup_phonemes,
             settings={
                 "de_DE": TextProcessorSettings(
-                    lang="de_DE",
-                    lookup_phonemes=lambda word, role=None: list(word.upper()),
+                    lang="de_DE", lookup_phonemes=de_lookup_phonemes
                 )
             },
         )

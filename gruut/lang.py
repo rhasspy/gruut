@@ -13,7 +13,7 @@ from gruut.g2p import GraphemesToPhonemes
 from gruut.phonemize import SqlitePhonemizer
 from gruut.pos import PartOfSpeechTagger
 from gruut.text_processor import InterpretAsFormat, TextProcessorSettings
-from gruut.utils import find_lang_dir, resolve_lang
+from gruut.utils import find_lang_dir, remove_non_word_chars, resolve_lang
 
 _LOGGER = logging.getLogger("gruut")
 
@@ -73,8 +73,14 @@ def get_settings(
         if load_phoneme_lexicon and ("lookup_phonemes" not in settings_args):
             lexicon_db_path = lang_dir / lang_model_prefix / "lexicon.db"
             if lexicon_db_path.is_file():
-                # Lower-case word if it can't be found in the lexicon
-                phonemizer_args = {"word_transform_funcs": [str.lower]}
+                # Transformations to apply to words when they can't be found in the lexicon
+                phonemizer_args = {
+                    "word_transform_funcs": [
+                        str.lower,
+                        remove_non_word_chars,
+                        lambda s: remove_non_word_chars(s.lower()),
+                    ]
+                }
 
                 settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
                     lexicon_db_path, **phonemizer_args
@@ -248,14 +254,17 @@ def get_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 # TTS and T.T.S.
 EN_INITIALISM_PATTERN = re.compile(r"^\s*[A-Z]{2,}\s*$")
 EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){2,}\s*$")
+EN_INITIALISM_SINGLE_PATTERN = re.compile(r"^(?:\s*[A-Z]\.)\s*$")
 
 EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 
 
 def en_is_initialism(text: str) -> bool:
     """True if text is of the form TTS or T.T.S."""
-    return (EN_INITIALISM_PATTERN.match(text) is not None) or (
-        EN_INITIALISM_DOTS_PATTERN.match(text) is not None
+    return (
+        (EN_INITIALISM_PATTERN.match(text) is not None)
+        or (EN_INITIALISM_DOTS_PATTERN.match(text) is not None)
+        or (EN_INITIALISM_SINGLE_PATTERN.match(text) is not None)
     )
 
 
@@ -810,7 +819,7 @@ class DelayedSqlitePhonemizer:
         self.phonemizer_args = phonemizer_args
 
     def __call__(
-        self, word: str, role: typing.Optional[str] = None
+        self, word: str, role: typing.Optional[str] = None, do_transforms: bool = True
     ) -> typing.Optional[PHONEMES_TYPE]:
         if self.phonemizer is None:
             _LOGGER.debug("Connecting to lexicon database at %s", self.db_path)
@@ -818,4 +827,4 @@ class DelayedSqlitePhonemizer:
             self.phonemizer = SqlitePhonemizer(db_conn=db_conn, **self.phonemizer_args)
 
         assert self.phonemizer is not None
-        return self.phonemizer(word, role=role)
+        return self.phonemizer(word, role=role, do_transforms=do_transforms)

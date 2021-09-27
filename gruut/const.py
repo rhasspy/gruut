@@ -236,6 +236,8 @@ class WordNode(Node):
     pos: typing.Optional[str] = None
     phonemes: typing.Optional[typing.Sequence[str]] = None
 
+    in_lexicon: typing.Optional[bool] = None
+
 
 @dataclass
 class BreakWordNode(Node):
@@ -357,7 +359,7 @@ class LookupPhonemes(typing.Protocol):
     """Look up phonemes for word/role in a lexicon"""
 
     def __call__(
-        self, word: str, role: typing.Optional[str] = None
+        self, word: str, role: typing.Optional[str] = None, do_transforms: bool = True
     ) -> typing.Optional[PHONEMES_TYPE]:
         pass
 

@@ -239,6 +239,13 @@ def text_and_elements(element, is_last=False):
 # Text
 # -----------------------------------------------------------------------------
 
+NON_WORDS_PATTERN = re.compile(r"\W")
+
+
+def remove_non_word_chars(s: str) -> str:
+    """Removes non-word characters from a string"""
+    return NON_WORDS_PATTERN.sub("", s)
+
 
 # -----------------------------------------------------------------------------
 # Graph

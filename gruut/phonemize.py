@@ -43,7 +43,7 @@ class SqlitePhonemizer:
         self.word_transform_funcs = word_transform_funcs or []
 
     def __call__(
-        self, word: str, role: typing.Optional[str] = None
+        self, word: str, role: typing.Optional[str] = None, do_transforms: bool = True
     ) -> typing.Optional[PHONEMES_TYPE]:
         # Look up in cache first
         role_to_word = self.lexicon.get(word)
@@ -67,8 +67,12 @@ class SqlitePhonemizer:
             # Not in lexicon (or database) for sure because role_to_word was present.
             return None
 
-        transforms = itertools.chain([None], self.word_transform_funcs)
-        for transform_func in transforms:
+        transforms = self.word_transform_funcs
+        if not do_transforms:
+            # No transforms
+            transforms = []
+
+        for transform_func in itertools.chain([None], transforms):
             if transform_func is not None:
                 lookup_word = transform_func(word)
             else:

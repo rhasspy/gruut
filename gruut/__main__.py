@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Command-line interface to gruut"""
 import argparse
+import csv
 import dataclasses
 import logging
 import os
@@ -64,15 +65,51 @@ def main():
         lines = sys.stdin
 
         if os.isatty(sys.stdin.fileno()):
-            print("Reading text from stdin...", file=sys.stderr)
+            print("Reading input from stdin...", file=sys.stderr)
 
-    writer = jsonlines.Writer(sys.stdout, flush=True)
-    for line in lines:
-        if not line.strip():
-            continue
+    if args.csv:
+        writer = csv.writer(sys.stdout, delimiter=args.csv_delimiter)
 
+        def input_text(lines):
+            reader = csv.reader(lines, delimiter=args.csv_delimiter)
+            for row in reader:
+                text = row[1]
+                yield (text, row)
+
+        def output_sentences(sentences, writer, text_data=None):
+            row = list(text_data)
+            row.append(
+                args.sentence_separator.join(
+                    args.word_separator.join(w.text for w in sentence if w.is_spoken)
+                    for sentence in sentences
+                )
+            )
+
+            phonemes = [
+                args.phoneme_separator.join(w.phonemes)
+                for sentence in sentences
+                for w in sentence
+                if w.phonemes
+            ]
+
+            row.append(args.phoneme_word_separator.join(phonemes))
+            writer.writerow(row)
+
+    else:
+        writer = jsonlines.Writer(sys.stdout, flush=True)
+
+        def input_text(lines):
+            for line in lines:
+                yield (line, None)
+
+        def output_sentences(sentences, writer, text_data=None):
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                writer.write(sentence_dict)
+
+    for text, text_data in input_text(lines):
         graph, root = text_processor(
-            line,
+            text,
             ssml=args.ssml,
             pos=(not args.no_pos),
             phonemize=(not (args.no_lexicon and args.no_g2p)),
@@ -89,15 +126,17 @@ def main():
             )
 
         # Output sentences
-        for sentence in text_processor.sentences(
-            graph,
-            root,
-            major_breaks=(not args.no_major_breaks),
-            minor_breaks=(not args.no_minor_breaks),
-            punctuations=(not args.no_punctuation),
-        ):
-            sentence_dict = dataclasses.asdict(sentence)
-            writer.write(sentence_dict)
+        sentences = list(
+            text_processor.sentences(
+                graph,
+                root,
+                major_breaks=(not args.no_major_breaks),
+                minor_breaks=(not args.no_minor_breaks),
+                punctuations=(not args.no_punctuation),
+            )
+        )
+
+        output_sentences(sentences, writer, text_data)
 
 
 # -----------------------------------------------------------------------------
@@ -173,6 +212,32 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",
+    )
+    parser.add_argument(
+        "--csv", action="store_true", help="Input text is id|text (see --csv-delimiter)"
+    )
+    parser.add_argument(
+        "--csv-delimiter", default="|", help="Delimiter for input text with --csv"
+    )
+    parser.add_argument(
+        "--sentence-separator",
+        default=". ",
+        help="String used to separate sentences in CSV output",
+    )
+    parser.add_argument(
+        "--word-separator",
+        default=" ",
+        help="String used to separate words in CSV output",
+    )
+    parser.add_argument(
+        "--phoneme-word-separator",
+        default="#",
+        help="String used to separate phonemes in CSV output",
+    )
+    parser.add_argument(
+        "--phoneme-separator",
+        default=" ",
+        help="String used to separate words in CSV output phonemes",
     )
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"

@@ -420,10 +420,13 @@ class TextProcessor:
                     if word_phonemes:
                         word_kwargs["phonemes"] = word_phonemes.pop()
 
+                    word_text_norm = settings.normalize_whitespace(word_text)
+
                     word_node = WordNode(
                         node=len(graph),
-                        text=word_text.strip(),
+                        text=word_text_norm,
                         text_with_ws=word_text,
+                        in_lexicon=self._is_word_in_lexicon(word_text_norm, settings),
                         **word_kwargs,
                     )
                     graph.add_node(word_node.node, data=word_node)
@@ -843,25 +846,13 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
-            # Don't interpret words that are spoken for
-            return
-
-        if not word.implicit:
-            # Don't break explicit words
+        if word.interpret_as or word.in_lexicon or (not word.implicit):
+            # Don't interpret words that are spoken for or explicit words (<w>)
             return
 
         settings = self.get_settings(word.lang)
         if settings.word_breaks_pattern is None:
             # No pattern set for this language
-            return
-
-        if (
-            phonemize
-            and (settings.lookup_phonemes is not None)
-            and settings.lookup_phonemes(word.text)
-        ):
-            # Don't break apart words already in the lexicon
             return
 
         parts = settings.word_breaks_pattern.split(word.text)
@@ -892,6 +883,7 @@ class TextProcessor:
                 "text_with_ws": part_text,
                 "implicit": True,
                 "lang": word.lang,
+                "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
             }
 
     def _split_punctuations(self, graph: GraphType, node: Node):
@@ -899,7 +891,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -932,9 +924,10 @@ class TextProcessor:
                     punct_text = first_ws + punct_text
                     first_word = False
 
+                punct_text_norm = settings.normalize_whitespace(punct_text)
                 has_punctuation = True
                 yield PunctuationWordNode, {
-                    "text": punct_text.strip(),
+                    "text": punct_text_norm,
                     "text_with_ws": punct_text,
                     "implicit": True,
                     "lang": word.lang,
@@ -978,12 +971,15 @@ class TextProcessor:
             # Preserve trailing whitespace
             word_text = word_text + last_ws
 
+        word_text_norm = settings.normalize_whitespace(word_text)
+
         if word_text:
             yield WordNode, {
-                "text": word_text.strip(),
+                "text": word_text_norm,
                 "text_with_ws": word_text,
                 "implicit": True,
                 "lang": word.lang,
+                "in_lexicon": self._is_word_in_lexicon(word_text_norm, settings),
             }
 
         last_punct_idx = len(end_punctuations) - 1
@@ -1004,7 +1000,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1022,11 +1018,14 @@ class TextProcessor:
 
         if word_part.strip():
             # Only yield word if there's anything but whitespace
+            word_part_norm = settings.normalize_whitespace(word_part)
+
             yield WordNode, {
-                "text": word_part.strip(),
+                "text": word_part_norm,
                 "text_with_ws": word_part,
                 "implicit": True,
                 "lang": word.lang,
+                "in_lexicon": self._is_word_in_lexicon(word_part_norm, settings),
             }
         else:
             # Keep leading whitespace
@@ -1034,7 +1033,7 @@ class TextProcessor:
 
         yield BreakWordNode, {
             "break_type": BreakType.MAJOR,
-            "text": break_part.strip(),
+            "text": settings.normalize_whitespace(break_part),
             "text_with_ws": break_part,
             "implicit": True,
             "lang": word.lang,
@@ -1045,7 +1044,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1059,17 +1058,22 @@ class TextProcessor:
             return
 
         word_part = parts[0]
-        yield WordNode, {
-            "text": word_part.strip(),
-            "text_with_ws": word_part,
-            "implicit": True,
-            "lang": word.lang,
-        }
+        if word_part.strip():
+            # Only yield word if there's anything but whitespace
+            word_part_norm = settings.normalize_whitespace(word_part)
+
+            yield WordNode, {
+                "text": word_part_norm,
+                "text_with_ws": word_part,
+                "implicit": True,
+                "lang": word.lang,
+                "in_lexicon": self._is_word_in_lexicon(word_part_norm, settings),
+            }
 
         break_part = parts[1]
         yield BreakWordNode, {
             "break_type": BreakType.MINOR,
-            "text": break_part.strip(),
+            "text": settings.normalize_whitespace(break_part),
             "text_with_ws": break_part,
             "implicit": True,
             "lang": word.lang,
@@ -1149,6 +1153,7 @@ class TextProcessor:
                 text=word_text_norm,
                 text_with_ws=word_text,
                 implicit=True,
+                in_lexicon=self._is_word_in_lexicon(word_text_norm, settings),
                 **word_kwargs,
             )
             graph.add_node(word_node.node, data=word_node)
@@ -1213,7 +1218,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1250,6 +1255,7 @@ class TextProcessor:
                     "text_with_ws": part_text,
                     "implicit": True,
                     "lang": word.lang,
+                    "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
                 }
 
     def _split_abbreviations(self, graph: GraphType, node: Node):
@@ -1258,7 +1264,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1292,6 +1298,7 @@ class TextProcessor:
                     "text_with_ws": part_text,
                     "implicit": True,
                     "lang": word.lang,
+                    "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
                 }
 
     def _split_initialism(self, graph: GraphType, node: Node, phonemize: bool = True):
@@ -1300,7 +1307,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1308,14 +1315,6 @@ class TextProcessor:
 
         if (settings.is_initialism is None) or (settings.split_initialism is None):
             # Can't do anything without these functions
-            return
-
-        if (
-            phonemize
-            and (settings.lookup_phonemes is not None)
-            and settings.lookup_phonemes(word.text)
-        ):
-            # Don't expand words already in lexicon
             return
 
         if not settings.is_initialism(word.text):
@@ -1349,7 +1348,7 @@ class TextProcessor:
             return
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as:
+        if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
 
@@ -1388,9 +1387,7 @@ class TextProcessor:
             pass
 
     def _transform_currency(
-        self,
-        graph: GraphType,
-        node: Node,
+        self, graph: GraphType, node: Node,
     ):
         if not isinstance(node, WordNode):
             return
@@ -1476,6 +1473,15 @@ class TextProcessor:
             date = dateparser.parse(word.text, **dateparser_kwargs)
             if date is not None:
                 word.date = date
+
+    def _is_word_in_lexicon(
+        self, word: str, settings: TextProcessorSettings
+    ) -> typing.Optional[bool]:
+        """True if word is in the lexicon"""
+        if settings.lookup_phonemes is None:
+            return None
+
+        return bool(settings.lookup_phonemes(word, do_transforms=False))
 
     # -------------------------------------------------------------------------
     # Verbalization
@@ -1631,9 +1637,7 @@ class TextProcessor:
             graph.add_edge(word.node, date_word.node)
 
     def _verbalize_currency(
-        self,
-        graph: GraphType,
-        node: Node,
+        self, graph: GraphType, node: Node,
     ):
         """Split currency amounts into words"""
         if not isinstance(node, WordNode):

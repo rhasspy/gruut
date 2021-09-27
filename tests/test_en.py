@@ -85,7 +85,7 @@ class EnglishTestCase(unittest.TestCase):
 
     def test_dates(self):
         """Test expansion of dates"""
-        text = "1/4/1999 vs 4/1/1999"
+        text = "1/4/1999 vs. 4/1/1999"
         sentence = next(sentences(text, lang="en_US"))
 
         self.assertEqual(
