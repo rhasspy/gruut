@@ -69,7 +69,9 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(
                     idx=3, sent_idx=0, text="»", text_with_ws="»", is_punctuation=True
                 ),
-                Word(idx=4, sent_idx=0, text=",", text_with_ws=",  ", is_break=True),
+                Word(
+                    idx=4, sent_idx=0, text=",", text_with_ws=",  ", is_minor_break=True
+                ),
                 Word(idx=5, sent_idx=0, text="a", text_with_ws="a "),
                 Word(
                     idx=6, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
@@ -78,7 +80,9 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(
                     idx=8, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
                 ),
-                Word(idx=9, sent_idx=0, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=9, sent_idx=0, text=".", text_with_ws=".", is_major_break=True
+                ),
             ],
         )
 
@@ -100,14 +104,18 @@ class TextProcessorTestCase(unittest.TestCase):
                     idx=1, sent_idx=0, text='"', text_with_ws='"', is_punctuation=True
                 ),
                 Word(idx=2, sent_idx=0, text="one", text_with_ws="one"),
-                Word(idx=3, sent_idx=0, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=3, sent_idx=0, text=".", text_with_ws=".", is_major_break=True
+                ),
                 Word(
                     idx=4, sent_idx=0, text='"', text_with_ws='" ', is_punctuation=True
                 ),
                 # Second sentence
                 Word(idx=0, sent_idx=1, text="Test", text_with_ws="Test "),
                 Word(idx=1, sent_idx=1, text="two", text_with_ws="two"),
-                Word(idx=2, sent_idx=1, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=2, sent_idx=1, text=".", text_with_ws=".", is_major_break=True
+                ),
             ],
         )
 
@@ -130,12 +138,16 @@ class TextProcessorTestCase(unittest.TestCase):
             words,
             [
                 Word(idx=0, sent_idx=0, text="This", text_with_ws="This"),
-                Word(idx=1, sent_idx=0, text=",", text_with_ws=", ", is_break=True),
+                Word(
+                    idx=1, sent_idx=0, text=",", text_with_ws=", ", is_minor_break=True
+                ),
                 Word(idx=2, sent_idx=0, text="is", text_with_ws="is "),
                 Word(idx=3, sent_idx=0, text="a", text_with_ws="a "),
                 Word(idx=4, sent_idx=0, text="test", text_with_ws="test "),
                 Word(idx=5, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=6, sent_idx=0, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=6, sent_idx=0, text=".", text_with_ws=".", is_major_break=True
+                ),
             ],
         )
 
@@ -158,18 +170,24 @@ class TextProcessorTestCase(unittest.TestCase):
             words,
             [
                 Word(idx=0, sent_idx=0, text="Mister", text_with_ws="Mister"),
-                Word(idx=1, sent_idx=0, text="?", text_with_ws="? ", is_break=True),
+                Word(
+                    idx=1, sent_idx=0, text="?", text_with_ws="? ", is_major_break=True
+                ),
                 Word(idx=0, sent_idx=1, text="I'm", text_with_ws="I'm "),
                 Word(idx=1, sent_idx=1, text="just", text_with_ws="just "),
                 Word(idx=2, sent_idx=1, text="a", text_with_ws="a "),
                 Word(idx=3, sent_idx=1, text="doctor", text_with_ws="doctor"),
-                Word(idx=4, sent_idx=1, text=",", text_with_ws=", ", is_break=True),
+                Word(
+                    idx=4, sent_idx=1, text=",", text_with_ws=", ", is_minor_break=True
+                ),
                 Word(idx=5, sent_idx=1, text="on", text_with_ws="on "),
                 Word(idx=6, sent_idx=1, text="this", text_with_ws="this "),
                 Word(idx=7, sent_idx=1, text="Street", text_with_ws="Street "),
                 Word(idx=8, sent_idx=1, text="at", text_with_ws="at "),
                 Word(idx=9, sent_idx=1, text="least", text_with_ws="least"),
-                Word(idx=10, sent_idx=1, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=10, sent_idx=1, text=".", text_with_ws=".", is_major_break=True
+                ),
             ],
         )
 
@@ -185,10 +203,14 @@ class TextProcessorTestCase(unittest.TestCase):
             [
                 Word(idx=0, sent_idx=0, text="First", text_with_ws="First  "),
                 Word(idx=1, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=0, text=".", text_with_ws=". ", is_break=True),
+                Word(
+                    idx=2, sent_idx=0, text=".", text_with_ws=". ", is_major_break=True
+                ),
                 Word(idx=0, sent_idx=1, text="Second", text_with_ws="Second "),
                 Word(idx=1, sent_idx=1, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=1, text="!", text_with_ws="! ", is_break=True),
+                Word(
+                    idx=2, sent_idx=1, text="!", text_with_ws="! ", is_major_break=True
+                ),
             ],
         )
 
@@ -211,7 +233,7 @@ class TextProcessorTestCase(unittest.TestCase):
                             sent_idx=0,
                             text=".",
                             text_with_ws=". ",
-                            is_break=True,
+                            is_major_break=True,
                         ),
                     ],
                 ),
@@ -229,7 +251,7 @@ class TextProcessorTestCase(unittest.TestCase):
                             sent_idx=1,
                             text="!",
                             text_with_ws="! ",
-                            is_break=True,
+                            is_major_break=True,
                         ),
                     ],
                 ),
@@ -248,10 +270,14 @@ class TextProcessorTestCase(unittest.TestCase):
             [
                 Word(idx=0, sent_idx=0, text="First", text_with_ws="First "),
                 Word(idx=1, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=2, sent_idx=0, text=".", text_with_ws=". ", is_break=True),
+                Word(
+                    idx=2, sent_idx=0, text=".", text_with_ws=". ", is_major_break=True
+                ),
                 Word(idx=3, sent_idx=0, text="Second", text_with_ws="Second "),
                 Word(idx=4, sent_idx=0, text="sentence", text_with_ws="sentence"),
-                Word(idx=5, sent_idx=0, text="!", text_with_ws="!", is_break=True),
+                Word(
+                    idx=5, sent_idx=0, text="!", text_with_ws="!", is_major_break=True
+                ),
             ],
         )
 
@@ -266,7 +292,9 @@ class TextProcessorTestCase(unittest.TestCase):
             words,
             [
                 Word(idx=0, sent_idx=0, text="this", text_with_ws="this"),
-                Word(idx=1, sent_idx=0, text=",", text_with_ws=", ", is_break=True),
+                Word(
+                    idx=1, sent_idx=0, text=",", text_with_ws=", ", is_minor_break=True
+                ),
                 Word(idx=2, sent_idx=0, text="is", text_with_ws="is "),
                 Word(idx=3, sent_idx=0, text="a", text_with_ws="a "),
                 Word(idx=4, sent_idx=0, text="test", text_with_ws="test"),
@@ -327,7 +355,9 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(idx=0, sent_idx=0, text="T", text_with_ws="T "),
                 Word(idx=1, sent_idx=0, text="T", text_with_ws="T "),
                 Word(idx=2, sent_idx=0, text="S", text_with_ws="S"),
-                Word(idx=3, sent_idx=0, text=".", text_with_ws=".", is_break=True),
+                Word(
+                    idx=3, sent_idx=0, text=".", text_with_ws=".", is_major_break=True
+                ),
             ],
         )
 

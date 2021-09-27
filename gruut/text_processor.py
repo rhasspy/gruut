@@ -178,9 +178,12 @@ class TextProcessor:
                     word_idx += 1
                 elif isinstance(node, BreakWordNode):
                     break_word = typing.cast(BreakWordNode, node)
-                    if (
-                        minor_breaks and (break_word.break_type == BreakType.MINOR)
-                    ) or (major_breaks and (break_word.break_type == BreakType.MAJOR)):
+                    is_minor_break = break_word.break_type == BreakType.MINOR
+                    is_major_break = break_word.break_type == BreakType.MAJOR
+
+                    if (minor_breaks and is_minor_break) or (
+                        major_breaks and is_major_break
+                    ):
                         words.append(
                             Word(
                                 idx=word_idx,
@@ -192,7 +195,8 @@ class TextProcessor:
                                 )
                                 if phonemes and break_phonemes
                                 else None,
-                                is_break=True,
+                                is_minor_break=is_minor_break,
+                                is_major_break=is_major_break,
                                 lang=get_lang(node.lang),
                             )
                         )
@@ -1384,7 +1388,9 @@ class TextProcessor:
             pass
 
     def _transform_currency(
-        self, graph: GraphType, node: Node,
+        self,
+        graph: GraphType,
+        node: Node,
     ):
         if not isinstance(node, WordNode):
             return
@@ -1625,7 +1631,9 @@ class TextProcessor:
             graph.add_edge(word.node, date_word.node)
 
     def _verbalize_currency(
-        self, graph: GraphType, node: Node,
+        self,
+        graph: GraphType,
+        node: Node,
     ):
         """Split currency amounts into words"""
         if not isinstance(node, WordNode):

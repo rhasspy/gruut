@@ -290,13 +290,18 @@ class Word:
     voice: str = ""
     pos: typing.Optional[str] = None
     phonemes: typing.Optional[typing.Sequence[str]] = None
-    is_break: bool = False
+    is_major_break: bool = False
+    is_minor_break: bool = False
     is_punctuation: bool = False
+    is_break: typing.Optional[bool] = None
+    is_spoken: typing.Optional[bool] = None
 
-    @property
-    def is_spoken(self):
-        """True if word is something that would be spoken during reading"""
-        return not (self.is_break or self.is_punctuation)
+    def __post_init__(self):
+        if self.is_break is None:
+            self.is_break = self.is_minor_break or self.is_minor_break
+
+        if self.is_spoken is None:
+            self.is_spoken = self.is_punctuation or self.is_break
 
 
 @dataclass
@@ -352,7 +357,10 @@ class PostProcessSentence(typing.Protocol):
     """Post-process each sentence node after tokenization/phonemization"""
 
     def __call__(
-        self, graph: GraphType, sentence_node: SentenceNode, settings: typing.Any,
+        self,
+        graph: GraphType,
+        sentence_node: SentenceNode,
+        settings: typing.Any,
     ):
         pass
 
