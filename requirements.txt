@@ -1,6 +1,8 @@
 Babel~=2.8.0
+dateparser~=1.0.0
 gruut-ipa~=0.10.0
 jsonlines~=1.2.0
+networkx~=2.6.2
 numpy>=1.19.0
 num2words>=0.5.10
 python-crfsuite~=0.9.7

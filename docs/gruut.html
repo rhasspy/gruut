@@ -733,64 +733,86 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.Word">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Word</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_punctuation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Word" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Word</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_major_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_minor_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_punctuation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_spoken</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Word" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Processed word from a Sentence</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.idx">
 <span class="sig-name descname"><span class="pre">idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Word.idx" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Zero-based index of word</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.is_break">
-<span class="sig-name descname"><span class="pre">is_break</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#gruut.const.Word.is_break" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">is_break</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Word.is_break" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if major or minor break</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.is_major_break">
+<span class="sig-name descname"><span class="pre">is_major_break</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#gruut.const.Word.is_major_break" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if word is a major break (separates sentences)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.is_minor_break">
+<span class="sig-name descname"><span class="pre">is_minor_break</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#gruut.const.Word.is_minor_break" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if word is a minor break (separates phrases)</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.is_punctuation">
 <span class="sig-name descname"><span class="pre">is_punctuation</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#gruut.const.Word.is_punctuation" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>True if word is punctuation that surrounds a spoken word (quotes, etc.)</p>
+</dd></dl>
 
-<dl class="py property">
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.is_spoken">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">is_spoken</span></span><a class="headerlink" href="#gruut.const.Word.is_spoken" title="Permalink to this definition">¶</a></dt>
-<dd><p>True if word is something that would be spoken during reading</p>
+<span class="sig-name descname"><span class="pre">is_spoken</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Word.is_spoken" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if word is something that would be spoken during reading (not punctuation or break)</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.lang">
 <span class="sig-name descname"><span class="pre">lang</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Word.lang" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Language code</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.phonemes">
 <span class="sig-name descname"><span class="pre">phonemes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Word.phonemes" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>List of phonemes (None if not set)</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.pos">
 <span class="sig-name descname"><span class="pre">pos</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Word.pos" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Part of speech (None if not set)</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.sent_idx">
 <span class="sig-name descname"><span class="pre">sent_idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Word.sent_idx" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Zero-based index of sentence</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.text">
 <span class="sig-name descname"><span class="pre">text</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><a class="headerlink" href="#gruut.const.Word.text" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Text with normalized whitespace</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.text_with_ws">
 <span class="sig-name descname"><span class="pre">text_with_ws</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><a class="headerlink" href="#gruut.const.Word.text_with_ws" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Text with original whitespace</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.voice">
 <span class="sig-name descname"><span class="pre">voice</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Word.voice" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Voice (from SSML)</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -2083,7 +2105,7 @@ French model is trained with “upos” label.</p>
 <li><p><strong>text</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – input text or SSML (ssml=True)</p></li>
 <li><p><strong>lang</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – default language of input text</p></li>
 <li><p><strong>ssml</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if input text is SSML</p></li>
-<li><p><strong>ssml</strong> – True if eSpeak phonemes should be used</p></li>
+<li><p><strong>espeak</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if eSpeak phonemes should be used</p></li>
 <li><p><strong>major_breaks</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if no sentence-breaking symbols in output</p></li>
 <li><p><strong>minor_breaks</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if no phrase-breaking symbols in output</p></li>
 <li><p><strong>punctuations</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if no word-surrounding symbols in output</p></li>

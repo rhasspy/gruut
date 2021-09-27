@@ -283,25 +283,50 @@ class Word:
     """Processed word from a Sentence"""
 
     idx: int
+    """Zero-based index of word"""
+
     text: str
+    """Text with normalized whitespace"""
+
     text_with_ws: str
+    """Text with original whitespace"""
+
     sent_idx: int
+    """Zero-based index of sentence"""
+
     lang: str = ""
+    """Language code"""
+
     voice: str = ""
+    """Voice (from SSML)"""
+
     pos: typing.Optional[str] = None
+    """Part of speech (None if not set)"""
+
     phonemes: typing.Optional[typing.Sequence[str]] = None
+    """List of phonemes (None if not set)"""
+
     is_major_break: bool = False
+    """True if word is a major break (separates sentences)"""
+
     is_minor_break: bool = False
+    """True if word is a minor break (separates phrases)"""
+
     is_punctuation: bool = False
+    """True if word is punctuation that surrounds a spoken word (quotes, etc.)"""
+
     is_break: typing.Optional[bool] = None
+    """True if major or minor break"""
+
     is_spoken: typing.Optional[bool] = None
+    """True if word is something that would be spoken during reading (not punctuation or break)"""
 
     def __post_init__(self):
         if self.is_break is None:
-            self.is_break = self.is_minor_break or self.is_minor_break
+            self.is_break = self.is_major_break or self.is_minor_break
 
         if self.is_spoken is None:
-            self.is_spoken = self.is_punctuation or self.is_break
+            self.is_spoken = not (self.is_punctuation or self.is_break)
 
 
 @dataclass
@@ -357,10 +382,7 @@ class PostProcessSentence(typing.Protocol):
     """Post-process each sentence node after tokenization/phonemization"""
 
     def __call__(
-        self,
-        graph: GraphType,
-        sentence_node: SentenceNode,
-        settings: typing.Any,
+        self, graph: GraphType, sentence_node: SentenceNode, settings: typing.Any,
     ):
         pass
 

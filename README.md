@@ -181,14 +181,18 @@ Output:
       "text_with_ws": "More  ",
       "sent_idx": 0,
       "lang": "en-us",
+      "voice": "",
       "pos": "JJR",
       "phonemes": [
         "m",
         "ˈɔ",
         "ɹ"
       ],
+      "is_major_break": false,
+      "is_minor_break": false,
+      "is_punctuation": false,
       "is_break": false,
-      "is_punctuation": false
+      "is_spoken": true
     },
     {
       "idx": 1,
@@ -196,6 +200,7 @@ Output:
       "text_with_ws": "text",
       "sent_idx": 0,
       "lang": "en-us",
+      "voice": "",
       "pos": "NN",
       "phonemes": [
         "t",
@@ -204,8 +209,11 @@ Output:
         "s",
         "t"
       ],
+      "is_major_break": false,
+      "is_minor_break": false,
+      "is_punctuation": false,
       "is_break": false,
-      "is_punctuation": false
+      "is_spoken": true
     },
     {
       "idx": 2,
@@ -213,12 +221,16 @@ Output:
       "text_with_ws": ".",
       "sent_idx": 0,
       "lang": "en-us",
+      "voice": "",
       "pos": null,
       "phonemes": [
         "‖"
       ],
+      "is_major_break": true,
+      "is_minor_break": false,
+      "is_punctuation": false,
       "is_break": true,
-      "is_punctuation": false
+      "is_spoken": false
     }
   ]
 }
@@ -232,8 +244,11 @@ Within each word, there is:
 * `sent_idx` - zero-based index of the sentence in the input text
 * `pos` - part of speech tag (if available)
 * `phonemes` - list of [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemes for the word (if available)
-* `is_break` - `true` if "word" is a major/minor break (period, comma, etc.)
-* `is_punctuation` - `true` if "word" is a punctuation mark (quote, bracket, etc.)
+* `is_minor_break` - `true` if "word" separates phrases (comma, semicolon, etc.)
+* `is_major_break` - `true` if "word" separates sentences (period, question mark, etc.)
+* `is_break` - `true` if "word" is a major or minor break
+* `is_punctuation` - `true` if "word" is a surrounding punctuation mark (quote, bracket, etc.)
+* `is_spoken` - `true` if not a break or punctuation
 
 See `python3 -m gruut <LANGUAGE> --help` for more options.
 

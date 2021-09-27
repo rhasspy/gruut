@@ -126,60 +126,34 @@ The <a class="reference internal" href="gruut.html#gruut.sentences" title="gruut
 <p>which outputs:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;This is a test.&quot;</span><span class="p">,</span>
-    <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;This is a test.&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;More text.&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;More  text.&quot;</span><span class="p">,</span>
     <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
     <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="nt">&quot;words&quot;</span><span class="p">:</span> <span class="p">[</span>
         <span class="p">{</span>
         <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;This&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;This &quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;More&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;More  &quot;</span><span class="p">,</span>
         <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
         <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
         <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;DT&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;JJR&quot;</span><span class="p">,</span>
         <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="s2">&quot;ð&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;ˈɪ&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;s&quot;</span>
+            <span class="s2">&quot;m&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ˈɔ&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ɹ&quot;</span>
         <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
         <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">true</span>
         <span class="p">},</span>
         <span class="p">{</span>
         <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;is&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;is &quot;</span><span class="p">,</span>
-        <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;VBZ&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="s2">&quot;ˈɪ&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;z&quot;</span>
-        <span class="p">],</span>
-        <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
-        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;a &quot;</span><span class="p">,</span>
-        <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;DT&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="s2">&quot;ə&quot;</span>
-        <span class="p">],</span>
-        <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
         <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
         <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
         <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -187,14 +161,18 @@ The <a class="reference internal" href="gruut.html#gruut.sentences" title="gruut
         <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
             <span class="s2">&quot;t&quot;</span><span class="p">,</span>
             <span class="s2">&quot;ˈɛ&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;k&quot;</span><span class="p">,</span>
             <span class="s2">&quot;s&quot;</span><span class="p">,</span>
             <span class="s2">&quot;t&quot;</span>
         <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
         <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">true</span>
         <span class="p">},</span>
         <span class="p">{</span>
-        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
         <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
         <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
         <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
@@ -204,8 +182,11 @@ The <a class="reference internal" href="gruut.html#gruut.sentences" title="gruut
         <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
             <span class="s2">&quot;‖&quot;</span>
         <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
         <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">false</span>
         <span class="p">}</span>
     <span class="p">]</span>
 <span class="p">}</span>

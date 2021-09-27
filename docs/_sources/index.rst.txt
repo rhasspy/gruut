@@ -109,60 +109,34 @@ which outputs:
 
     {
         "idx": 0,
-        "text": "This is a test.",
-        "text_with_ws": "This is a test.",
+        "text": "More text.",
+        "text_with_ws": "More  text.",
         "lang": "en-us",
         "voice": "",
         "words": [
             {
             "idx": 0,
-            "text": "This",
-            "text_with_ws": "This ",
+            "text": "More",
+            "text_with_ws": "More  ",
             "sent_idx": 0,
             "lang": "en-us",
             "voice": "",
-            "pos": "DT",
+            "pos": "JJR",
             "phonemes": [
-                "ð",
-                "ˈɪ",
-                "s"
+                "m",
+                "ˈɔ",
+                "ɹ"
             ],
+            "is_major_break": false,
+            "is_minor_break": false,
+            "is_punctuation": false,
             "is_break": false,
-            "is_punctuation": false
+            "is_spoken": true
             },
             {
             "idx": 1,
-            "text": "is",
-            "text_with_ws": "is ",
-            "sent_idx": 0,
-            "lang": "en-us",
-            "voice": "",
-            "pos": "VBZ",
-            "phonemes": [
-                "ˈɪ",
-                "z"
-            ],
-            "is_break": false,
-            "is_punctuation": false
-            },
-            {
-            "idx": 2,
-            "text": "a",
-            "text_with_ws": "a ",
-            "sent_idx": 0,
-            "lang": "en-us",
-            "voice": "",
-            "pos": "DT",
-            "phonemes": [
-                "ə"
-            ],
-            "is_break": false,
-            "is_punctuation": false
-            },
-            {
-            "idx": 3,
-            "text": "test",
-            "text_with_ws": "test",
+            "text": "text",
+            "text_with_ws": "text",
             "sent_idx": 0,
             "lang": "en-us",
             "voice": "",
@@ -170,14 +144,18 @@ which outputs:
             "phonemes": [
                 "t",
                 "ˈɛ",
+                "k",
                 "s",
                 "t"
             ],
+            "is_major_break": false,
+            "is_minor_break": false,
+            "is_punctuation": false,
             "is_break": false,
-            "is_punctuation": false
+            "is_spoken": true
             },
             {
-            "idx": 4,
+            "idx": 2,
             "text": ".",
             "text_with_ws": ".",
             "sent_idx": 0,
@@ -187,8 +165,11 @@ which outputs:
             "phonemes": [
                 "‖"
             ],
+            "is_major_break": true,
+            "is_minor_break": false,
+            "is_punctuation": false,
             "is_break": true,
-            "is_punctuation": false
+            "is_spoken": false
             }
         ]
     }
