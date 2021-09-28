@@ -483,23 +483,31 @@ class TextProcessorTestCase(unittest.TestCase):
                     lang="en_US", idx=0, sent_idx=0, text="April", text_with_ws="April "
                 ),
                 Word(
-                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first "
+                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first"
                 ),
                 Word(
                     lang="en_US",
                     idx=2,
+                    sent_idx=0,
+                    text=",",
+                    text_with_ws=", ",
+                    is_minor_break=True,
+                ),
+                Word(
+                    lang="en_US",
+                    idx=3,
                     sent_idx=0,
                     text="nineteen",
                     text_with_ws="nineteen ",
                 ),
                 Word(
                     lang="en_US",
-                    idx=3,
+                    idx=4,
                     sent_idx=0,
                     text="ninety",
                     text_with_ws="ninety ",
                 ),
-                Word(lang="en_US", idx=4, sent_idx=0, text="nine", text_with_ws="nine"),
+                Word(lang="en_US", idx=5, sent_idx=0, text="nine", text_with_ws="nine"),
             ],
         )
 
@@ -522,23 +530,31 @@ class TextProcessorTestCase(unittest.TestCase):
                     lang="en_US", idx=0, sent_idx=0, text="April", text_with_ws="April "
                 ),
                 Word(
-                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first "
+                    lang="en_US", idx=1, sent_idx=0, text="first", text_with_ws="first"
                 ),
                 Word(
                     lang="en_US",
                     idx=2,
+                    sent_idx=0,
+                    text=",",
+                    text_with_ws=", ",
+                    is_minor_break=True,
+                ),
+                Word(
+                    lang="en_US",
+                    idx=3,
                     sent_idx=0,
                     text="nineteen",
                     text_with_ws="nineteen ",
                 ),
                 Word(
                     lang="en_US",
-                    idx=3,
+                    idx=4,
                     sent_idx=0,
                     text="ninety",
                     text_with_ws="ninety ",
                 ),
-                Word(lang="en_US", idx=4, sent_idx=0, text="nine", text_with_ws="nine"),
+                Word(lang="en_US", idx=5, sent_idx=0, text="nine", text_with_ws="nine"),
                 # French
                 Word(
                     lang="fr_FR",

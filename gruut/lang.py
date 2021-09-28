@@ -274,7 +274,7 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "'", "“", "«", "[", "(", "<", "*", "_"},
         "end_punctuations": {'"', "'", "”", "»", "]", ")", ">", "*", "_"},
         "default_currency": "USD",
-        "default_date_format": InterpretAsFormat.DATE_MDY_ORDINAL,
+        "default_date_format": "{m} {o}, {y}",
         "is_initialism": en_is_initialism,
         "split_initialism": lambda text: list(text.replace(".", "")),
         "is_non_word": lambda text: EN_NON_WORD_PATTERN.match(text) is not None,

@@ -279,6 +279,9 @@ class TextProcessor:
         phonemize: bool = True,
         post_process: bool = True,
         add_speak_tag: bool = True,
+        detect_numbers: bool = True,
+        detect_currency: bool = True,
+        detect_dates: bool = True,
         verbalize_numbers: bool = True,
         verbalize_currency: bool = True,
         verbalize_dates: bool = True,
@@ -676,9 +679,14 @@ class TextProcessor:
         pipeline_split(self._split_spell_out, graph, root)
 
         # Transform text into known classes
-        pipeline_transform(self._transform_number, graph, root)
-        pipeline_transform(self._transform_currency, graph, root)
-        pipeline_transform(self._transform_date, graph, root)
+        if detect_numbers:
+            pipeline_transform(self._transform_number, graph, root)
+
+        if detect_currency:
+            pipeline_transform(self._transform_currency, graph, root)
+
+        if detect_dates:
+            pipeline_transform(self._transform_date, graph, root)
 
         # Verbalize known classes
         if verbalize_numbers:
@@ -689,6 +697,10 @@ class TextProcessor:
 
         if verbalize_dates:
             pipeline_transform(self._verbalize_date, graph, root)
+
+        if verbalize_numbers or verbalize_currency or verbalize_dates:
+            # Final split on minor breaks since numbers/dates can have commas, etc.
+            pipeline_split(self._split_minor_breaks, graph, root)
 
         # Break apart words
         pipeline_split(self._break_words, graph, root)
@@ -1549,9 +1561,6 @@ class TextProcessor:
             # Convert to words (e.g., 100 -> one hundred)
             num_str = num2words(final_num, **num2words_kwargs)
 
-            # Remove all non-word characters
-            num_str = re.sub(r"\W", settings.join_str, num_str).strip()
-
             # Add original whitespace back in
             first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
             num_str = first_ws + num_str + last_ws
@@ -1589,30 +1598,41 @@ class TextProcessor:
         assert settings.num2words_lang
 
         date = word.date
-        date_format = (word.format or settings.default_date_format).strip().upper()
+        date_format = word.format or settings.default_date_format
+
+        if "{" not in date_format:
+            # Transform into Python format string
+            date_format = date_format.strip().upper()
+
+            # MDY -> {M} {D} {Y}
+            date_format_str = settings.join_str.join(f"{{{c}}}" for c in date_format)
+        else:
+            # Assumed to be a Python format string already
+            date_format_str = date_format
+
         day_card_str = ""
         day_ord_str = ""
         month_str = ""
         year_str = ""
 
-        if "M" in date_format:
+        if ("{M}" in date_format_str) or ("{m}" in date_format_str):
             month_str = babel.dates.format_date(
                 date, "MMMM", locale=settings.babel_locale
             )
 
         num2words_kwargs = {"lang": settings.num2words_lang}
 
-        if "D" in date_format:
+        if ("{D}" in date_format_str) or ("{d}" in date_format_str):
             # Cardinal day (1 -> one)
             num2words_kwargs["to"] = "cardinal"
             day_card_str = num2words(date.day, **num2words_kwargs)
 
-        if "O" in date_format:
+        if ("{O}" in date_format_str) or ("{o}" in date_format_str):
             # Ordinal day (1 -> first)
             num2words_kwargs["to"] = "ordinal"
             day_ord_str = num2words(date.day, **num2words_kwargs)
 
-        if "Y" in date_format:
+        if ("{Y}" in date_format_str) or ("{y}" in date_format_str):
             try:
                 num2words_kwargs["to"] = "year"
                 year_str = num2words(date.year, **num2words_kwargs)
@@ -1621,14 +1641,19 @@ class TextProcessor:
                 num2words_kwargs["to"] = "cardinal"
                 year_str = num2words(date.year, **num2words_kwargs)
 
-        # Transform into Python format string
-        # MDY -> {M} {D} {Y}
-        date_format_str = settings.join_str.join(f"{{{c}}}" for c in date_format)
         date_str = date_format_str.format(
-            **{"M": month_str, "D": day_card_str, "O": day_ord_str, "Y": year_str}
+            **{
+                "M": month_str,
+                "m": month_str,
+                "D": day_card_str,
+                "d": day_card_str,
+                "O": day_ord_str,
+                "o": day_ord_str,
+                "Y": year_str,
+                "y": year_str,
+            }
         )
 
-        # Add original whitespace back in
         first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
         date_str = first_ws + date_str + last_ws
 
@@ -1708,9 +1733,6 @@ class TextProcessor:
         else:
             # Remove 'zero cents' part
             num_str = num_str.split("|", maxsplit=1)[0]
-
-        # Remove all non-word characters
-        num_str = re.sub(r"\W", settings.join_str, num_str).strip()
 
         # Add original whitespace back in
         first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
