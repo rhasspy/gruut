@@ -1413,6 +1413,10 @@ class TextProcessor:
             )
             word.interpret_as = InterpretAs.NUMBER
             word.number = number
+
+            if 1000 < number < 3000:
+                # Interpret numbers in this range as years by default
+                word.format = InterpretAsFormat.NUMBER_YEAR
         except ValueError:
             pass
 
