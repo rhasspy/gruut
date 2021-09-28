@@ -29,8 +29,7 @@ __all__ = [
 
 # -----------------------------------------------------------------------------
 
-# model_prefix -> TextProcessor
-_PROCESSORS: typing.Dict[str, TextProcessor] = {}
+_LOCAL = threading.local()
 _PROCESSORS_LOCK = threading.RLock()
 
 
@@ -64,10 +63,13 @@ def sentences(
     model_prefix = "" if (not espeak) else "espeak"
 
     with _PROCESSORS_LOCK:
-        text_processor = _PROCESSORS.get(model_prefix)
+        if not hasattr(_LOCAL, "processors"):
+            _LOCAL.processors = {}
+
+        text_processor = _LOCAL.processors.get(model_prefix)
         if text_processor is None:
             text_processor = TextProcessor(default_lang=lang, model_prefix=model_prefix)
-            _PROCESSORS[model_prefix] = text_processor
+            _LOCAL.processors[model_prefix] = text_processor
 
     assert text_processor is not None
     graph, root = text_processor(text, lang=lang, ssml=ssml, **process_args)
