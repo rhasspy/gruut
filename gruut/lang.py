@@ -66,7 +66,9 @@ def get_settings(
                 )
             else:
                 _LOGGER.debug(
-                    "(%s) no part of speech tagger found at %s", lang, pos_model_path,
+                    "(%s) no part of speech tagger found at %s",
+                    lang,
+                    pos_model_path,
                 )
 
         # Phonemizer
@@ -76,10 +78,10 @@ def get_settings(
                 # Transformations to apply to words when they can't be found in the lexicon
                 phonemizer_args = {
                     "word_transform_funcs": [
-                        str.lower,
                         remove_non_word_chars,
                         lambda s: remove_non_word_chars(s.lower()),
-                    ]
+                    ],
+                    "casing_func": str.lower,
                 }
 
                 settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
@@ -210,7 +212,9 @@ def get_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [("’", "'"),],  # normalize apostrophe
+        "replacements": [
+            ("’", "'"),
+        ],  # normalize apostrophe
         "pre_process_text": ArabicPreProcessText(),
         **settings_args,
     }

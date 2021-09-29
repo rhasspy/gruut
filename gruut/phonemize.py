@@ -32,7 +32,7 @@ class SqlitePhonemizer:
         word_transform_funcs: typing.Optional[
             typing.Iterable[WORD_TRANSFORM_TYPE]
         ] = None,
-        # guess_transform_func=None,
+        casing_func: typing.Optional[WORD_TRANSFORM_TYPE] = None,
     ):
         self.db_conn = db_conn
 
@@ -42,10 +42,15 @@ class SqlitePhonemizer:
         # [functions]
         self.word_transform_funcs = word_transform_funcs or []
 
+        self.casing_func = casing_func
+
     def __call__(
         self, word: str, role: typing.Optional[str] = None, do_transforms: bool = True
     ) -> typing.Optional[PHONEMES_TYPE]:
         # Look up in cache first
+        if self.casing_func is not None:
+            word = self.casing_func(word)
+
         role_to_word = self.lexicon.get(word)
 
         if role_to_word is not None:
