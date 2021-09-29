@@ -1405,6 +1405,15 @@ class TextProcessor:
         settings = self.get_settings(word.lang)
         assert settings.babel_locale
 
+        if settings.get_ordinal is not None:
+            # Try to parse as an ordinal (e.g., 1st -> 1)
+            ordinal_num = settings.get_ordinal(word.text)
+            if ordinal_num is not None:
+                word.interpret_as = InterpretAs.NUMBER
+                word.format = InterpretAsFormat.NUMBER_ORDINAL
+                word.number = Decimal(ordinal_num)
+                return
+
         try:
             # Try to parse as a number
             # This is important to handle thousand/decimal separators correctly.
@@ -1412,10 +1421,15 @@ class TextProcessor:
                 word.text, locale=settings.babel_locale
             )
             word.interpret_as = InterpretAs.NUMBER
+            word.format = InterpretAsFormat.NUMBER_CARDINAL
             word.number = number
 
-            if 1000 < number < 3000:
-                # Interpret numbers in this range as years by default
+            if (1000 < number < 3000) and (re.match(r"^\d+$", word.text) is not None):
+                # Interpret numbers in this range as years by default, but only
+                # if the text was entirely digits.
+                #
+                # So "2020" will become "twenty twenty", but "2,020" will become
+                # "two thousand and twenty".
                 word.format = InterpretAsFormat.NUMBER_YEAR
         except ValueError:
             pass

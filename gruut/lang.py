@@ -210,11 +210,7 @@ def get_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'"),],  # normalize apostrophe
         "pre_process_text": ArabicPreProcessText(),
         **settings_args,
     }
@@ -236,11 +232,7 @@ def get_cs_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="cs_CZ", **settings_args)
@@ -256,6 +248,7 @@ EN_INITIALISM_PATTERN = re.compile(r"^\s*[A-Z]{2,}\s*$")
 EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){1,}\s*$")
 
 EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
+EN_ORDINAL_PATTERN = re.compile(r"^(-?[0-9][0-9,]*)(?:st|nd|rd|th).*$")
 
 
 def en_is_initialism(text: str) -> bool:
@@ -263,6 +256,15 @@ def en_is_initialism(text: str) -> bool:
     return (EN_INITIALISM_PATTERN.match(text) is not None) or (
         EN_INITIALISM_DOTS_PATTERN.match(text) is not None
     )
+
+
+def en_get_ordinal(text: str) -> typing.Optional[int]:
+    """Parse English ordinal string (e.g., 1st -> 1)"""
+    match = EN_ORDINAL_PATTERN.match(text)
+    if match is not None:
+        return int(re.sub(r"[^0-9]", "", match.group(1)))
+
+    return None
 
 
 def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
@@ -278,7 +280,8 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "is_initialism": en_is_initialism,
         "split_initialism": lambda text: list(text.replace(".", "")),
         "is_non_word": lambda text: EN_NON_WORD_PATTERN.match(text) is not None,
-        "replacements": [("’", "'"),],  # normalize apostrophe
+        "get_ordinal": en_get_ordinal,
+        "replacements": [("’", "'")],  # normalize apostrophe
         "abbreviations": {
             r"^([cC])o\.": r"\1ompany",  # co. -> company
             r"^([dD])r\.": r"\1octor",  # dr. -> doctor
@@ -323,11 +326,7 @@ def get_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="de_DE", **settings_args)
@@ -348,11 +347,7 @@ def get_es_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="es_ES", **settings_args)
@@ -428,11 +423,7 @@ def get_fa_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "’", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         "post_process_sentence": fa_post_process_sentence,
         **settings_args,
     }
@@ -569,11 +560,7 @@ def get_fr_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         "post_process_sentence": fr_post_process_sentence,
         **settings_args,
     }
@@ -595,11 +582,7 @@ def get_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         "post_process_sentence": fr_post_process_sentence,
         **settings_args,
     }
@@ -621,11 +604,7 @@ def get_nl_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="nl", **settings_args)
@@ -646,11 +625,7 @@ def get_pt_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="pt", **settings_args)
@@ -671,11 +646,7 @@ def get_ru_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_currency": "RUB",
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="ru_RU", **settings_args)
@@ -695,11 +666,7 @@ def get_sv_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="sv_SE", **settings_args)
@@ -719,11 +686,7 @@ def get_sw_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),  # normalize apostrophe
-            ("\\B['‘]", '"'),  # replace single quotes (left)
-            ("['’]\\B", '"'),  # replace signed quotes (right)
-        ],
+        "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
     return TextProcessorSettings(lang="sw", **settings_args)

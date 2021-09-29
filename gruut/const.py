@@ -516,6 +516,9 @@ class TextProcessorSettings:
     is_maybe_number: typing.Optional[typing.Callable[[str], bool]] = has_digit
     """True if a word may be a number (parsing will be attempted)"""
 
+    get_ordinal: typing.Optional[typing.Callable[[str], typing.Optional[int]]] = None
+    """Returns integer value of an ordinal string (e.g., 1st -> 1) or None if not an ordinal"""
+
     babel_locale: typing.Optional[str] = None
     """Locale used to parse numbers/dates/currencies (defaults to lang)"""
 
@@ -656,8 +659,8 @@ class TextProcessorSettings:
         if (self.minor_breaks_pattern is None) and self.minor_breaks:
             pattern_str = "|".join(re.escape(b) for b in self.minor_breaks)
 
-            # Match minor break with optional whitespace after
-            self.minor_breaks_pattern = f"((?:{pattern_str})\\s*)"
+            # Match minor break with either whitespace at the end or at the end of the text
+            self.minor_breaks_pattern = f"((?:{pattern_str})(?:\\s+|$))"
 
         if self.minor_breaks_pattern is not None:
             self.minor_breaks_pattern = maybe_compile_regex(self.minor_breaks_pattern)

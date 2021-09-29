@@ -80,8 +80,7 @@ class EnglishTestCase(unittest.TestCase):
         sentence = next(sentences(text, lang="en_US"))
 
         self.assertEqual(
-            ["A", "B", "C", "abc", "A", "B", "C"],
-            [word.text for word in sentence],
+            ["A", "B", "C", "abc", "A", "B", "C"], [word.text for word in sentence],
         )
 
     def test_dates(self):
@@ -104,6 +103,50 @@ class EnglishTestCase(unittest.TestCase):
                 "nineteen",
                 "ninety",
                 "nine",
+            ],
+            [word.text for word in sentence],
+        )
+
+    def test_ordinals(self):
+        """Test parsing of ordinal numbers"""
+        text = "1st, 2nd, 3rd, 4th, 5th, 23rd, 32nd, 44th, 121st, 5,111st."
+        sentence = next(sentences(text, lang="en_US"))
+
+        self.assertEqual(
+            [
+                "first",
+                ",",
+                "second",
+                ",",
+                "third",
+                ",",
+                "fourth",
+                ",",
+                "fifth",
+                ",",
+                "twenty",
+                "third",
+                ",",
+                "thirty",
+                "second",
+                ",",
+                "forty",
+                "fourth",
+                ",",
+                "one",
+                "hundred",
+                "and",
+                "twenty",
+                "first",
+                ",",
+                "five",
+                "thousand",
+                ",",
+                "one",
+                "hundred",
+                "and",
+                "eleventh",
+                ".",
             ],
             [word.text for word in sentence],
         )
