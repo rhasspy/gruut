@@ -285,7 +285,7 @@ class Word:
     """Processed word from a Sentence"""
 
     idx: int
-    """Zero-based index of word"""
+    """Zero-based index of word in sentence"""
 
     text: str
     """Text with normalized whitespace"""
@@ -293,8 +293,11 @@ class Word:
     text_with_ws: str
     """Text with original whitespace"""
 
-    sent_idx: int
-    """Zero-based index of sentence"""
+    sent_idx: int = 0
+    """Zero-based index of sentence in paragraph"""
+
+    par_idx: int = 0
+    """Zero-based index of paragraph in document"""
 
     lang: str = ""
     """Language code"""
@@ -336,19 +339,36 @@ class Sentence:
     """Processed sentence from a document"""
 
     idx: int
+    """Zero-based index of sentence in paragraph"""
+
     text: str
+    """Text with normalized whitespace"""
+
     text_with_ws: str
+    """Text with original whitespace"""
+
+    par_idx: int = 0
+    """Zero-based index of paragraph in document"""
+
     lang: str = ""
+    """Language code"""
+
     voice: str = ""
+    """Voice (from SSML)"""
+
     words: typing.Sequence[Word] = field(default_factory=list)
+    """Words in the sentence"""
 
     def __iter__(self):
+        """Iterates over words"""
         return iter(self.words)
 
     def __len__(self):
+        """Number of words"""
         return len(self.words)
 
     def __getitem__(self, key):
+        """Gets word by index"""
         return self.words[key]
 
 

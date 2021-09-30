@@ -259,6 +259,40 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_multiple_paragraphs(self):
+        """Test paragraph index"""
+        processor = TextProcessor()
+        graph, root = processor(
+            "<speak><p>First paragraph</p><p>Second paragraph</p></speak>", ssml=True
+        )
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+        print_graph(graph, root)
+
+        # Sentences/words should be in different paragraphs
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, par_idx=0, text="First", text_with_ws="First "),
+                Word(
+                    idx=1,
+                    sent_idx=0,
+                    par_idx=0,
+                    text="paragraph",
+                    text_with_ws="paragraph",
+                ),
+                Word(
+                    idx=0, sent_idx=0, par_idx=1, text="Second", text_with_ws="Second "
+                ),
+                Word(
+                    idx=1,
+                    sent_idx=0,
+                    par_idx=1,
+                    text="paragraph",
+                    text_with_ws="paragraph",
+                ),
+            ],
+        )
+
     def test_explicit_sentence(self):
         """Test <s> in SSML for avoiding sentence break"""
         processor = TextProcessor(major_breaks={".", "!"})

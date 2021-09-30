@@ -113,7 +113,7 @@ class TextProcessor:
             return ""
 
         def make_sentence(
-            node: Node, words: typing.Sequence[Word], sent_idx: int
+            node: Node, words: typing.Sequence[Word], sent_idx: int, par_idx: int
         ) -> Sentence:
             settings = self.get_settings(node.lang)
             text_with_ws = "".join(w.text_with_ws for w in words)
@@ -142,8 +142,10 @@ class TextProcessor:
                 lang=get_lang(node.lang),
                 voice=sent_voice,
                 words=words,
+                par_idx=par_idx,
             )
 
+        par_idx: int = -1
         sent_idx: int = 0
         word_idx: int = 0
         words: typing.List[Word] = []
@@ -151,9 +153,21 @@ class TextProcessor:
 
         for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
             node = graph.nodes[dfs_node][DATA_PROP]
-            if isinstance(node, SentenceNode):
+            if isinstance(node, ParagraphNode):
+                # Finish current sentence
                 if words and (last_sentence_node is not None):
-                    yield make_sentence(last_sentence_node, words, sent_idx)
+                    yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
+                    words = []
+
+                par_idx += 1
+                sent_idx = 0
+                word_idx = 0
+
+                last_sentence_node = None
+            elif isinstance(node, SentenceNode):
+                # Finish current sentence
+                if words and (last_sentence_node is not None):
+                    yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
                     sent_idx += 1
                     word_idx = 0
                     words = []
@@ -166,6 +180,7 @@ class TextProcessor:
                         Word(
                             idx=word_idx,
                             sent_idx=sent_idx,
+                            par_idx=par_idx,
                             text=word.text,
                             text_with_ws=word.text_with_ws,
                             phonemes=word.phonemes if phonemes else None,
@@ -188,6 +203,7 @@ class TextProcessor:
                             Word(
                                 idx=word_idx,
                                 sent_idx=sent_idx,
+                                par_idx=par_idx,
                                 text=break_word.text,
                                 text_with_ws=break_word.text_with_ws,
                                 phonemes=self._phonemes_for_break(
@@ -208,6 +224,7 @@ class TextProcessor:
                         Word(
                             idx=word_idx,
                             sent_idx=sent_idx,
+                            par_idx=par_idx,
                             text=punct_word.text,
                             text_with_ws=punct_word.text_with_ws,
                             is_punctuation=True,
@@ -218,7 +235,8 @@ class TextProcessor:
                     word_idx += 1
 
         if words and (last_sentence_node is not None):
-            yield make_sentence(last_sentence_node, words, sent_idx)
+            # Finish current sentence
+            yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
 
     def words(self, graph: GraphType, root: Node, **kwargs) -> typing.Iterable[Word]:
         """Processes text and returns each word"""
@@ -547,6 +565,9 @@ class TextProcessor:
                     graph.add_node(p_node.node, data=p_node)
                     graph.add_edge(last_speak.node, p_node.node)
                     last_paragraph = p_node
+
+                    # Force a new sentence to begin
+                    last_sentence = None
                 elif elem_tag == "s":
                     # Explicit sentence
                     if last_speak is None:
