@@ -41,6 +41,10 @@ def sentences(
     major_breaks: bool = True,
     minor_breaks: bool = True,
     punctuations: bool = True,
+    explicit_lang: bool = True,
+    phonemes: bool = True,
+    break_phonemes: bool = True,
+    pos: bool = True,
     **process_args,
 ) -> typing.Iterable[Sentence]:
     """
@@ -80,6 +84,10 @@ def sentences(
         major_breaks=major_breaks,
         minor_breaks=minor_breaks,
         punctuations=punctuations,
+        explicit_lang=explicit_lang,
+        phonemes=phonemes,
+        break_phonemes=break_phonemes,
+        pos=pos,
     )
 
 

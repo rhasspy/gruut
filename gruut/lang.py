@@ -66,9 +66,7 @@ def get_settings(
                 )
             else:
                 _LOGGER.debug(
-                    "(%s) no part of speech tagger found at %s",
-                    lang,
-                    pos_model_path,
+                    "(%s) no part of speech tagger found at %s", lang, pos_model_path,
                 )
 
         # Phonemizer
@@ -212,9 +210,7 @@ def get_ar_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">"},
         "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"),
-        ],  # normalize apostrophe
+        "replacements": [("’", "'")],  # normalize apostrophe
         "pre_process_text": ArabicPreProcessText(),
         **settings_args,
     }

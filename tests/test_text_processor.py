@@ -131,7 +131,6 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
         graph, root = processor("\"This,\" [is] <a> (test) 'sentence.'")
-        print_graph(graph, root)
         words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # Quotes and brackets are discarded
@@ -266,7 +265,6 @@ class TextProcessorTestCase(unittest.TestCase):
             "<speak><p>First paragraph</p><p>Second paragraph</p></speak>", ssml=True
         )
         words = list(processor.words(graph, root, **WORDS_KWARGS))
-        print_graph(graph, root)
 
         # Sentences/words should be in different paragraphs
         self.assertEqual(
@@ -809,7 +807,7 @@ class TextProcessorTestCase(unittest.TestCase):
 
     def test_sub(self):
         """Test SSML substitution"""
-        processor = TextProcessor(default_lang="en_US",)
+        processor = TextProcessor(default_lang="en_US")
         graph, root = processor(
             '<speak><sub alias="World Wide Web Consortium">W3C</sub></speak>', ssml=True
         )
@@ -823,6 +821,53 @@ class TextProcessorTestCase(unittest.TestCase):
                 Word(idx=1, sent_idx=0, text="Wide", text_with_ws="Wide ",),
                 Word(idx=2, sent_idx=0, text="Web", text_with_ws="Web ",),
                 Word(idx=3, sent_idx=0, text="Consortium", text_with_ws="Consortium",),
+            ],
+        )
+
+    def test_break(self):
+        """Test SSML break tag"""
+        processor = TextProcessor(default_lang="en_US", keep_whitespace=False)
+        graph, root = processor(
+            """
+        <speak>
+          <break time="1s"/>
+          <p>
+            <break time="2s" />
+            <s>
+              <break time="3s" />
+              Break <break time="4s" /> here
+            </s>
+            <break time="5s" />
+          </p>
+          <break time="6s" />
+        </speak>
+        """,
+            ssml=True,
+        )
+        sentences = list(processor.sentences(graph, root, **WORDS_KWARGS))
+
+        # Single word is replaced by multiple words
+        self.assertEqual(
+            sentences,
+            [
+                Sentence(
+                    idx=0,
+                    text="Break here",
+                    text_with_ws="Break here",
+                    pause_before_ms=((1 + 2) * 1000),
+                    pause_after_ms=((5 + 6) * 1000),
+                    words=[
+                        Word(
+                            idx=0,
+                            sent_idx=0,
+                            text="Break",
+                            text_with_ws="Break",
+                            pause_before_ms=(3 * 1000),
+                            pause_after_ms=(4 * 1000),
+                        ),
+                        Word(idx=1, sent_idx=0, text="here", text_with_ws="here",),
+                    ],
+                ),
             ],
         )
 

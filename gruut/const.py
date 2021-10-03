@@ -216,6 +216,17 @@ class BreakNode(Node):
     """Represents a user-specified break"""
 
     time: str = ""
+    """Length of break in seconds (123s) or milliseconds (123ms)"""
+
+    def get_milliseconds(self) -> int:
+        """Get number of milliseconds from the time string"""
+        if self.time.endswith("ms"):
+            return int(self.time[:-2])
+
+        if self.time.endswith("s"):
+            return int(self.time[:-1]) * 1000
+
+        return 0
 
 
 @dataclass
@@ -293,6 +304,12 @@ class Word:
     text_with_ws: str
     """Text with original whitespace"""
 
+    leading_ws: str = ""
+    """Whitespace before text"""
+
+    training_ws: str = ""
+    """Whitespace after text"""
+
     sent_idx: int = 0
     """Zero-based index of sentence in paragraph"""
 
@@ -326,12 +343,20 @@ class Word:
     is_spoken: typing.Optional[bool] = None
     """True if word is something that would be spoken during reading (not punctuation or break)"""
 
+    pause_before_ms: int = 0
+    """Milliseconds to pause before this word"""
+
+    pause_after_ms: int = 0
+    """Milliseconds to pause after this word"""
+
     def __post_init__(self):
         if self.is_break is None:
             self.is_break = self.is_major_break or self.is_minor_break
 
         if self.is_spoken is None:
             self.is_spoken = not (self.is_punctuation or self.is_break)
+
+        self.leading_ws, self.training_ws = default_get_whitespace(self.text_with_ws)
 
 
 @dataclass
@@ -356,8 +381,14 @@ class Sentence:
     voice: str = ""
     """Voice (from SSML)"""
 
-    words: typing.Sequence[Word] = field(default_factory=list)
+    words: typing.List[Word] = field(default_factory=list)
     """Words in the sentence"""
+
+    pause_before_ms: int = 0
+    """Milliseconds to pause before this sentence"""
+
+    pause_after_ms: int = 0
+    """Milliseconds to pause after this sentence"""
 
     def __iter__(self):
         """Iterates over words"""

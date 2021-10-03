@@ -112,16 +112,166 @@ class TextProcessor:
             # Implicit default language
             return ""
 
-        def make_sentence(
-            node: Node, words: typing.Sequence[Word], sent_idx: int, par_idx: int
-        ) -> Sentence:
-            settings = self.get_settings(node.lang)
-            text_with_ws = "".join(w.text_with_ws for w in words)
+        sentence: typing.Optional[Sentence] = None
+
+        par_idx: int = -1
+        sent_idx: int = 0
+
+        sent_pause_before_ms: int = 0
+        word_pause_before_ms: int = 0
+
+        sentences: typing.List[Sentence] = []
+
+        for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
+            node = graph.nodes[dfs_node][DATA_PROP]
+            if isinstance(node, ParagraphNode):
+                par_idx += 1
+                sent_idx = 0
+            elif isinstance(node, SentenceNode):
+                # New sentence
+                sentences.append(
+                    Sentence(
+                        idx=sent_idx,
+                        par_idx=par_idx,
+                        text="",
+                        text_with_ws="",
+                        voice=node.voice,
+                        lang=get_lang(node.lang),
+                        pause_before_ms=sent_pause_before_ms,
+                    )
+                )
+
+                sent_pause_before_ms = 0
+                sent_idx += 1
+            elif graph.out_degree(dfs_node) == 0:
+                if isinstance(node, WordNode):
+                    assert sentences, "No sentence"
+                    sentence = sentences[-1]
+
+                    word_node = typing.cast(WordNode, node)
+                    sentence.words.append(
+                        Word(
+                            idx=len(sentence.words),
+                            sent_idx=sentence.idx,
+                            par_idx=sentence.par_idx,
+                            text=word_node.text,
+                            text_with_ws=word_node.text_with_ws,
+                            phonemes=word_node.phonemes if phonemes else None,
+                            pos=word_node.pos if pos else None,
+                            lang=get_lang(node.lang),
+                            voice=node.voice,
+                            pause_before_ms=word_pause_before_ms,
+                        )
+                    )
+
+                    word_pause_before_ms = 0
+                elif isinstance(node, BreakWordNode):
+                    assert sentences, "No sentence"
+                    sentence = sentences[-1]
+
+                    break_word_node = typing.cast(BreakWordNode, node)
+                    is_minor_break = break_word_node.break_type == BreakType.MINOR
+                    is_major_break = break_word_node.break_type == BreakType.MAJOR
+
+                    if (minor_breaks and is_minor_break) or (
+                        major_breaks and is_major_break
+                    ):
+                        sentence.words.append(
+                            Word(
+                                idx=len(sentence.words),
+                                sent_idx=sentence.idx,
+                                par_idx=sentence.par_idx,
+                                text=break_word_node.text,
+                                text_with_ws=break_word_node.text_with_ws,
+                                phonemes=self._phonemes_for_break(
+                                    break_word_node.break_type,
+                                    lang=break_word_node.lang,
+                                )
+                                if phonemes and break_phonemes
+                                else None,
+                                is_minor_break=is_minor_break,
+                                is_major_break=is_major_break,
+                                lang=get_lang(node.lang),
+                                pause_before_ms=word_pause_before_ms,
+                            )
+                        )
+
+                        word_pause_before_ms = 0
+                elif punctuations and isinstance(node, PunctuationWordNode):
+                    assert sentences, "No sentence"
+                    sentence = sentences[-1]
+
+                    punct_word_node = typing.cast(PunctuationWordNode, node)
+                    sentence.words.append(
+                        Word(
+                            idx=len(sentence.words),
+                            sent_idx=sentence.idx,
+                            par_idx=sentence.par_idx,
+                            text=punct_word_node.text,
+                            text_with_ws=punct_word_node.text_with_ws,
+                            is_punctuation=True,
+                            lang=get_lang(punct_word_node.lang),
+                            pause_before_ms=word_pause_before_ms,
+                        )
+                    )
+
+                    word_pause_before_ms = 0
+                elif isinstance(node, BreakNode):
+                    break_node = typing.cast(BreakNode, node)
+                    break_parent = self._find_parent(
+                        graph, node, (SentenceNode, ParagraphNode, SpeakNode)
+                    )
+
+                    if break_parent is not None:
+                        break_ms = break_node.get_milliseconds()
+                        break_parent_edges = list(graph.out_edges(break_parent.node))
+                        break_edge_idx = break_parent_edges.index(
+                            (break_parent.node, break_node.node)
+                        )
+                        is_last_edge = break_edge_idx == (len(break_parent_edges) - 1)
+
+                        if isinstance(break_parent, SentenceNode):
+                            assert sentences
+                            sentence = sentences[-1]
+                            if is_last_edge:
+                                # End of sentence, add pause after
+                                sentence.pause_after_ms += break_ms
+                            elif sentence.words:
+                                # Between words, add pause after previous word
+                                sentence.words[-1].pause_after_ms += break_ms
+                            else:
+                                # Before first word, set pause for first word
+                                word_pause_before_ms += break_ms
+                        elif isinstance(break_parent, ParagraphNode):
+                            if sentences and (sentences[-1].par_idx == par_idx):
+                                # Between sentences in the same paragraph, add pause after previous sentence
+                                sentences[-1].pause_after_ms += break_ms
+                            else:
+                                # Add pause to beginning of next sentence
+                                sent_pause_before_ms += break_ms
+                        elif isinstance(break_parent, SpeakNode):
+                            if sentences:
+                                # After paragraphs or sentences
+                                sentences[-1].pause_after_ms += break_ms
+                            else:
+                                # Before any paragraphs or sentences
+                                sent_pause_before_ms += break_ms
+
+        # Post-process sentences to fix up text, voice, etc.
+        for sentence in sentences:
+            settings = self.get_settings(sentence.lang)
+            if settings.keep_whitespace:
+                text_with_ws = "".join(w.text_with_ws for w in sentence.words)
+            else:
+                text_with_ws = settings.join_str.join(
+                    w.text_with_ws for w in sentence.words
+                )
+
             text = settings.normalize_whitespace(text_with_ws)
             sent_voice = ""
 
             # Get voice used across all words
-            for word in words:
+            for word in sentence.words:
                 if word.voice:
                     if sent_voice and (sent_voice != word.voice):
                         # Multiple voices
@@ -132,111 +282,13 @@ class TextProcessor:
 
             if sent_voice:
                 # Set voice on all words
-                for word in words:
+                for word in sentence.words:
                     word.voice = sent_voice
 
-            return Sentence(
-                idx=sent_idx,
-                text=text,
-                text_with_ws=text_with_ws,
-                lang=get_lang(node.lang),
-                voice=sent_voice,
-                words=words,
-                par_idx=par_idx,
-            )
+            sentence.text = text
+            sentence.text_with_ws = text_with_ws
 
-        par_idx: int = -1
-        sent_idx: int = 0
-        word_idx: int = 0
-        words: typing.List[Word] = []
-        last_sentence_node: typing.Optional[Node] = None
-
-        for dfs_node in nx.dfs_preorder_nodes(graph, root.node):
-            node = graph.nodes[dfs_node][DATA_PROP]
-            if isinstance(node, ParagraphNode):
-                # Finish current sentence
-                if words and (last_sentence_node is not None):
-                    yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
-                    words = []
-
-                par_idx += 1
-                sent_idx = 0
-                word_idx = 0
-
-                last_sentence_node = None
-            elif isinstance(node, SentenceNode):
-                # Finish current sentence
-                if words and (last_sentence_node is not None):
-                    yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
-                    sent_idx += 1
-                    word_idx = 0
-                    words = []
-
-                last_sentence_node = node
-            elif graph.out_degree(dfs_node) == 0:
-                if isinstance(node, WordNode):
-                    word = typing.cast(WordNode, node)
-                    words.append(
-                        Word(
-                            idx=word_idx,
-                            sent_idx=sent_idx,
-                            par_idx=par_idx,
-                            text=word.text,
-                            text_with_ws=word.text_with_ws,
-                            phonemes=word.phonemes if phonemes else None,
-                            pos=word.pos if pos else None,
-                            lang=get_lang(node.lang),
-                            voice=node.voice,
-                        )
-                    )
-
-                    word_idx += 1
-                elif isinstance(node, BreakWordNode):
-                    break_word = typing.cast(BreakWordNode, node)
-                    is_minor_break = break_word.break_type == BreakType.MINOR
-                    is_major_break = break_word.break_type == BreakType.MAJOR
-
-                    if (minor_breaks and is_minor_break) or (
-                        major_breaks and is_major_break
-                    ):
-                        words.append(
-                            Word(
-                                idx=word_idx,
-                                sent_idx=sent_idx,
-                                par_idx=par_idx,
-                                text=break_word.text,
-                                text_with_ws=break_word.text_with_ws,
-                                phonemes=self._phonemes_for_break(
-                                    break_word.break_type, lang=break_word.lang
-                                )
-                                if phonemes and break_phonemes
-                                else None,
-                                is_minor_break=is_minor_break,
-                                is_major_break=is_major_break,
-                                lang=get_lang(node.lang),
-                            )
-                        )
-
-                        word_idx += 1
-                elif punctuations and isinstance(node, PunctuationWordNode):
-                    punct_word = typing.cast(PunctuationWordNode, node)
-                    words.append(
-                        Word(
-                            idx=word_idx,
-                            sent_idx=sent_idx,
-                            par_idx=par_idx,
-                            text=punct_word.text,
-                            text_with_ws=punct_word.text_with_ws,
-                            is_punctuation=True,
-                            lang=get_lang(punct_word.lang),
-                        )
-                    )
-
-                    word_idx += 1
-
-        if words and (last_sentence_node is not None):
-            # Finish current sentence
-            yield make_sentence(last_sentence_node, words, sent_idx, par_idx)
+        return sentences
 
     def words(self, graph: GraphType, root: Node, **kwargs) -> typing.Iterable[Word]:
         """Processes text and returns each word"""
