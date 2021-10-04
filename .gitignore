@@ -14,7 +14,5 @@ g2p.fst
 g2p.corpus
 lexicon*.txt
 words.txt
-postagger.model
-model.mkl
 
 /data/
