@@ -271,6 +271,8 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
     * `format` - way to format text depending on `interpret-as`
         * number - one of "cardinal", "ordinal", "digits", "year"
         * date - string with "d" (cardinal day), "o" (ordinal day), "m" (month), or "y" (year)
+* `<break time="">` - Pause for given amount of time
+    * time - seconds ("123s") or milliseconds ("123ms")
 * `<sub alias="">` - substitute `alias` for inner text
 * `<phoneme ph="...">` - supply phonemes for inner text
     * `ph` - phonemes for each word of inner text, separated by whitespace
