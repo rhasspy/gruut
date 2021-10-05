@@ -268,7 +268,7 @@ class TextProcessor:
                 )
 
             text = settings.normalize_whitespace(text_with_ws)
-            sent_voice = ""
+            sent_voice = sentence.voice
 
             # Get voice used across all words
             for word in sentence.words:

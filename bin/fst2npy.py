@@ -31,7 +31,7 @@ def main():
     _LOGGER.info("Converting %s to graph", args.fst_text)
     graph = fst2graph(args.fst_text)
     _LOGGER.info("Writing graph to %s", args.npz)
-    with open(args.npz, "wb", encoding="utf-8") as npz_file:
+    with open(args.npz, "wb") as npz_file:
         np.savez(npz_file, **graph)
 
 
