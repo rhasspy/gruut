@@ -223,6 +223,7 @@ class TextProcessorTestCase(unittest.TestCase):
                     idx=0,
                     text="First sentence.",
                     text_with_ws="First  sentence. ",
+                    text_spoken="First sentence",
                     words=[
                         Word(idx=0, sent_idx=0, text="First", text_with_ws="First  "),
                         Word(
@@ -241,6 +242,7 @@ class TextProcessorTestCase(unittest.TestCase):
                     idx=1,
                     text="Second sentence!",
                     text_with_ws="Second sentence! ",
+                    text_spoken="Second sentence",
                     words=[
                         Word(idx=0, sent_idx=1, text="Second", text_with_ws="Second "),
                         Word(
@@ -854,6 +856,7 @@ class TextProcessorTestCase(unittest.TestCase):
                     idx=0,
                     text="Break here",
                     text_with_ws="Break here",
+                    text_spoken="Break here",
                     pause_before_ms=((1 + 2) * 1000),
                     pause_after_ms=((5 + 6) * 1000),
                     words=[

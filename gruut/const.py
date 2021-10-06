@@ -372,6 +372,9 @@ class Sentence:
     text_with_ws: str
     """Text with original whitespace"""
 
+    text_spoken: str
+    """Text with only spoken words and normalized whitespace"""
+
     par_idx: int = 0
     """Zero-based index of paragraph in document"""
 
@@ -435,10 +438,7 @@ class PostProcessSentence:
     """Post-process each sentence node after tokenization/phonemization"""
 
     def __call__(
-        self,
-        graph: GraphType,
-        sentence_node: SentenceNode,
-        settings: typing.Any,
+        self, graph: GraphType, sentence_node: SentenceNode, settings: typing.Any,
     ):
         pass
 

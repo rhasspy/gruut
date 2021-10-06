@@ -105,10 +105,6 @@ def main():
         def output_sentences(sentences, writer, text_data=None):
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
-
-                # TODO: use join_str
-                sentence_dict["text_spoken"] = " ".join(w.text for w in sentence.words if w.is_spoken)
-
                 writer.write(sentence_dict)
 
     for text, text_data in input_text(lines):
@@ -154,9 +150,12 @@ def main():
 
 # -----------------------------------------------------------------------------
 
+
 class TextProcessingError(Exception):
     """Raised when a line of input results in an exception"""
+
     pass
+
 
 # -----------------------------------------------------------------------------
 
@@ -222,9 +221,7 @@ def get_args() -> argparse.Namespace:
         help="Disable post-processing of sentences (e.g., liasons)",
     )
     parser.add_argument(
-        "--no-fail",
-        action="store_true",
-        help="Skip lines that result in errors",
+        "--no-fail", action="store_true", help="Skip lines that result in errors",
     )
 
     # Miscellaneous

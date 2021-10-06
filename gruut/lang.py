@@ -66,9 +66,7 @@ def get_settings(
                 )
             else:
                 _LOGGER.debug(
-                    "(%s) no part of speech tagger found at %s",
-                    lang,
-                    pos_model_path,
+                    "(%s) no part of speech tagger found at %s", lang, pos_model_path,
                 )
 
         # Phonemizer

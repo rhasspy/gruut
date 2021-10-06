@@ -171,15 +171,20 @@ Output:
 {
   "idx": 0,
   "text": "More text.",
-  "text_with_ws": "More  text.",
+  "text_with_ws": "More text.",
+  "text_spoken": "More text",
+  "par_idx": 0,
   "lang": "en-us",
   "voice": "",
   "words": [
     {
       "idx": 0,
       "text": "More",
-      "text_with_ws": "More  ",
+      "text_with_ws": "More ",
+      "leading_ws": "",
+      "training_ws": " ",
       "sent_idx": 0,
+      "par_idx": 0,
       "lang": "en-us",
       "voice": "",
       "pos": "JJR",
@@ -192,13 +197,18 @@ Output:
       "is_minor_break": false,
       "is_punctuation": false,
       "is_break": false,
-      "is_spoken": true
+      "is_spoken": true,
+      "pause_before_ms": 0,
+      "pause_after_ms": 0
     },
     {
       "idx": 1,
       "text": "text",
       "text_with_ws": "text",
+      "leading_ws": "",
+      "training_ws": "",
       "sent_idx": 0,
+      "par_idx": 0,
       "lang": "en-us",
       "voice": "",
       "pos": "NN",
@@ -213,13 +223,18 @@ Output:
       "is_minor_break": false,
       "is_punctuation": false,
       "is_break": false,
-      "is_spoken": true
+      "is_spoken": true,
+      "pause_before_ms": 0,
+      "pause_after_ms": 0
     },
     {
       "idx": 2,
       "text": ".",
       "text_with_ws": ".",
+      "leading_ws": "",
+      "training_ws": "",
       "sent_idx": 0,
+      "par_idx": 0,
       "lang": "en-us",
       "voice": "",
       "pos": null,
@@ -230,13 +245,17 @@ Output:
       "is_minor_break": false,
       "is_punctuation": false,
       "is_break": true,
-      "is_spoken": false
+      "is_spoken": false,
+      "pause_before_ms": 0,
+      "pause_after_ms": 0
     }
-  ]
+  ],
+  "pause_before_ms": 0,
+  "pause_after_ms": 0
 }
 ```
 
-For the whole input line and each word, the `text` property contains the processed input text with normalized whitespace while `text_with_ws` retains the original whitespace.
+For the whole input line and each word, the `text` property contains the processed input text with normalized whitespace while `text_with_ws` retains the original whitespace. The `text_spoken` property only contains words that are spoken, so punctuation and breaks are excluded.
 
 Within each word, there is:
 
@@ -266,6 +285,7 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
     * `lang` - set language for word
     * `role` - set word role (see [word roles](#word-roles))
 * `<lang lang="...">` - set language inner text
+* `<voice name="...">` - set voice of inner text
 * `<say-as interpret-as="">` - force interpretation of inner text
     * `interpret-as` one of "spell-out", "date", "number", or "currency"
     * `format` - way to format text depending on `interpret-as`

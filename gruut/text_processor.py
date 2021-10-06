@@ -135,6 +135,7 @@ class TextProcessor:
                         par_idx=par_idx,
                         text="",
                         text_with_ws="",
+                        text_spoken="",
                         voice=node.voice,
                         lang=get_lang(node.lang),
                         pause_before_ms=sent_pause_before_ms,
@@ -261,13 +262,18 @@ class TextProcessor:
         for sentence in sentences:
             settings = self.get_settings(sentence.lang)
             if settings.keep_whitespace:
-                text_with_ws = "".join(w.text_with_ws for w in sentence.words)
+                sentence.text_with_ws = "".join(w.text_with_ws for w in sentence.words)
             else:
-                text_with_ws = settings.join_str.join(
+                sentence.text_with_ws = settings.join_str.join(
                     w.text_with_ws for w in sentence.words
                 )
 
-            text = settings.normalize_whitespace(text_with_ws)
+            sentence.text = settings.normalize_whitespace(sentence.text_with_ws)
+            sentence.text_spoken = settings.join_str.join(
+                w.text for w in sentence.words if w.is_spoken
+            )
+
+            # Normalize voice
             sent_voice = sentence.voice
 
             # Get voice used across all words
@@ -284,9 +290,6 @@ class TextProcessor:
                 # Set voice on all words
                 for word in sentence.words:
                     word.voice = sent_voice
-
-            sentence.text = text
-            sentence.text_with_ws = text_with_ws
 
         return sentences
 
