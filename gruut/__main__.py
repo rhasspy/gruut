@@ -105,42 +105,58 @@ def main():
         def output_sentences(sentences, writer, text_data=None):
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
+
+                # TODO: use join_str
+                sentence_dict["text_spoken"] = " ".join(w.text for w in sentence.words if w.is_spoken)
+
                 writer.write(sentence_dict)
 
     for text, text_data in input_text(lines):
-        graph, root = text_processor(
-            text,
-            ssml=args.ssml,
-            pos=(not args.no_pos),
-            phonemize=(not (args.no_lexicon and args.no_g2p)),
-            post_process=(not args.no_post_process),
-            verbalize_numbers=(not args.no_numbers),
-            verbalize_currency=(not args.no_currency),
-            verbalize_dates=(not args.no_dates),
-        )
-
-        if args.debug:
-            print_graph(
-                graph,
-                root,
-                print_func=lambda *print_args: _LOGGER.debug(
-                    " ".join(str(a) for a in print_args)
-                ),
+        try:
+            graph, root = text_processor(
+                text,
+                ssml=args.ssml,
+                pos=(not args.no_pos),
+                phonemize=(not (args.no_lexicon and args.no_g2p)),
+                post_process=(not args.no_post_process),
+                verbalize_numbers=(not args.no_numbers),
+                verbalize_currency=(not args.no_currency),
+                verbalize_dates=(not args.no_dates),
             )
 
-        # Output sentences
-        sentences = list(
-            text_processor.sentences(
-                graph,
-                root,
-                major_breaks=(not args.no_major_breaks),
-                minor_breaks=(not args.no_minor_breaks),
-                punctuations=(not args.no_punctuation),
+            if args.debug:
+                print_graph(
+                    graph,
+                    root,
+                    print_func=lambda *print_args: _LOGGER.debug(
+                        " ".join(str(a) for a in print_args)
+                    ),
+                )
+
+            # Output sentences
+            sentences = list(
+                text_processor.sentences(
+                    graph,
+                    root,
+                    major_breaks=(not args.no_major_breaks),
+                    minor_breaks=(not args.no_minor_breaks),
+                    punctuations=(not args.no_punctuation),
+                )
             )
-        )
 
-        output_sentences(sentences, writer, text_data)
+            output_sentences(sentences, writer, text_data)
+        except Exception as e:
+            _LOGGER.exception(text)
 
+            if not args.no_fail:
+                raise TextProcessingError(text) from e
+
+
+# -----------------------------------------------------------------------------
+
+class TextProcessingError(Exception):
+    """Raised when a line of input results in an exception"""
+    pass
 
 # -----------------------------------------------------------------------------
 
@@ -204,6 +220,11 @@ def get_args() -> argparse.Namespace:
         "--no-post-process",
         action="store_true",
         help="Disable post-processing of sentences (e.g., liasons)",
+    )
+    parser.add_argument(
+        "--no-fail",
+        action="store_true",
+        help="Skip lines that result in errors",
     )
 
     # Miscellaneous

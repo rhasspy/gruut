@@ -62,7 +62,7 @@ NODE_TYPE = int
 DATA_PROP = "data"
 
 
-class GraphType(typing.Protocol):
+class GraphType:
     """Type wrapper for networkx graph"""
 
     nodes: typing.Dict[NODE_TYPE, typing.Dict[typing.Any, typing.Any]]
@@ -406,7 +406,7 @@ class Sentence:
 # -----------------------------------------------------------------------------
 
 
-class LookupPhonemes(typing.Protocol):
+class LookupPhonemes:
     """Look up phonemes for word/role in a lexicon"""
 
     def __call__(
@@ -415,7 +415,7 @@ class LookupPhonemes(typing.Protocol):
         pass
 
 
-class GuessPhonemes(typing.Protocol):
+class GuessPhonemes:
     """Guess phonemes for word/role"""
 
     def __call__(
@@ -424,18 +424,21 @@ class GuessPhonemes(typing.Protocol):
         pass
 
 
-class GetPartsOfSpeech(typing.Protocol):
+class GetPartsOfSpeech:
     """Get part of speech tags for words"""
 
     def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
         pass
 
 
-class PostProcessSentence(typing.Protocol):
+class PostProcessSentence:
     """Post-process each sentence node after tokenization/phonemization"""
 
     def __call__(
-        self, graph: GraphType, sentence_node: SentenceNode, settings: typing.Any,
+        self,
+        graph: GraphType,
+        sentence_node: SentenceNode,
+        settings: typing.Any,
     ):
         pass
 

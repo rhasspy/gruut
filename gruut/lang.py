@@ -66,7 +66,9 @@ def get_settings(
                 )
             else:
                 _LOGGER.debug(
-                    "(%s) no part of speech tagger found at %s", lang, pos_model_path,
+                    "(%s) no part of speech tagger found at %s",
+                    lang,
+                    pos_model_path,
                 )
 
         # Phonemizer
@@ -371,12 +373,14 @@ class FarsiPartOfSpeechTagger:
             import hazm
 
             # Load normalizer
-            if not hasattr(self, "normalizer"):
+            normalizer = getattr(self, "normalizer", None)
+            if normalizer is None:
                 normalizer = hazm.Normalizer()
                 setattr(self, "normalizer", normalizer)
 
             # Load tagger
-            if not hasattr(self, "tagger"):
+            tagger = getattr(self, "tagger", None)
+            if tagger is None:
                 # Load part of speech tagger
                 model_path = self.lang_dir / "pos" / "postagger.model"
                 tagger = hazm.POSTagger(model=str(model_path))
