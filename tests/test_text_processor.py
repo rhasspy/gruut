@@ -874,6 +874,21 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_missing_speak(self):
+        """Test SSML with missing <speak> tag"""
+        processor = TextProcessor()
+        graph, root = processor("<s>hello</s><s>world</s>", ssml=True,)
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # <speak> is automatically added when XML fails to parse
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, text="hello", text_with_ws="hello",),
+                Word(idx=0, sent_idx=1, text="world", text_with_ws="world",),
+            ],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""

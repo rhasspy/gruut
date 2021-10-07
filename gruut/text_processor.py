@@ -375,15 +375,26 @@ class TextProcessor:
             graph, root: text graph and root node
 
         """
-        if not ssml:
+        if ssml:
+            try:
+                root_element = etree.fromstring(text)
+            except Exception as e:
+                if add_speak_tag:
+                    # Try wrapping text in <speak> and parsing again
+                    root_element = etree.fromstring(f"<speak>{text}</speak>")
+                else:
+                    # Log and re-raise exception
+                    _LOGGER.exception("TextProcessor.process")
+                    raise e
+
+            def iter_elements():
+                yield from text_and_elements(root_element)
+
+        else:
             # Not XML
-            text = saxutils.escape(text)
+            def iter_elements():
+                yield text
 
-        if add_speak_tag and (not text.lstrip().startswith("<")):
-            # Wrap in <speak> tag
-            text = f"<speak>{text}</speak>"
-
-        root_element = etree.fromstring(text)
         graph = typing.cast(GraphType, nx.DiGraph())
 
         # Parse XML
@@ -438,7 +449,7 @@ class TextProcessor:
             return scope
 
         # Process sub-elements and text chunks
-        for elem_or_text in text_and_elements(root_element):
+        for elem_or_text in iter_elements():
             if isinstance(elem_or_text, str):
                 if skip_elements:
                     # Inside <metadata>
