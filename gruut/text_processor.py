@@ -1663,8 +1663,16 @@ class TextProcessor:
             else:
                 final_num = int(decimal_num)
 
-            # Convert to words (e.g., 100 -> one hundred)
-            num_str = num2words(final_num, **num2words_kwargs)
+            try:
+                # Convert to words (e.g., 100 -> one hundred)
+                num_str = num2words(final_num, **num2words_kwargs)
+            except NotImplementedError:
+                _LOGGER.exception(
+                    "Failed to convert number %s to words for language %s",
+                    word.text,
+                    word.lang,
+                )
+                return
 
             # Add original whitespace back in
             first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
@@ -1720,31 +1728,37 @@ class TextProcessor:
         month_str = ""
         year_str = ""
 
-        if ("{M}" in date_format_str) or ("{m}" in date_format_str):
-            month_str = babel.dates.format_date(
-                date, "MMMM", locale=settings.babel_locale
-            )
+        try:
+            if ("{M}" in date_format_str) or ("{m}" in date_format_str):
+                month_str = babel.dates.format_date(
+                    date, "MMMM", locale=settings.babel_locale
+                )
 
-        num2words_kwargs = {"lang": settings.num2words_lang}
+            num2words_kwargs = {"lang": settings.num2words_lang}
 
-        if ("{D}" in date_format_str) or ("{d}" in date_format_str):
-            # Cardinal day (1 -> one)
-            num2words_kwargs["to"] = "cardinal"
-            day_card_str = num2words(date.day, **num2words_kwargs)
-
-        if ("{O}" in date_format_str) or ("{o}" in date_format_str):
-            # Ordinal day (1 -> first)
-            num2words_kwargs["to"] = "ordinal"
-            day_ord_str = num2words(date.day, **num2words_kwargs)
-
-        if ("{Y}" in date_format_str) or ("{y}" in date_format_str):
-            try:
-                num2words_kwargs["to"] = "year"
-                year_str = num2words(date.year, **num2words_kwargs)
-            except Exception:
-                # Fall back to use cardinal number for year
+            if ("{D}" in date_format_str) or ("{d}" in date_format_str):
+                # Cardinal day (1 -> one)
                 num2words_kwargs["to"] = "cardinal"
-                year_str = num2words(date.year, **num2words_kwargs)
+                day_card_str = num2words(date.day, **num2words_kwargs)
+
+            if ("{O}" in date_format_str) or ("{o}" in date_format_str):
+                # Ordinal day (1 -> first)
+                num2words_kwargs["to"] = "ordinal"
+                day_ord_str = num2words(date.day, **num2words_kwargs)
+
+            if ("{Y}" in date_format_str) or ("{y}" in date_format_str):
+                try:
+                    num2words_kwargs["to"] = "year"
+                    year_str = num2words(date.year, **num2words_kwargs)
+                except Exception:
+                    # Fall back to use cardinal number for year
+                    num2words_kwargs["to"] = "cardinal"
+                    year_str = num2words(date.year, **num2words_kwargs)
+        except Exception:
+            _LOGGER.exception(
+                "Failed to format date %s for language %s", word.text, word.lang
+            )
+            return
 
         date_str = date_format_str.format(
             **{
@@ -1828,7 +1842,9 @@ class TextProcessor:
         try:
             num_str = num2words(float(decimal_num), **num2words_kwargs)
         except Exception:
-            _LOGGER.exception("verbalize_currency: %s", word)
+            _LOGGER.exception(
+                "Failed to verbalize currency %s for language %s", word, word.lang
+            )
             return
 
         # Post-process currency words
