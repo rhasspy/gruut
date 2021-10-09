@@ -193,6 +193,7 @@ class TextProcessor:
                                 is_minor_break=is_minor_break,
                                 is_major_break=is_major_break,
                                 lang=get_lang(node.lang),
+                                voice=node.voice,
                                 pause_before_ms=word_pause_before_ms,
                             )
                         )
@@ -287,6 +288,8 @@ class TextProcessor:
                     sent_voice = word.voice
 
             if sent_voice:
+                sentence.voice = sent_voice
+
                 # Set voice on all words
                 for word in sentence.words:
                     word.voice = sent_voice
@@ -988,6 +991,7 @@ class TextProcessor:
                 "text_with_ws": part_text,
                 "implicit": True,
                 "lang": word.lang,
+                "voice": word.voice,
                 "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
             }
 
@@ -1036,6 +1040,7 @@ class TextProcessor:
                     "text_with_ws": punct_text,
                     "implicit": True,
                     "lang": word.lang,
+                    "voice": word.voice,
                 }
 
                 parts = list(
@@ -1084,6 +1089,7 @@ class TextProcessor:
                 "text_with_ws": word_text,
                 "implicit": True,
                 "lang": word.lang,
+                "voice": word.voice,
                 "in_lexicon": self._is_word_in_lexicon(word_text_norm, settings),
             }
 
@@ -1098,6 +1104,7 @@ class TextProcessor:
                 "text_with_ws": punct_text,
                 "implicit": True,
                 "lang": word.lang,
+                "voice": word.voice,
             }
 
     def _split_major_breaks(self, graph: GraphType, node: Node):
@@ -1130,6 +1137,7 @@ class TextProcessor:
                 "text_with_ws": word_part,
                 "implicit": True,
                 "lang": word.lang,
+                "voice": word.voice,
                 "in_lexicon": self._is_word_in_lexicon(word_part_norm, settings),
             }
         else:
@@ -1142,6 +1150,7 @@ class TextProcessor:
             "text_with_ws": break_part,
             "implicit": True,
             "lang": word.lang,
+            "voice": word.voice,
         }
 
     def _split_minor_breaks(self, graph: GraphType, node: Node):
@@ -1172,6 +1181,7 @@ class TextProcessor:
                 "text_with_ws": word_part,
                 "implicit": True,
                 "lang": word.lang,
+                "voice": word.voice,
                 "in_lexicon": self._is_word_in_lexicon(word_part_norm, settings),
             }
 
@@ -1182,6 +1192,7 @@ class TextProcessor:
             "text_with_ws": break_part,
             "implicit": True,
             "lang": word.lang,
+            "voice": word.voice,
         }
 
     def _find_parent(self, graph, node, *classes):

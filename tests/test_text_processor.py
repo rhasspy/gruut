@@ -889,6 +889,22 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_adjacent_voice(self):
+        """Test SSML with adjacent <voice> tags"""
+        processor = TextProcessor()
+        graph, root = processor(
+            '<voice name="a">hello.</voice><voice name="b">world.</voice>', ssml=True,
+        )
+        words = list(processor.words(graph, root, major_breaks=False, **WORDS_KWARGS))
+
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, sent_idx=0, voice="a", text="hello", text_with_ws="hello",),
+                Word(idx=0, sent_idx=1, voice="b", text="world", text_with_ws="world",),
+            ],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""
