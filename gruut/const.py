@@ -307,7 +307,7 @@ class Word:
     leading_ws: str = ""
     """Whitespace before text"""
 
-    training_ws: str = ""
+    trailing_ws: str = ""
     """Whitespace after text"""
 
     sent_idx: int = 0
@@ -356,7 +356,7 @@ class Word:
         if self.is_spoken is None:
             self.is_spoken = not (self.is_punctuation or self.is_break)
 
-        self.leading_ws, self.training_ws = default_get_whitespace(self.text_with_ws)
+        self.leading_ws, self.trailing_ws = default_get_whitespace(self.text_with_ws)
 
 
 @dataclass
