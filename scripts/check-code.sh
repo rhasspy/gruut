@@ -16,10 +16,10 @@ if [[ -z "${no_venv}" ]]; then
     fi
 fi
 
-python_files=("${src_dir}/gruut/"*.py)
+python_files=("${src_dir}/gruut/"*.py "${src_dir}/tests/"*.py "${src_dir}/setup.py")
 
 # Add bin scripts selectively
-bin_scripts=('align2phonemeids' 'clean-metadata' 'csv2phonemeids' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'print_phonemeids' 'reorder_lexicon' 'espeak_word')
+bin_scripts=('clean-metadata' 'fst2npy' 'map_lexicon' 'phonemize_lexicon' 'reorder_lexicon' 'espeak_word')
 
 while read -r python_lib; do
     if [ "$(echo "${python_lib}" | grep 'phonetisaurus')" ]; then

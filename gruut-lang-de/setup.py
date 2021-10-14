@@ -17,7 +17,7 @@ if readme_path.is_file():
     long_description = readme_path.read_text(encoding="UTF-8")
 
 version_path = module_dir / "VERSION"
-with open(version_path, "r") as version_file:
+with open(version_path, "r", encoding="utf-8") as version_file:
     version = version_file.read().strip()
 
 

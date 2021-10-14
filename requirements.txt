@@ -1,6 +1,8 @@
-Babel~=2.8.0
+Babel>=2.8.0,<3.0.0
+dateparser~=1.0.0
 gruut-ipa~=0.10.0
 jsonlines~=1.2.0
-numpy>=1.19.0
-num2words>=0.5.10
+networkx>=2.5.0,<3.0.0
+numpy>=1.19.0,<2.0.0
+num2words>=0.5.10,<1.0.0
 python-crfsuite~=0.9.7

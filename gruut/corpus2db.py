@@ -25,7 +25,7 @@ def main():
     conn = sqlite3.connect(args.database)
 
     g2p_alignments = {}
-    with open(args.corpus, "r") as corpus_file:
+    with open(args.corpus, "r", encoding="utf-8") as corpus_file:
         for line in corpus_file:
             line = line.strip()
             if not line:

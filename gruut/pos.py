@@ -52,7 +52,9 @@ FEATURES_TYPE = typing.Dict[
 class PartOfSpeechTagger:
     """Part of speech tagger using a pre-trained CRF model"""
 
-    def __init__(self, crf_tagger: typing.Union[str, Path, pycrfsuite.Tagger]):
+    def __init__(
+        self, crf_tagger: typing.Union[str, Path, pycrfsuite.Tagger], **kwargs
+    ):
         if isinstance(crf_tagger, pycrfsuite.Tagger):
             self.crf_tagger = crf_tagger
         else:
@@ -60,7 +62,7 @@ class PartOfSpeechTagger:
             self.crf_tagger = pycrfsuite.Tagger()
             self.crf_tagger.open(str(crf_tagger))
 
-    def __call__(self, words: typing.List[str]) -> typing.List[str]:
+    def __call__(self, words: typing.Sequence[str]) -> typing.Sequence[str]:
         """Returns POS tag for each word"""
         features = PartOfSpeechTagger.sent2features(words)
         return self.crf_tagger.tag(features)
@@ -104,7 +106,7 @@ class PartOfSpeechTagger:
 
     @staticmethod
     def word2features(
-        sentence: typing.List[str],
+        sentence: typing.Sequence[str],
         i: int,
         add_bos: bool = True,
         add_eos: bool = True,
@@ -145,7 +147,7 @@ class PartOfSpeechTagger:
 
     @staticmethod
     def sent2features(
-        sentence: typing.List[str], **kwargs
+        sentence: typing.Sequence[str], **kwargs
     ) -> typing.List[FEATURES_TYPE]:
         """Get features for all words in a sentence"""
         return [
@@ -188,7 +190,7 @@ def train_model(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     _LOGGER.debug("Loading train file (%s)", conllu_path)
-    with open(conllu_path, "r") as conllu_file:
+    with open(conllu_path, "r", encoding="utf-8") as conllu_file:
         train_sents = conllu.parse(conllu_file.read())
 
     _LOGGER.debug("Training model for %s max iteration(s)", max_iterations)
@@ -262,7 +264,7 @@ def do_print_labels(args):
         raise e
 
     labels = set()
-    with open(args.conllu, "r") as conllu_file:
+    with open(args.conllu, "r", encoding="utf-8") as conllu_file:
         for sent in conllu.parse(conllu_file.read()):
             for token in sent:
                 token_label = token.get(args.label)
@@ -316,7 +318,7 @@ def do_test(args):
     num_words = 0
     sents_with_errors = 0
     total_errors = 0
-    with open(args.conllu, "r") as conllu_file:
+    with open(args.conllu, "r", encoding="utf-8") as conllu_file:
         for sent in conllu.parse(conllu_file.read()):
             words = [token["form"] for token in sent]
             actual_labels = [token.get(args.label) for token in sent]

@@ -38,16 +38,17 @@
   <section id="gruut">
 <h1>gruut<a class="headerlink" href="#gruut" title="Permalink to this headline">¶</a></h1>
 <p>A tokenizer and <a class="reference external" href="https://en.wikipedia.org/wiki/International_Phonetic_Alphabet">IPA</a> phonemizer for multiple human languages.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">text_to_phonemes</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">sentences</span>
 
 <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;He wound it around the wound, saying &quot;I read it was $10 to read.&quot;&#39;</span>
 
-<span class="k">for</span> <span class="n">sent_idx</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">word_phonemes</span> <span class="ow">in</span> <span class="n">text_to_phonemes</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="o">*</span><span class="n">word_phonemes</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">word</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Output:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>he h ˈi
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>He h ˈi
 wound w ˈaʊ n d
 it ˈɪ t
 around ɚ ˈaʊ n d
@@ -55,7 +56,7 @@ the ð ə
 wound w ˈu n d
 , |
 saying s ˈeɪ ɪ ŋ
-i ˈaɪ
+I ˈaɪ
 read ɹ ˈɛ d
 it ˈɪ t
 was w ə z
@@ -66,7 +67,49 @@ read ɹ ˈi d
 . ‖
 </pre></div>
 </div>
-<p>Note that “wound” and “read” have different pronunciations in different contexts (see <a class="reference internal" href="#features"><span class="std std-ref">Features</span></a> for more details).</p>
+<p>Note that “wound” and “read” have different pronunciations in different (grammatical) contexts.</p>
+<p>A subset of <a class="reference internal" href="#ssml-support"><span class="std std-ref">SSML</span></a> is also supported:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">sentences</span>
+
+<span class="n">ssml_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;</span>
+<span class="s2">&lt;speak version=&quot;1.1&quot; xmlns=&quot;http://www.w3.org/2001/10/synthesis&quot;</span>
+<span class="s2">    xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span>
+<span class="s2">    xsi:schemaLocation=&quot;http://www.w3.org/2001/10/synthesis</span>
+<span class="s2">                http://www.w3.org/TR/speech-synthesis11/synthesis.xsd&quot;</span>
+<span class="s2">    xml:lang=&quot;en-US&quot;&gt;</span>
+<span class="s2">&lt;s&gt;Today at 4pm, 2/1/2000.&lt;/s&gt;</span>
+<span class="s2">&lt;s xml:lang=&quot;it&quot;&gt;Un mese fà, 2/1/2000.&lt;/s&gt;</span>
+<span class="s2">&lt;/speak&gt;&quot;&quot;&quot;</span>
+
+<span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">(</span><span class="n">ssml_text</span><span class="p">,</span> <span class="n">ssml</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sent</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">sent</span><span class="o">.</span><span class="n">idx</span><span class="p">,</span> <span class="n">word</span><span class="o">.</span><span class="n">lang</span><span class="p">,</span> <span class="n">word</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>with the output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>0 en-US Today t ə d ˈeɪ
+0 en-US at ˈæ t
+0 en-US four f ˈɔ ɹ
+0 en-US P p ˈi
+0 en-US M ˈɛ m
+0 en-US , |
+0 en-US February f ˈɛ b j u ˌɛ ɹ i
+0 en-US first f ˈɚ s t
+0 en-US , |
+0 en-US two t ˈu
+0 en-US thousand θ ˈaʊ z ə n d
+0 en-US . ‖
+1 it Un u n
+1 it mese ˈm e s e
+1 it fà f a
+1 it , |
+1 it due d j u
+1 it gennaio d͡ʒ e n n ˈa j o
+1 it duemila d u e ˈm i l a
+1 it . ‖
+</pre></div>
+</div>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <p>To install gruut with U.S. English support only:</p>
@@ -74,9 +117,10 @@ read ɹ ˈi d
 </pre></div>
 </div>
 <p>Additional languages can be added during installation. For example, with French and Italian support:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">gruut</span><span class="p">[</span><span class="n">fr</span><span class="p">,</span><span class="n">it</span><span class="p">]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">f</span> <span class="s1">&#39;https://synesthesiam.github.io/prebuilt-apps/&#39;</span> <span class="n">gruut</span><span class="p">[</span><span class="n">fr</span><span class="p">,</span><span class="n">it</span><span class="p">]</span>
 </pre></div>
 </div>
+<p>The extra pip repo is needed for an updated <a class="reference external" href="https://github.com/rhasspy/num2words">num2words fork</a> that includes support for more languages.</p>
 <section id="supported-languages">
 <h3>Supported Languages<a class="headerlink" href="#supported-languages" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -85,6 +129,7 @@ read ɹ ˈi d
 <li><p>German (<code class="docutils literal notranslate"><span class="pre">de</span></code>)</p></li>
 <li><p>English (<code class="docutils literal notranslate"><span class="pre">en</span></code>)</p></li>
 <li><p>Spanish (<code class="docutils literal notranslate"><span class="pre">es</span></code>)</p></li>
+<li><p>Persian/Farsi (<code class="docutils literal notranslate"><span class="pre">fa</span></code>)</p></li>
 <li><p>French (<code class="docutils literal notranslate"><span class="pre">fr</span></code>)</p></li>
 <li><p>Italian (<code class="docutils literal notranslate"><span class="pre">it</span></code>)</p></li>
 <li><p>Dutch (<code class="docutils literal notranslate"><span class="pre">nl</span></code>)</p></li>
@@ -99,71 +144,167 @@ read ɹ ˈi d
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
 <p>gruut performs two main functions: tokenization and phonemization.
-The <a class="reference internal" href="gruut.html#gruut.text_to_phonemes" title="gruut.text_to_phonemes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.text_to_phonemes()</span></code></a> method does everything for you. See the <a class="reference internal" href="gruut.html#gruut.TextToPhonemesReturn" title="gruut.TextToPhonemesReturn"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextToPhonemesReturn</span></code></a> enum for ways to adjust the <code class="docutils literal notranslate"><span class="pre">return_format</span></code>.</p>
-<p>If you need more control, see the language-specific classes in <a class="reference internal" href="gruut.html#module-gruut.lang" title="gruut.lang"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.lang</span></code></a> as well as <a class="reference internal" href="gruut.html#gruut.toksen.RegexTokenizer" title="gruut.toksen.RegexTokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">RegexTokenizer</span></code></a> and <code class="xref py py-class docutils literal notranslate"><span class="pre">SqlitePhonemizer</span></code>.</p>
+The <a class="reference internal" href="gruut.html#gruut.sentences" title="gruut.sentences"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.sentences()</span></code></a> method does everything for you, including creating a <a class="reference internal" href="gruut.html#gruut.text_processor.TextProcessor" title="gruut.text_processor.TextProcessor"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextProcessor</span></code></a> instance for you.</p>
+<p>If you need more control, see the language-specific settings in <a class="reference internal" href="gruut.html#module-gruut.lang" title="gruut.lang"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.lang</span></code></a> and create a <a class="reference internal" href="gruut.html#gruut.text_processor.TextProcessor" title="gruut.text_processor.TextProcessor"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.text_processor.TextProcessor</span></code></a> with your custom settings.</p>
 <p>Tokenziation operates on text and does the following:</p>
 <ul class="simple">
 <li><p>Splits text into words by whitespace</p></li>
-<li><p>Expands user-defined abbreviations</p></li>
+<li><p>Expands user-defined abbreviations and initialisms (TTS/T.T.S.)</p></li>
 <li><p>Breaks apart words and sentences further by punctuation (periods, commas, etc.)</p></li>
-<li><p>Drops empty/non-word tokens</p></li>
-<li><p>Expands numbers into words (100 -&gt; one hundred)</p></li>
-<li><p>Applies upper/lower case filter</p></li>
+<li><p>Expands numbers, dates, and currency amounts into words (100 -&gt; one hundred)</p></li>
 <li><p>Predicts part of speech tags (see <a class="reference internal" href="gruut.html#module-gruut.pos" title="gruut.pos"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.pos</span></code></a>)</p></li>
 </ul>
 <p>Once tokenized, phonemization predicts the phonetic pronunciation for each word by:</p>
 <ul class="simple">
-<li><p>Looking up each word in an SQLite database</p></li>
+<li><p>Looking up each word in an SQLite database or</p></li>
 <li><p>Guessing the pronunciation with a pre-trained model (see <a class="reference internal" href="gruut.html#module-gruut.g2p" title="gruut.g2p"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gruut.g2p</span></code></a>)</p></li>
 </ul>
-<p>In cases where more than one pronunciation is possible for a word, the “best” pronunciation is:</p>
-<ul class="simple">
-<li><p>Specified by the user with word indexes enabled and a word of the form “word_N” where N is the 1-based pronunciation index</p></li>
-<li><p>Whichever pronunciation has the most compatible <a class="reference internal" href="#features"><span class="std std-ref">Features</span></a>.</p></li>
-<li><p>The first pronunciation</p></li>
-</ul>
+<p>In cases where more than one pronunciation is possible for a word, the “role” of a word is used to disambiguate. This is normally derived from the word’s part of speech (e.g., <cite>gruut:NN</cite>), but can be manually set in SSML with <cite>&lt;w role=”…”&gt;</cite>.</p>
 <section id="command-line">
 <h3>Command-Line<a class="headerlink" href="#command-line" title="Permalink to this headline">¶</a></h3>
 <p>gruut tokenization and phonemization can be done externally with a command-line interface.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gruut en-us tokenize <span class="s1">&#39;This is a test.&#39;</span> <span class="p">|</span> gruut en-us phonemize <span class="p">|</span> jq -r .pronunciation_text
-ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gruut --language en-us <span class="s1">&#39;This is a test.&#39;</span>
 </pre></div>
 </div>
-<p>The combined <code class="docutils literal notranslate"><span class="pre">text2phonemes</span></code> command will perform tokenization/phonemization in one step:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gruut en-us text2phonemes &#39;This is a test.&#39; | jq -r .pronunciation_text
-ð ˈɪ s ˈɪ z ə t ˈɛ s t ‖
+<p>which outputs:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;More text.&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;More  text.&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;words&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;More&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;More  &quot;</span><span class="p">,</span>
+        <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;JJR&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;m&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ˈɔ&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ɹ&quot;</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">true</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="s2">&quot;NN&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;t&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ˈɛ&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;k&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;s&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;t&quot;</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">true</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+        <span class="nt">&quot;idx&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;text_with_ws&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;sent_idx&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nt">&quot;lang&quot;</span><span class="p">:</span> <span class="s2">&quot;en-us&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;voice&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;pos&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&quot;phonemes&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;‖&quot;</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;is_major_break&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;is_minor_break&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_punctuation&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&quot;is_break&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&quot;is_spoken&quot;</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>See <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">&lt;COMMAND&gt;</span> <span class="pre">--help</span></code> for more options.</p>
+<p>See <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">--help</span></code> for more options.</p>
 </section>
-<section id="features">
-<span id="id1"></span><h3>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h3>
-<p>gruut tokens can contain arbitrary features. For now, only part of speech tags are implemented for English and French.</p>
-<p>When determining the “best” pronunciation for a word, a phonemizer may consult these features. In English, for example, some word pronunciations in the lexicon contain “preferred” parts of speech. Words like “wind” may be pronounced differently depending on their use as a verb or noun. If a token “wind” is predicted to be a noun during tokenization, then the pronunciation “w ˈɪ n d” is selected instead of “w ˈaɪ n d”.</p>
-<p>French uses part of speech tags differently. During the post-processing phase of phonemization, these features are help to add liasons between words. For example, in the sentence “J’ai des petites oreilles.”, “petites” will be pronounced “p ə t i t z” instead of “p ə t i t”.</p>
 </section>
-<section id="inline-pronunciations">
-<h3>Inline Pronunciations<a class="headerlink" href="#inline-pronunciations" title="Permalink to this headline">¶</a></h3>
-<p>If you want more control over a word’s pronunciation, you can include inline pronunciations in your sentences (enable with <code class="docutils literal notranslate"><span class="pre">inline_pronunciations=True</span></code> or <code class="docutils literal notranslate"><span class="pre">--inline</span></code> on the command-line). There are two different syntaxes, with different purposes:</p>
+<section id="ssml-support">
+<span id="id1"></span><h2>SSML Support<a class="headerlink" href="#ssml-support" title="Permalink to this headline">¶</a></h2>
+<p>A subset of <a class="reference external" href="https://www.w3.org/TR/speech-synthesis11/">the SSML standard</a> is supported:</p>
 <ul class="simple">
-<li><p>Brackets - <code class="docutils literal notranslate"><span class="pre">[[</span> <span class="pre">p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s</span> <span class="pre">]]</span></code></p></li>
-<li><p>Curly Braces - <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">words</span> <span class="pre">with</span> <span class="pre">s{eg}m{ent}s</span> <span class="pre">}}</span></code></p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;speak&gt;</span></code> - wrap around SSML text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for document</p></li>
 </ul>
-<p>The “brackets” syntax allows you to directly insert phonemes for a word. See <a class="reference external" href="https://github.com/rhasspy/gruut-ipa">gruut-ipa</a> for the list of phonemes in your desired language. Some substitutions are automatically made for you:</p>
-<ol class="arabic simple">
-<li><p>Primary and secondary stress can be given with the apostrophe (<code class="docutils literal notranslate"><span class="pre">'</span></code>) and comma (<code class="docutils literal notranslate"><span class="pre">,</span></code>)</p></li>
-<li><p>Elongation can be given with a colon (<code class="docutils literal notranslate"><span class="pre">:</span></code>)</p></li>
-<li><p>Ties will be added, if necessary (e.g., <code class="docutils literal notranslate"><span class="pre">tʃ</span></code> becomes <code class="docutils literal notranslate"><span class="pre">t͡ʃ</span></code>)</p></li>
-</ol>
-<p>The “curly brackets” syntax lets you sound out a word using other words (or segments of other words). For example, “Beyoncé” could be written as <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">bee</span> <span class="pre">yawn</span> <span class="pre">say</span> <span class="pre">}}</span></code>. From the curly brackets, gruut will look up each word’s pronunciation in the lexicon (or guess it), and combine all of the resulting phonemes. You may include phonemes inside the curly brackets as well with the syntax <code class="docutils literal notranslate"><span class="pre">/p</span> <span class="pre">h</span> <span class="pre">o</span> <span class="pre">n</span> <span class="pre">e</span> <span class="pre">m</span> <span class="pre">e</span> <span class="pre">s/</span></code> alongside other words.</p>
-<p>An even more useful aspect of the “curly brackets” syntax is using <strong>word segments</strong>. For most words in the lexicon, gruut has an alignment between its graphemes and phonemes. This enables you do insert <em>partial</em> pronunciations of words, such as the “zure” in “azure”, with <code class="docutils literal notranslate"><span class="pre">a{zure}</span></code>. You can even have multiple segments from a single word! For example, <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">{mic}roph{one}</span> <span class="pre">}}</span></code> will produce phonemes sounding like “mike own”.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># raxacoricofallipatorius</span>
-gruut en-us text2phonemes --inline <span class="se">\</span>
-  <span class="s1">&#39;{{ racks uh core {i}t {co}de {fall}{i}ble {pu}n tore s{ee} us }}&#39;</span> <span class="p">|</span> jq -r .pronunciation_text
-ɹ ˈæ k s ˈʌ k ˈɔ ɹ ˈɪ k ˈoʊ f ˈæ l ə p ˈʌ t ˈɔ ɹ ˈi ˈʌ s
-</pre></div>
-</div>
-</section>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;p&gt;</span></code> - paragraph</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for paragraph</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;s&gt;</span></code> - sentence (disables automatic sentence breaking)</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for sentence</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;w&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;token&gt;</span></code> - word (disables automatic tokenization)</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for word</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">role</span></code> - set word role (see [word roles](#word-roles))</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;lang</span> <span class="pre">lang=&quot;...&quot;&gt;</span></code> - set language inner text</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;voice</span> <span class="pre">name=&quot;...&quot;&gt;</span></code> - set voice of inner text</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;say-as</span> <span class="pre">interpret-as=&quot;&quot;&gt;</span></code> - force interpretation of inner text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">interpret-as</span></code> one of “spell-out”, “date”, “number”, “time”, or “currency”</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">format</span></code> - way to format text depending on <code class="docutils literal notranslate"><span class="pre">interpret-as</span></code></dt><dd><ul>
+<li><p>number - one of “cardinal”, “ordinal”, “digits”, “year”</p></li>
+<li><p>date - string with “d” (cardinal day), “o” (ordinal day), “m” (month), or “y” (year)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time=&quot;&quot;&gt;</span></code> - Pause for given amount of time</dt><dd><ul>
+<li><p>time - seconds (“123s”) or milliseconds (“123ms”)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;sub</span> <span class="pre">alias=&quot;&quot;&gt;</span></code> - substitute <code class="docutils literal notranslate"><span class="pre">alias</span></code> for inner text</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;phoneme</span> <span class="pre">ph=&quot;...&quot;&gt;</span></code> - supply phonemes for inner text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">ph</span></code> - phonemes for each word of inner text, separated by whitespace</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alphabet</span></code> - if “ipa”, phonemes are intelligently split (“aːˈb” -&gt; “aː”, “ˈb”)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
 </section>
 <section id="database">
 <span id="id2"></span><h2>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h2>
@@ -175,24 +316,7 @@ gruut en-us text2phonemes --inline <span class="se">\</span>
 <li><p>word TEXT - word text</p></li>
 <li><p>pron_order INTEGER - priority of pronunciation (lowest is first)</p></li>
 <li><p>phonemes TEXT - whitespace-separated phonemes</p></li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>feature_names - names of extra pronunciation features (like part of speech)</dt><dd><ul>
-<li><p>id INTEGER - primary key</p></li>
-<li><p>feature_id INTEGER - id of feature (linked to pron_features)</p></li>
-<li><p>feature TEXT - name of feature (e.g., “pos”)</p></li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>pron_features - extra pronunciation features</dt><dd><ul>
-<li><p>id INTEGER - primary key</p></li>
-<li><p>pron_id INTEGER - id from word_phonemes</p></li>
-<li><p>feature_id INTEGER - feature_id from feature_names</p></li>
+<li><p>role TEXT - role used to disambiguate pronunciations (e.g., “gruut:NN”)</p></li>
 </ul>
 </dd>
 </dl>
@@ -217,11 +341,12 @@ gruut en-us text2phonemes --inline <span class="se">\</span>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">gruut</span><span class="o">.</span><span class="n">lexicon2db</span> <span class="o">--</span><span class="n">casing</span> <span class="n">lower</span> <span class="o">--</span><span class="n">lexicon</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">database</span> <span class="n">lexicon</span><span class="o">.</span><span class="n">db</span>
 </pre></div>
 </div>
-<p>If your lexicon has part of speech (POS) tags, you can add the <code class="docutils literal notranslate"><span class="pre">--pos</span></code> flag. In this case, your lexicon must have the following format:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">word</span> <span class="n">POS</span> <span class="n">phoneme</span> <span class="o">...</span>
-<span class="n">word</span> <span class="n">POS</span> <span class="n">phoneme</span> <span class="n">phoneme</span> <span class="o">...</span>
+<p>If your lexicon has word roles, you can add the <code class="docutils literal notranslate"><span class="pre">--role</span></code> flag. In this case, your lexicon must have the following format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">word</span> <span class="n">ROLE</span> <span class="n">phoneme</span> <span class="o">...</span>
+<span class="n">word</span> <span class="n">ROLE</span> <span class="n">phoneme</span> <span class="n">phoneme</span> <span class="o">...</span>
 </pre></div>
 </div>
+<p>Word roles that do not contain a “:” will be formatted as “gruut:&lt;ROLE&gt;”.</p>
 </section>
 <section id="g2p-models">
 <span id="g2p"></span><h2>G2P Models<a class="headerlink" href="#g2p-models" title="Permalink to this headline">¶</a></h2>
@@ -262,33 +387,30 @@ These models predict the part of speech for each word during tokenization, and a
 <section id="espeak-phonemes">
 <h2>eSpeak Phonemes<a class="headerlink" href="#espeak-phonemes" title="Permalink to this headline">¶</a></h2>
 <p>Most languages include an additional lexicon and pre-trained grapheme to phoneme model with IPA generated from <a class="reference external" href="https://github.com/espeak-ng/espeak-ng">espeak-ng</a>.</p>
-<p>These additional lexicons can be accessed via the <code class="docutils literal notranslate"><span class="pre">model_prefix</span></code> argument to <code class="xref py py-meth docutils literal notranslate"><span class="pre">gruut.get_phonemizer()</span></code> or the <code class="docutils literal notranslate"><span class="pre">--model-prefix</span></code> command-line argument to <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">&lt;LANG&gt;</span> <span class="pre">phonemize</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">text_to_phonemes</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">sentences</span>
 
-<span class="n">text</span> <span class="o">=</span> <span class="n">uHe</span> <span class="n">wound</span> <span class="n">it</span> <span class="n">around</span> <span class="n">the</span> <span class="n">wound</span><span class="p">,</span> <span class="n">saying</span> <span class="s2">&quot;I read it was $10 to read.&quot;</span><span class="n">u</span>
-
-<span class="k">for</span> <span class="n">sent_idx</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">word_phonemes</span> <span class="ow">in</span> <span class="n">text_to_phonemes</span><span class="p">(</span>
-    <span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">,</span> <span class="n">phonemizer_args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;espeak&quot;</span><span class="p">}</span>
-<span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="o">*</span><span class="n">word_phonemes</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en-us&quot;</span><span class="p">,</span> <span class="n">espeak</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sent</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">word</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Output:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>he h ˈiː
-wound w ˈaʊ n d
-it ˈɪ t
-around ɚ ɹ ˈaʊ n d
-the ð ˈə
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>He h iː
+wound w ˈa ʊ n d
+it ɪ ɾ
+around ɚ ɹ ˈa ʊ n d
+the ð ə
 wound w ˈuː n d
 , |
-saying s ˈeɪ ɪ ŋ
-i ˈaɪ
+saying s ˈe ɪ ɪ ŋ
+I ˈa ɪ
 read ɹ ˈɛ d
-it ˈɪ t
+it ɪ ɾ
 was w ʌ z
 ten t ˈɛ n
 dollars d ˈɑː l ɚ z
-to t ˈuː
+to t ə
 read ɹ ˈiː d
 . ‖
 </pre></div>
@@ -375,10 +497,9 @@ read ɹ ˈiː d
 </li>
 <li><a class="reference internal" href="#usage">Usage</a><ul>
 <li><a class="reference internal" href="#command-line">Command-Line</a></li>
-<li><a class="reference internal" href="#features">Features</a></li>
-<li><a class="reference internal" href="#inline-pronunciations">Inline Pronunciations</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#ssml-support">SSML Support</a></li>
 <li><a class="reference internal" href="#database">Database</a></li>
 <li><a class="reference internal" href="#g2p-models">G2P Models</a></li>
 <li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>
@@ -400,7 +521,7 @@ read ɹ ˈiː d
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -425,7 +546,7 @@ read ɹ ˈiː d
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2021, Michael Hansen.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.0.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.2.0.
     </div>
   </body>
 </html>

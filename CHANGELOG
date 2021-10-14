@@ -1,4 +1,20 @@
-## [1.3.0] - 2021-08-02
+## [2.0.0] - 2021 Oct 14
+
+### Added
+
+- SSML support (see README for supported tags)
+- Date, time, and initialism (e.g., T.T.S.) expansion
+- Swahili (sw) language
+
+### Changed
+
+- API and command-line interface (use gruut.sentences)
+
+### Removed
+
+- Inline pronunciations, <number>_<format> (use SSML)
+
+## [1.3.1] - 2021-08-02
 
 ### Fixed
 

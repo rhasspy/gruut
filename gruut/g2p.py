@@ -182,7 +182,7 @@ def train(
 
     trainer = pycrfsuite.Trainer(verbose=False)
 
-    with open(corpus_path, "r") as corpus:
+    with open(corpus_path, "r", encoding="utf-8") as corpus:
         for i, line in enumerate(corpus):
             line = line.strip()
             if not line:

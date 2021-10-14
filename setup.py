@@ -1,5 +1,4 @@
 """Setup file for gruut"""
-import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -19,11 +18,11 @@ if readme_path.is_file():
 requirements = []
 requirements_path = this_dir / "requirements.txt"
 if requirements_path.is_file():
-    with open(requirements_path, "r") as requirements_file:
+    with open(requirements_path, "r", encoding="utf-8") as requirements_file:
         requirements = requirements_file.read().splitlines()
 
 version_path = module_dir / "VERSION"
-with open(version_path, "r") as version_file:
+with open(version_path, "r", encoding="utf-8") as version_file:
     version = version_file.read().strip()
 
 # x.y.z -> x.y.0

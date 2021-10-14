@@ -30,9 +30,8 @@ function gruut {
     text="$2"
     shift 2
 
-    python3 -m gruut "${lang}" tokenize "${text}" | \
-        python3 -m gruut "${lang}" phonemize "$@" | \
-        jq -r .pronunciation_text
+    python3 -m gruut --language "${lang}" "${text}" "$@" | \
+        jq -r '[.words[].phonemes|add]|add'
 }
 
 function espeak {

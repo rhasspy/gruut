@@ -54,7 +54,7 @@ def fst2graph(fst_path: typing.Union[str, Path]) -> typing.Dict[str, np.ndarray]
 
     to_nodes = set()
 
-    with open(fst_path, "r") as fst_file:
+    with open(fst_path, "r", encoding="utf-8") as fst_file:
         for line in fst_file:
             line = line.strip()
             if not line:

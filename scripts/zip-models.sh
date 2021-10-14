@@ -6,7 +6,7 @@ this_dir="$( cd "$( dirname "$0" )" && pwd )"
 src_dir="$(realpath "${this_dir}/..")"
 
 dist_dir="${src_dir}/dist"
-mkdir -p "${dist_dir}"
+mkdir -p "${dist_dir}/data"
 
 rm -rf -- *.egg-info/
 

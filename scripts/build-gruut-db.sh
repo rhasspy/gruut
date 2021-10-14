@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+
+# -----------------------------------------------------------------------------
+# Automatically creates lexicon databases and g2p models from
+# data/<lang>/lexicon.txt files.
+# -----------------------------------------------------------------------------
+
 set -e
 
 if [[ -z "$1" ]]; then
@@ -25,12 +31,17 @@ export PYTHONPATH="${src_dir}"
 lang_dir="${src_dir}/data/${lang}"
 
 if [[ "${lang}" == 'en-us' ]]; then
-    pos='1'
+    role='1'
 fi
 
 # Text lexicon
 lexicon_text="${lang_dir}/lexicon.txt"
 lexicon_args=()
+
+if [[ -n "${role}" ]]; then
+    # Lexicon is formatted as <word> <role> <phonemes>
+    lexicon_args+=('--role')
+fi
 
 # Database lexicon
 lexicon_db="${lang_dir}/lexicon.db"
@@ -48,7 +59,7 @@ if [ ! -s "${g2p_corpus}" ] || [ ! -s "${g2p_fst}" ]; then
     echo "Creating Phonetisaurus g2p model (${g2p_fst})"
 
     lexicon_g2p="${lexicon_text}"
-    if [[ -n "${pos}" ]]; then
+    if [[ -n "${role}" ]]; then
         # Drop POS column from lexicon
         lexicon_g2p="$(basename "${lexicon_text}" .txt).nopos.txt"
         cut -d' ' -f1,3- < "${lexicon_text}" > "${lexicon_g2p}"
