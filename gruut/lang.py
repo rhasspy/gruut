@@ -8,7 +8,7 @@ from pathlib import Path
 
 import networkx as nx
 
-from gruut.const import PHONEMES_TYPE, GraphType, SentenceNode
+from gruut.const import PHONEMES_TYPE, GraphType, SentenceNode, Time
 from gruut.g2p import GraphemesToPhonemes
 from gruut.phonemize import SqlitePhonemizer
 from gruut.pos import PartOfSpeechTagger
@@ -250,6 +250,15 @@ EN_INITIALISM_DOTS_PATTERN = re.compile(r"^(?:\s*[a-zA-Z]\.){1,}\s*$")
 EN_NON_WORD_PATTERN = re.compile(r"^(\W|_)+$")
 EN_ORDINAL_PATTERN = re.compile(r"^(-?[0-9][0-9,]*)(?:st|nd|rd|th).*$")
 
+EN_TIME_PATTERN = re.compile(
+    r"""^((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3]))  # hours
+         (?::
+         ([0-5][0-9]))?                          # minutes
+         \s*(a\\.m\\.|am|pm|p\\.m\\.|a\\.m|p\\.m)? # am/pm
+         $""",
+    re.IGNORECASE | re.X,
+)
+
 
 def en_is_initialism(text: str) -> bool:
     """True if text is of the form TTS or T.T.S."""
@@ -267,6 +276,57 @@ def en_get_ordinal(text: str) -> typing.Optional[int]:
     return None
 
 
+def en_parse_time(text: str) -> typing.Optional[Time]:
+    """Parse English clock time (e.g. 4:01pm)"""
+    match = EN_TIME_PATTERN.match(text.strip().lower())
+    if match is None:
+        return None
+
+    hours = int(match.group(1))
+    maybe_minutes = match.group(6)
+    minutes = 0 if maybe_minutes is None else int(maybe_minutes)
+    period = match.group(7)
+
+    if period is not None:
+        # Normalize period
+        if "a" in period:
+            period = "A.M."
+        else:
+            period = "P.M."
+
+    return Time(hours=hours, minutes=minutes, period=period)
+
+
+def en_verbalize_time(time: Time) -> typing.Iterable[str]:
+    """Convert time into words"""
+
+    hour = time.hours
+    past_noon = hour >= 12
+
+    if hour > 12:
+        hour -= 12
+    elif hour == 0:
+        hour = 12
+        past_noon = True
+
+    yield str(hour)
+
+    minute = time.minutes
+    if minute > 0:
+        if minute < 10:
+            yield "oh"
+
+        yield str(minute)
+
+    if time.period is None:
+        if past_noon:
+            yield "P.M."
+        else:
+            yield "A.M."
+    else:
+        yield time.period
+
+
 def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     """Create settings for English"""
     settings_args = {
@@ -281,6 +341,8 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "split_initialism": lambda text: list(text.replace(".", "")),
         "is_non_word": lambda text: EN_NON_WORD_PATTERN.match(text) is not None,
         "get_ordinal": en_get_ordinal,
+        "parse_time": en_parse_time,
+        "verbalize_time": en_verbalize_time,
         "replacements": [("’", "'")],  # normalize apostrophe
         "abbreviations": {
             r"^([cC])o\.": r"\1ompany",  # co. -> company

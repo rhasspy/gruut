@@ -118,6 +118,7 @@ def main():
                 verbalize_numbers=(not args.no_numbers),
                 verbalize_currency=(not args.no_currency),
                 verbalize_dates=(not args.no_dates),
+                verbalize_times=(not args.no_times),
             )
 
             if args.debug:
@@ -190,6 +191,11 @@ def get_args() -> argparse.Namespace:
         "--no-dates",
         action="store_true",
         help="Disable date replacement (4/1/2021 -> April first twenty twenty one)",
+    )
+    parser.add_argument(
+        "--no-times",
+        action="store_true",
+        help="Disable time replacement (4:01pm -> four oh one P M)",
     )
     parser.add_argument(
         "--no-pos", action="store_true", help="Disable part of speech tagger",

@@ -503,6 +503,42 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_time(self):
+        """Test time verbalization (English)"""
+        processor = TextProcessor(default_lang="en_US")
+        graph, root = processor("  4:01pm")
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
+
+        # Time should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(
+                    lang="en_US", idx=0, sent_idx=0, text="four", text_with_ws="  four "
+                ),
+                Word(lang="en_US", idx=1, sent_idx=0, text="oh", text_with_ws="oh "),
+                Word(lang="en_US", idx=2, sent_idx=0, text="one", text_with_ws="one "),
+                Word(lang="en_US", idx=3, sent_idx=0, text="P", text_with_ws="P "),
+                Word(lang="en_US", idx=4, sent_idx=0, text="M", text_with_ws="M"),
+            ],
+        )
+
+    def test_time_no_colon(self):
+        """Test time verbalization without a colon (English)"""
+        processor = TextProcessor(default_lang="en_US")
+        graph, root = processor("10am")
+        words = list(processor.words(graph, root, phonemes=False, pos=False))
+
+        # Time should be verbalized
+        self.assertEqual(
+            words,
+            [
+                Word(lang="en_US", idx=0, sent_idx=0, text="ten", text_with_ws="ten "),
+                Word(lang="en_US", idx=1, sent_idx=0, text="A", text_with_ws="A "),
+                Word(lang="en_US", idx=2, sent_idx=0, text="M", text_with_ws="M"),
+            ],
+        )
+
     def test_date_one_language(self):
         """Test date verbalization (single language)"""
         processor = TextProcessor(default_lang="en_US", word_breaks={"-"})

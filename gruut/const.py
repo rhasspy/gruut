@@ -120,6 +120,17 @@ SURROUNDING_WHITESPACE_PATTERN = re.compile(r"^(\s*)\S+(\s*)$")
 HAS_DIGIT_PATTERN = re.compile(r"[0-9]")
 
 
+@dataclass
+class Time:
+    """Parsed time from text"""
+
+    hours: int
+    minutes: int = 0
+
+    period: typing.Optional[str] = None
+    """A.M. or P.M."""
+
+
 # -----------------------------------------------------------------------------
 
 
@@ -137,6 +148,9 @@ class InterpretAs(str, Enum):
 
     CURRENCY = "currency"
     """Word should be interpreted as an amount of currency"""
+
+    TIME = "time"
+    """Word should be interpreted as a time on the clock"""
 
 
 class InterpretAsFormat(str, Enum):
@@ -224,7 +238,7 @@ class BreakNode(Node):
             return int(self.time[:-2])
 
         if self.time.endswith("s"):
-            return int(self.time[:-1]) * 1000
+            return int(float(self.time[:-1]) * 1000)
 
         return 0
 
@@ -242,6 +256,7 @@ class WordNode(Node):
     date: typing.Optional[datetime] = None
     currency_symbol: typing.Optional[str] = None
     currency_name: typing.Optional[str] = None
+    time: typing.Optional[Time] = None
 
     role: typing.Union[str, WordRole] = WordRole.DEFAULT
     pos: typing.Optional[str] = None
@@ -603,6 +618,18 @@ class TextProcessorSettings:
         str, InterpretAsFormat
     ] = InterpretAsFormat.DATE_MDY_ORDINAL
     """Format used to verbalize a date unless set with the format attribute of <say-as>"""
+
+    # Times
+    is_maybe_time: typing.Optional[typing.Callable[[str], bool]] = has_digit
+    """True if a word may be a clock time (parsing will be attempted)"""
+
+    parse_time: typing.Optional[typing.Callable[[str], typing.Optional[Time]]] = None
+    """Parse word text into a Time object or None"""
+
+    verbalize_time: typing.Optional[
+        typing.Callable[[Time], typing.Iterable[str]]
+    ] = None
+    """Convert Time to words"""
 
     # Part of speech (pos) tagging
     get_parts_of_speech: typing.Optional[GetPartsOfSpeech] = None

@@ -34,7 +34,7 @@ read ɹ ˈi d
 . ‖
 ```
 
-Note that "wound" and "read" have different pronunciations when used in different contexts.
+Note that "wound" and "read" have different pronunciations when used in different (grammatical) contexts.
 
 A [subset of SSML](#ssml) is also supported:
 
@@ -47,7 +47,7 @@ ssml_text = """<?xml version="1.0" encoding="ISO-8859-1"?>
     xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
     xml:lang="en-US">
-<s>Today, 2/1/2000.</s>
+<s>Today at 4pm, 2/1/2000.</s>
 <s xml:lang="it">Un mese fà, 2/1/2000.</s>
 </speak>"""
 
@@ -61,9 +61,14 @@ with the output:
 
 ```
 0 en-US Today t ə d ˈeɪ
+0 en-US at ˈæ t
+0 en-US four f ˈɔ ɹ
+0 en-US P p ˈi
+0 en-US M ˈɛ m
 0 en-US , |
 0 en-US February f ˈɛ b j u ˌɛ ɹ i
 0 en-US first f ˈɚ s t
+0 en-US , |
 0 en-US two t ˈu
 0 en-US thousand θ ˈaʊ z ə n d
 0 en-US . ‖
@@ -128,7 +133,24 @@ The goal is to support all of [voice2json's languages](https://github.com/synest
     * [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) pronunciation manipulation
 * [pycrfsuite](https://github.com/scrapinghub/python-crfsuite)
     * Part of speech tagging and grapheme to phoneme models
+* [pydateparser](https://github.com/GLibAi/pydateparser)
+    * Date parsing for multiple languages
 
+## Numbers, Dates, and More
+
+`gruut` can automatically verbalize numbers, dates, and other expressions. This is done in a locale-aware manner for both parsing and verbalization, so "1/1/2020" may be interpreted as "M/D/Y" or "D/M/Y" depending on the word or sentence's language (e.g., `<s lang="...">`).
+
+The following types of expressions can be automatically expanded into words by `gruut`:
+
+* Numbers - "123" to "one hundred and twenty three" (disable with `verbalize_numbers=False` or `--no-numbers`)
+    * Relies on `Babel` for parsing and `num2words` for verbalization
+* Dates - "1/1/2020" to "January first, twenty twenty" (disable with `verbalize_dates=False` or `--no-dates`)
+    * Relies on `pydateparser` for parsing and both `Babel` and `num2words` for verbalization
+* Currency - "$10" to "ten dollars" (disable with `verbalize_currency=False` or `--no-currency`)
+    * Relies on `Babel` for parsing and both `Babel` and `num2words` for verbalization
+* Times - "12:01am" to "twelve oh one A M" (disable with `verbalize_times=False` or `--no-times`)
+    * English only
+    * Relies on `num2words` for verbalization
 
 ## Command-Line Usage
 
@@ -287,7 +309,7 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
 * `<lang lang="...">` - set language inner text
 * `<voice name="...">` - set voice of inner text
 * `<say-as interpret-as="">` - force interpretation of inner text
-    * `interpret-as` one of "spell-out", "date", "number", or "currency"
+    * `interpret-as` one of "spell-out", "date", "number", "time", or "currency"
     * `format` - way to format text depending on `interpret-as`
         * number - one of "cardinal", "ordinal", "digits", "year"
         * date - string with "d" (cardinal day), "o" (ordinal day), "m" (month), or "y" (year)

@@ -63,7 +63,7 @@ ssml_text = """<?xml version="1.0" encoding="ISO-8859-1"?>
     xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
     xml:lang="en-US">
-<s>Today, 2/1/2000.</s>
+<s>Today at 4pm, 2/1/2000.</s>
 <s xml:lang="it">Un mese fà, 2/1/2000.</s>
 </speak>"""
 

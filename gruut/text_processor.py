@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Tokenizes, verbalizes, and phonemizes text and SSML"""
-import functools
 import logging
 import re
 import typing
 import xml.etree.ElementTree as etree
 from decimal import Decimal
 from pathlib import Path
-from xml.sax import saxutils
 
 import babel
 import babel.numbers
@@ -358,9 +356,11 @@ class TextProcessor:
         detect_numbers: bool = True,
         detect_currency: bool = True,
         detect_dates: bool = True,
+        detect_times: bool = True,
         verbalize_numbers: bool = True,
         verbalize_currency: bool = True,
         verbalize_dates: bool = True,
+        verbalize_times: bool = True,
     ) -> typing.Tuple[GraphType, Node]:
         """
         Processes text or SSML
@@ -372,7 +372,15 @@ class TextProcessor:
             pos: False if part of speech tagging should be disabled
             phonemize: False if phonemization should be disabled
             post_process: False if sentence/graph post-processing should be disabled
-            add_speak_tag: False if <speak> should not automatically be added to input text
+            add_speak_tag: True if <speak> should be automatically added to input text when ssml=True
+            detect_numbers: True if numbers should be annotated in text (interpret_as="number")
+            detect_currency: True if currency amounts should be annotated in text (interpret_as="currency")
+            detect_dates: True if dates should be annotated in text (interpret_as="date")
+            detect_times: True if clock times should be annotated in text (interpret_as="time")
+            verbalize_numbers: True if annotated numbers should be expanded into words
+            verbalize_currency: True if annotated currency amounts should be expanded into words
+            verbalize_dates: True if annotated dates should be expanded into words
+            verbalize_times: True if annotated clock times should be expanded into words
 
         Returns:
             graph, root: text graph and root node
@@ -748,10 +756,7 @@ class TextProcessor:
         pipeline_split(self._split_abbreviations, graph, root)
 
         # Break apart initialisms 1/2 (e.g., TTS or T.T.S.) before major breaks
-        split_initialism = functools.partial(
-            self._split_initialism, phonemize=phonemize
-        )
-        pipeline_split(split_initialism, graph, root)
+        pipeline_split(self._split_initialism, graph, root)
 
         # Split on major breaks (periods, etc.)
         pipeline_split(self._split_major_breaks, graph, root)
@@ -760,7 +765,7 @@ class TextProcessor:
         pipeline_split(self._split_punctuations, graph, root)
 
         # Break apart initialisms 2/2 (e.g., TTS. or T.T.S..) after major breaks
-        pipeline_split(split_initialism, graph, root)
+        pipeline_split(self._split_initialism, graph, root)
 
         # Break apart sentences using BreakWordNodes
         self._break_sentences(graph, root)
@@ -778,17 +783,28 @@ class TextProcessor:
         if detect_dates:
             pipeline_transform(self._transform_date, graph, root)
 
+        if detect_times:
+            pipeline_transform(self._transform_time, graph, root)
+
         # Verbalize known classes
+        if verbalize_dates:
+            pipeline_transform(self._verbalize_date, graph, root)
+
+        if verbalize_times:
+            pipeline_transform(self._verbalize_time, graph, root)
+
         if verbalize_numbers:
             pipeline_transform(self._verbalize_number, graph, root)
 
         if verbalize_currency:
             pipeline_transform(self._verbalize_currency, graph, root)
 
-        if verbalize_dates:
-            pipeline_transform(self._verbalize_date, graph, root)
-
-        if verbalize_numbers or verbalize_currency or verbalize_dates:
+        if (
+            verbalize_numbers
+            or verbalize_currency
+            or verbalize_dates
+            or verbalize_times
+        ):
             # Final split on minor breaks since numbers/dates can have commas, etc.
             pipeline_split(self._split_minor_breaks, graph, root)
 
@@ -1417,12 +1433,13 @@ class TextProcessor:
                     "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
                 }
 
-    def _split_initialism(self, graph: GraphType, node: Node, phonemize: bool = True):
+    def _split_initialism(self, graph: GraphType, node: Node):
         """Split apart ABC or A.B.C."""
         if not isinstance(node, WordNode):
             return
 
         word = typing.cast(WordNode, node)
+
         if word.interpret_as or word.in_lexicon:
             # Don't interpret words that are spoken for
             return
@@ -1620,6 +1637,31 @@ class TextProcessor:
             if date is not None:
                 word.date = date
 
+    def _transform_time(self, graph: GraphType, node: Node):
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if word.interpret_as and (word.interpret_as != InterpretAs.TIME):
+            return
+
+        settings = self.get_settings(word.lang)
+
+        if settings.parse_time is None:
+            # Can't parse a time anyways
+            return
+
+        if (settings.is_maybe_time is not None) and not settings.is_maybe_time(
+            word.text
+        ):
+            # Probably not a time
+            return
+
+        time = settings.parse_time(word.text)
+        if time is not None:
+            word.interpret_as = InterpretAs.TIME
+            word.time = time
+
     def _is_word_in_lexicon(
         self, word: str, settings: TextProcessorSettings
     ) -> typing.Optional[bool]:
@@ -1808,6 +1850,63 @@ class TextProcessor:
             )
             graph.add_node(date_word.node, data=date_word)
             graph.add_edge(word.node, date_word.node)
+
+    def _verbalize_time(self, graph: GraphType, node: Node):
+        """Split times into words"""
+        if not isinstance(node, WordNode):
+            return
+
+        word = typing.cast(WordNode, node)
+        if (word.interpret_as != InterpretAs.TIME) or (word.time is None):
+            return
+
+        settings = self.get_settings(word.lang)
+
+        if settings.verbalize_time is None:
+            # Can't verbalize
+            return
+
+        first_ws, last_ws = settings.get_whitespace(word.text_with_ws)
+        time_words = list(settings.verbalize_time(word.time))
+        last_idx = len(time_words) - 1
+
+        # Split into words
+        for word_idx, time_word_text in enumerate(time_words):
+            if word_idx == 0:
+                time_word_text = first_ws + time_word_text
+
+            if word_idx == last_idx:
+                time_word_text += last_ws
+            else:
+                time_word_text += settings.join_str
+
+            time_word_text_norm = settings.normalize_whitespace(time_word_text)
+            if not time_word_text_norm:
+                continue
+
+            if not settings.keep_whitespace:
+                time_word_text = time_word_text_norm
+
+            if not time_word_text:
+                continue
+
+            time_word = WordNode(
+                node=len(graph),
+                implicit=True,
+                lang=word.lang,
+                text=time_word_text_norm,
+                text_with_ws=time_word_text,
+            )
+
+            graph.add_node(time_word.node, data=time_word)
+            graph.add_edge(word.node, time_word.node)
+
+            # May contain numbers or initialisms
+            self._transform_number(graph, time_word)
+            for node_class, node_kwargs in self._split_initialism(graph, time_word):
+                new_node = node_class(node=len(graph), **node_kwargs)
+                graph.add_node(new_node.node, data=new_node)
+                graph.add_edge(time_word.node, new_node.node)
 
     def _verbalize_currency(
         self, graph: GraphType, node: Node,
