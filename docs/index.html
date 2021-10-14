@@ -67,7 +67,49 @@ read ɹ ˈi d
 . ‖
 </pre></div>
 </div>
-<p>Note that “wound” and “read” have different pronunciations in different contexts.</p>
+<p>Note that “wound” and “read” have different pronunciations in different (grammatical) contexts.</p>
+<p>A subset of <a class="reference internal" href="#ssml-support"><span class="std std-ref">SSML</span></a> is also supported:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">gruut</span> <span class="kn">import</span> <span class="n">sentences</span>
+
+<span class="n">ssml_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;</span>
+<span class="s2">&lt;speak version=&quot;1.1&quot; xmlns=&quot;http://www.w3.org/2001/10/synthesis&quot;</span>
+<span class="s2">    xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span>
+<span class="s2">    xsi:schemaLocation=&quot;http://www.w3.org/2001/10/synthesis</span>
+<span class="s2">                http://www.w3.org/TR/speech-synthesis11/synthesis.xsd&quot;</span>
+<span class="s2">    xml:lang=&quot;en-US&quot;&gt;</span>
+<span class="s2">&lt;s&gt;Today at 4pm, 2/1/2000.&lt;/s&gt;</span>
+<span class="s2">&lt;s xml:lang=&quot;it&quot;&gt;Un mese fà, 2/1/2000.&lt;/s&gt;</span>
+<span class="s2">&lt;/speak&gt;&quot;&quot;&quot;</span>
+
+<span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">(</span><span class="n">ssml_text</span><span class="p">,</span> <span class="n">ssml</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sent</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">sent</span><span class="o">.</span><span class="n">idx</span><span class="p">,</span> <span class="n">word</span><span class="o">.</span><span class="n">lang</span><span class="p">,</span> <span class="n">word</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="n">word</span><span class="o">.</span><span class="n">phonemes</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>with the output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>0 en-US Today t ə d ˈeɪ
+0 en-US at ˈæ t
+0 en-US four f ˈɔ ɹ
+0 en-US P p ˈi
+0 en-US M ˈɛ m
+0 en-US , |
+0 en-US February f ˈɛ b j u ˌɛ ɹ i
+0 en-US first f ˈɚ s t
+0 en-US , |
+0 en-US two t ˈu
+0 en-US thousand θ ˈaʊ z ə n d
+0 en-US . ‖
+1 it Un u n
+1 it mese ˈm e s e
+1 it fà f a
+1 it , |
+1 it due d j u
+1 it gennaio d͡ʒ e n n ˈa j o
+1 it duemila d u e ˈm i l a
+1 it . ‖
+</pre></div>
+</div>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <p>To install gruut with U.S. English support only:</p>
@@ -87,6 +129,7 @@ read ɹ ˈi d
 <li><p>German (<code class="docutils literal notranslate"><span class="pre">de</span></code>)</p></li>
 <li><p>English (<code class="docutils literal notranslate"><span class="pre">en</span></code>)</p></li>
 <li><p>Spanish (<code class="docutils literal notranslate"><span class="pre">es</span></code>)</p></li>
+<li><p>Persian/Farsi (<code class="docutils literal notranslate"><span class="pre">fa</span></code>)</p></li>
 <li><p>French (<code class="docutils literal notranslate"><span class="pre">fr</span></code>)</p></li>
 <li><p>Italian (<code class="docutils literal notranslate"><span class="pre">it</span></code>)</p></li>
 <li><p>Dutch (<code class="docutils literal notranslate"><span class="pre">nl</span></code>)</p></li>
@@ -195,8 +238,76 @@ The <a class="reference internal" href="gruut.html#gruut.sentences" title="gruut
 <p>See <code class="docutils literal notranslate"><span class="pre">gruut</span> <span class="pre">--help</span></code> for more options.</p>
 </section>
 </section>
+<section id="ssml-support">
+<span id="id1"></span><h2>SSML Support<a class="headerlink" href="#ssml-support" title="Permalink to this headline">¶</a></h2>
+<p>A subset of <a class="reference external" href="https://www.w3.org/TR/speech-synthesis11/">the SSML standard</a> is supported:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;speak&gt;</span></code> - wrap around SSML text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for document</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;p&gt;</span></code> - paragraph</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for paragraph</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;s&gt;</span></code> - sentence (disables automatic sentence breaking)</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for sentence</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;w&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;token&gt;</span></code> - word (disables automatic tokenization)</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> - set language for word</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">role</span></code> - set word role (see [word roles](#word-roles))</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;lang</span> <span class="pre">lang=&quot;...&quot;&gt;</span></code> - set language inner text</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;voice</span> <span class="pre">name=&quot;...&quot;&gt;</span></code> - set voice of inner text</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;say-as</span> <span class="pre">interpret-as=&quot;&quot;&gt;</span></code> - force interpretation of inner text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">interpret-as</span></code> one of “spell-out”, “date”, “number”, “time”, or “currency”</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">format</span></code> - way to format text depending on <code class="docutils literal notranslate"><span class="pre">interpret-as</span></code></dt><dd><ul>
+<li><p>number - one of “cardinal”, “ordinal”, “digits”, “year”</p></li>
+<li><p>date - string with “d” (cardinal day), “o” (ordinal day), “m” (month), or “y” (year)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time=&quot;&quot;&gt;</span></code> - Pause for given amount of time</dt><dd><ul>
+<li><p>time - seconds (“123s”) or milliseconds (“123ms”)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;sub</span> <span class="pre">alias=&quot;&quot;&gt;</span></code> - substitute <code class="docutils literal notranslate"><span class="pre">alias</span></code> for inner text</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&lt;phoneme</span> <span class="pre">ph=&quot;...&quot;&gt;</span></code> - supply phonemes for inner text</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">ph</span></code> - phonemes for each word of inner text, separated by whitespace</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alphabet</span></code> - if “ipa”, phonemes are intelligently split (“aːˈb” -&gt; “aː”, “ˈb”)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
 <section id="database">
-<span id="id1"></span><h2>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>Database<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h2>
 <p>Word pronunciations and other metadata are stored in SQLite databases with the following tables:</p>
 <ul class="simple">
 <li><dl class="simple">
@@ -388,6 +499,7 @@ read ɹ ˈiː d
 <li><a class="reference internal" href="#command-line">Command-Line</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#ssml-support">SSML Support</a></li>
 <li><a class="reference internal" href="#database">Database</a></li>
 <li><a class="reference internal" href="#g2p-models">G2P Models</a></li>
 <li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>

@@ -36,7 +36,51 @@ Output::
     . ‖
 
 
-Note that "wound" and "read" have different pronunciations in different contexts.
+Note that "wound" and "read" have different pronunciations in different (grammatical) contexts.
+
+A subset of :ref:`SSML <ssml_support>` is also supported:
+
+.. code-block:: python
+
+    from gruut import sentences
+
+    ssml_text = """<?xml version="1.0" encoding="ISO-8859-1"?>
+    <speak version="1.1" xmlns="http://www.w3.org/2001/10/synthesis"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                    http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+        xml:lang="en-US">
+    <s>Today at 4pm, 2/1/2000.</s>
+    <s xml:lang="it">Un mese fà, 2/1/2000.</s>
+    </speak>"""
+
+    for sent in sentences(ssml_text, ssml=True):
+        for word in sent:
+            if word.phonemes:
+                print(sent.idx, word.lang, word.text, *word.phonemes)
+
+with the output::
+
+    0 en-US Today t ə d ˈeɪ
+    0 en-US at ˈæ t
+    0 en-US four f ˈɔ ɹ
+    0 en-US P p ˈi
+    0 en-US M ˈɛ m
+    0 en-US , |
+    0 en-US February f ˈɛ b j u ˌɛ ɹ i
+    0 en-US first f ˈɚ s t
+    0 en-US , |
+    0 en-US two t ˈu
+    0 en-US thousand θ ˈaʊ z ə n d
+    0 en-US . ‖
+    1 it Un u n
+    1 it mese ˈm e s e
+    1 it fà f a
+    1 it , |
+    1 it due d j u
+    1 it gennaio d͡ʒ e n n ˈa j o
+    1 it duemila d u e ˈm i l a
+    1 it . ‖
 
 Installation
 ------------
@@ -60,6 +104,7 @@ Supported Languages
 * German (``de``)
 * English (``en``)
 * Spanish (``es``)
+* Persian/Farsi (``fa``)
 * French (``fr``)
 * Italian (``it``)
 * Dutch (``nl``)
@@ -176,6 +221,38 @@ which outputs:
 
 
 See ``gruut --help`` for more options.
+
+
+.. _ssml_support:
+
+SSML Support
+--------------------------
+
+A subset of `the SSML standard <https://www.w3.org/TR/speech-synthesis11/>`_ is supported:
+
+* ``<speak>`` - wrap around SSML text
+    * ``lang`` - set language for document
+* ``<p>`` - paragraph
+    * ``lang`` - set language for paragraph
+* ``<s>`` - sentence (disables automatic sentence breaking)
+    * ``lang`` - set language for sentence
+* ``<w>`` / ``<token>`` - word (disables automatic tokenization)
+    * ``lang`` - set language for word
+    * ``role`` - set word role (see [word roles](#word-roles))
+* ``<lang lang="...">`` - set language inner text
+* ``<voice name="...">`` - set voice of inner text
+* ``<say-as interpret-as="">`` - force interpretation of inner text
+    * ``interpret-as`` one of "spell-out", "date", "number", "time", or "currency"
+    * ``format`` - way to format text depending on ``interpret-as``
+        * number - one of "cardinal", "ordinal", "digits", "year"
+        * date - string with "d" (cardinal day), "o" (ordinal day), "m" (month), or "y" (year)
+* ``<break time="">`` - Pause for given amount of time
+    * time - seconds ("123s") or milliseconds ("123ms")
+* ``<sub alias="">`` - substitute ``alias`` for inner text
+* ``<phoneme ph="...">`` - supply phonemes for inner text
+    * ``ph`` - phonemes for each word of inner text, separated by whitespace
+    * ``alphabet`` - if "ipa", phonemes are intelligently split ("aːˈb" -> "aː", "ˈb")
+
 
 .. _database:
 

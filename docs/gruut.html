@@ -48,10 +48,22 @@
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">BreakNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">implicit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.BreakNode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gruut.const.Node" title="gruut.const.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.const.Node</span></code></a></p>
 <p>Represents a user-specified break</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.const.BreakNode.get_milliseconds">
+<span class="sig-name descname"><span class="pre">get_milliseconds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.BreakNode.get_milliseconds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get number of milliseconds from the time string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.BreakNode.time">
 <span class="sig-name descname"><span class="pre">time</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.BreakNode.time" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Length of break in seconds (123s) or milliseconds (123ms)</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -110,15 +122,15 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.GetPartsOfSpeech">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GetPartsOfSpeech</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.GetPartsOfSpeech" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GetPartsOfSpeech</span></span><a class="headerlink" href="#gruut.const.GetPartsOfSpeech" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Get part of speech tags for words</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.GraphType">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GraphType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.GraphType" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GraphType</span></span><a class="headerlink" href="#gruut.const.GraphType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Type wrapper for networkx graph</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="gruut.const.GraphType.add_edge">
@@ -198,8 +210,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.GuessPhonemes">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GuessPhonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.GuessPhonemes" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">GuessPhonemes</span></span><a class="headerlink" href="#gruut.const.GuessPhonemes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Guess phonemes for word/role</p>
 </dd></dl>
 
@@ -242,6 +254,12 @@
 <dt class="sig sig-object py" id="gruut.const.InterpretAs.SPELL_OUT">
 <span class="sig-name descname"><span class="pre">SPELL_OUT</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'spell-out'</span></em><a class="headerlink" href="#gruut.const.InterpretAs.SPELL_OUT" title="Permalink to this definition">¶</a></dt>
 <dd><p>Word should be spelled out (abc = a b c)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.InterpretAs.TIME">
+<span class="sig-name descname"><span class="pre">TIME</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'time'</span></em><a class="headerlink" href="#gruut.const.InterpretAs.TIME" title="Permalink to this definition">¶</a></dt>
+<dd><p>Word should be interpreted as a time on the clock</p>
 </dd></dl>
 
 </dd></dl>
@@ -339,8 +357,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.LookupPhonemes">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">LookupPhonemes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.LookupPhonemes" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">LookupPhonemes</span></span><a class="headerlink" href="#gruut.const.LookupPhonemes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Look up phonemes for word/role in a lexicon</p>
 </dd></dl>
 
@@ -390,8 +408,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.PostProcessSentence">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">PostProcessSentence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.PostProcessSentence" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">PostProcessSentence</span></span><a class="headerlink" href="#gruut.const.PostProcessSentence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Post-process each sentence node after tokenization/phonemization</p>
 </dd></dl>
 
@@ -414,38 +432,68 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.Sentence">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Sentence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">idx</span></em>, <em class="sig-param"><span class="pre">text</span></em>, <em class="sig-param"><span class="pre">text_with_ws</span></em>, <em class="sig-param"><span class="pre">lang=''</span></em>, <em class="sig-param"><span class="pre">voice=''</span></em>, <em class="sig-param"><span class="pre">words=&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Sentence" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Sentence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">idx</span></em>, <em class="sig-param"><span class="pre">text</span></em>, <em class="sig-param"><span class="pre">text_with_ws</span></em>, <em class="sig-param"><span class="pre">text_spoken</span></em>, <em class="sig-param"><span class="pre">par_idx=0</span></em>, <em class="sig-param"><span class="pre">lang=''</span></em>, <em class="sig-param"><span class="pre">voice=''</span></em>, <em class="sig-param"><span class="pre">words=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">pause_before_ms=0</span></em>, <em class="sig-param"><span class="pre">pause_after_ms=0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Sentence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Processed sentence from a document</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.idx">
 <span class="sig-name descname"><span class="pre">idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Sentence.idx" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Zero-based index of sentence in paragraph</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.lang">
 <span class="sig-name descname"><span class="pre">lang</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Sentence.lang" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Language code</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Sentence.par_idx">
+<span class="sig-name descname"><span class="pre">par_idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Sentence.par_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-based index of paragraph in document</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Sentence.pause_after_ms">
+<span class="sig-name descname"><span class="pre">pause_after_ms</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Sentence.pause_after_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Milliseconds to pause after this sentence</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Sentence.pause_before_ms">
+<span class="sig-name descname"><span class="pre">pause_before_ms</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Sentence.pause_before_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Milliseconds to pause before this sentence</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.text">
 <span class="sig-name descname"><span class="pre">text</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><a class="headerlink" href="#gruut.const.Sentence.text" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Text with normalized whitespace</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Sentence.text_spoken">
+<span class="sig-name descname"><span class="pre">text_spoken</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><a class="headerlink" href="#gruut.const.Sentence.text_spoken" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text with only spoken words and normalized whitespace</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.text_with_ws">
 <span class="sig-name descname"><span class="pre">text_with_ws</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><a class="headerlink" href="#gruut.const.Sentence.text_with_ws" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Text with original whitespace</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.voice">
 <span class="sig-name descname"><span class="pre">voice</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Sentence.voice" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Voice (from SSML)</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Sentence.words">
-<span class="sig-name descname"><span class="pre">words</span></span><em class="property"><span class="pre">:</span> <span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Word" title="gruut.const.Word"><span class="pre">gruut.const.Word</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#gruut.const.Sentence.words" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">words</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Word" title="gruut.const.Word"><span class="pre">gruut.const.Word</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#gruut.const.Sentence.words" title="Permalink to this definition">¶</a></dt>
+<dd><p>Words in the sentence</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -475,7 +523,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.TextProcessorSettings">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">TextProcessorSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">lang</span></em>, <em class="sig-param"><span class="pre">split_words=&lt;function</span> <span class="pre">default_split_words&gt;</span></em>, <em class="sig-param"><span class="pre">join_str='</span> <span class="pre">'</span></em>, <em class="sig-param"><span class="pre">keep_whitespace=True</span></em>, <em class="sig-param"><span class="pre">is_non_word=None</span></em>, <em class="sig-param"><span class="pre">get_whitespace=&lt;function</span> <span class="pre">default_get_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">normalize_whitespace=&lt;function</span> <span class="pre">default_normalize_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">begin_punctuations=None</span></em>, <em class="sig-param"><span class="pre">begin_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">replacements=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">abbreviations=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">spell_out_words=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">minor_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">minor_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">word_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">word_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_number=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">babel_locale=None</span></em>, <em class="sig-param"><span class="pre">num2words_lang=None</span></em>, <em class="sig-param"><span class="pre">default_currency='USD'</span></em>, <em class="sig-param"><span class="pre">currencies=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">currency_symbols=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">is_maybe_currency=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">dateparser_lang=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_date=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">default_date_format=InterpretAsFormat.DATE_MDY_ORDINAL</span></em>, <em class="sig-param"><span class="pre">get_parts_of_speech=None</span></em>, <em class="sig-param"><span class="pre">is_initialism=None</span></em>, <em class="sig-param"><span class="pre">split_initialism=None</span></em>, <em class="sig-param"><span class="pre">lookup_phonemes=None</span></em>, <em class="sig-param"><span class="pre">guess_phonemes=None</span></em>, <em class="sig-param"><span class="pre">pre_process_text=None</span></em>, <em class="sig-param"><span class="pre">post_process_sentence=None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.TextProcessorSettings" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">TextProcessorSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">lang</span></em>, <em class="sig-param"><span class="pre">split_words=&lt;function</span> <span class="pre">default_split_words&gt;</span></em>, <em class="sig-param"><span class="pre">join_str='</span> <span class="pre">'</span></em>, <em class="sig-param"><span class="pre">keep_whitespace=True</span></em>, <em class="sig-param"><span class="pre">is_non_word=None</span></em>, <em class="sig-param"><span class="pre">get_whitespace=&lt;function</span> <span class="pre">default_get_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">normalize_whitespace=&lt;function</span> <span class="pre">default_normalize_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">begin_punctuations=None</span></em>, <em class="sig-param"><span class="pre">begin_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">replacements=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">abbreviations=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">spell_out_words=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">minor_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">minor_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">word_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">word_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_number=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">get_ordinal=None</span></em>, <em class="sig-param"><span class="pre">babel_locale=None</span></em>, <em class="sig-param"><span class="pre">num2words_lang=None</span></em>, <em class="sig-param"><span class="pre">default_currency='USD'</span></em>, <em class="sig-param"><span class="pre">currencies=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">currency_symbols=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">is_maybe_currency=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">dateparser_lang=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_date=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">default_date_format=InterpretAsFormat.DATE_MDY_ORDINAL</span></em>, <em class="sig-param"><span class="pre">is_maybe_time=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">parse_time=None</span></em>, <em class="sig-param"><span class="pre">verbalize_time=None</span></em>, <em class="sig-param"><span class="pre">get_parts_of_speech=None</span></em>, <em class="sig-param"><span class="pre">is_initialism=None</span></em>, <em class="sig-param"><span class="pre">split_initialism=None</span></em>, <em class="sig-param"><span class="pre">lookup_phonemes=None</span></em>, <em class="sig-param"><span class="pre">guess_phonemes=None</span></em>, <em class="sig-param"><span class="pre">pre_process_text=None</span></em>, <em class="sig-param"><span class="pre">post_process_sentence=None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.TextProcessorSettings" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Language specific settings for text processing</p>
 <dl class="py attribute">
@@ -545,6 +593,12 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.get_ordinal">
+<span class="sig-name descname"><span class="pre">get_ordinal</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.get_ordinal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns integer value of an ordinal string (e.g., 1st -&gt; 1) or None if not an ordinal</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.get_parts_of_speech">
 <span class="sig-name descname"><span class="pre">get_parts_of_speech</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.GetPartsOfSpeech" title="gruut.const.GetPartsOfSpeech"><span class="pre">gruut.const.GetPartsOfSpeech</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.get_parts_of_speech" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional function to get part of speech for a word</p>
@@ -599,6 +653,17 @@
 <dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.is_maybe_number">
 <span class="sig-name descname"><span class="pre">is_maybe_number</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.TextProcessorSettings.is_maybe_number" title="Permalink to this definition">¶</a></dt>
 <dd><p>True if a word may be a number (parsing will be attempted)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.is_maybe_time">
+<span class="sig-name descname"><span class="pre">is_maybe_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.TextProcessorSettings.is_maybe_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if a word may be a clock time (parsing will be attempted)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
@@ -678,6 +743,12 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.parse_time">
+<span class="sig-name descname"><span class="pre">parse_time</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><span class="pre">gruut.const.Time</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.parse_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse word text into a Time object or None</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.post_process_sentence">
 <span class="sig-name descname"><span class="pre">post_process_sentence</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.PostProcessSentence" title="gruut.const.PostProcessSentence"><span class="pre">gruut.const.PostProcessSentence</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.post_process_sentence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional function to post-process each sentence in the graph before post_process_graph</p>
@@ -719,6 +790,12 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.verbalize_time">
+<span class="sig-name descname"><span class="pre">verbalize_time</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><span class="pre">gruut.const.Time</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.verbalize_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Time to words</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.TextProcessorSettings.word_breaks">
 <span class="sig-name descname"><span class="pre">word_breaks</span></span><em class="property"><span class="pre">:</span> <span class="pre">Set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#gruut.const.TextProcessorSettings.word_breaks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -732,14 +809,37 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="gruut.const.Time">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minutes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parsed time from text</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Time.hours">
+<span class="sig-name descname"><span class="pre">hours</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Time.hours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Time.minutes">
+<span class="sig-name descname"><span class="pre">minutes</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Time.minutes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Time.period">
+<span class="sig-name descname"><span class="pre">period</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Time.period" title="Permalink to this definition">¶</a></dt>
+<dd><p>A.M. or P.M.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.Word">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Word</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_major_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_minor_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_punctuation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_spoken</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Word" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">Word</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leading_ws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trailing_ws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sent_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">par_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_major_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_minor_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_punctuation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_break</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_spoken</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause_before_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause_after_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.Word" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Processed word from a Sentence</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.idx">
 <span class="sig-name descname"><span class="pre">idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Word.idx" title="Permalink to this definition">¶</a></dt>
-<dd><p>Zero-based index of word</p>
+<dd><p>Zero-based index of word in sentence</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -779,6 +879,30 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.leading_ws">
+<span class="sig-name descname"><span class="pre">leading_ws</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Word.leading_ws" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whitespace before text</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.par_idx">
+<span class="sig-name descname"><span class="pre">par_idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Word.par_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-based index of paragraph in document</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.pause_after_ms">
+<span class="sig-name descname"><span class="pre">pause_after_ms</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Word.pause_after_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Milliseconds to pause after this word</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.pause_before_ms">
+<span class="sig-name descname"><span class="pre">pause_before_ms</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Word.pause_before_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Milliseconds to pause before this word</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.phonemes">
 <span class="sig-name descname"><span class="pre">phonemes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.Word.phonemes" title="Permalink to this definition">¶</a></dt>
 <dd><p>List of phonemes (None if not set)</p>
@@ -792,8 +916,8 @@
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.sent_idx">
-<span class="sig-name descname"><span class="pre">sent_idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#gruut.const.Word.sent_idx" title="Permalink to this definition">¶</a></dt>
-<dd><p>Zero-based index of sentence</p>
+<span class="sig-name descname"><span class="pre">sent_idx</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#gruut.const.Word.sent_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-based index of sentence in paragraph</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -809,6 +933,12 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.Word.trailing_ws">
+<span class="sig-name descname"><span class="pre">trailing_ws</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Word.trailing_ws" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whitespace after text</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.Word.voice">
 <span class="sig-name descname"><span class="pre">voice</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.Word.voice" title="Permalink to this definition">¶</a></dt>
 <dd><p>Voice (from SSML)</p>
@@ -818,7 +948,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.const.WordNode">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">WordNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">implicit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interpret_as</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">currency_symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">currency_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">WordRole.DEFAULT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.WordNode" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.const.</span></span><span class="sig-name descname"><span class="pre">WordNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">implicit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_with_ws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interpret_as</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">currency_symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">currency_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">WordRole.DEFAULT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_lexicon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.const.WordNode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gruut.const.Node" title="gruut.const.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">gruut.const.Node</span></code></a></p>
 <p>Represents a single word</p>
 <dl class="py attribute">
@@ -839,6 +969,11 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.WordNode.format">
 <span class="sig-name descname"><span class="pre">format</span></span><em class="property"><span class="pre">:</span> <span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#gruut.const.InterpretAsFormat" title="gruut.const.InterpretAsFormat"><span class="pre">gruut.const.InterpretAsFormat</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.WordNode.format" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.WordNode.in_lexicon">
+<span class="sig-name descname"><span class="pre">in_lexicon</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.WordNode.in_lexicon" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -874,6 +1009,11 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.const.WordNode.text_with_ws">
 <span class="sig-name descname"><span class="pre">text_with_ws</span></span><em class="property"><span class="pre">:</span> <span class="pre">str</span></em><em class="property"> <span class="pre">=</span> <span class="pre">''</span></em><a class="headerlink" href="#gruut.const.WordNode.text_with_ws" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.const.WordNode.time">
+<span class="sig-name descname"><span class="pre">time</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><span class="pre">gruut.const.Time</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.const.WordNode.time" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -1173,12 +1313,45 @@ to load.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="gruut.lang.en_get_ordinal">
+<span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">en_get_ordinal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.en_get_ordinal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse English ordinal string (e.g., 1st -&gt; 1)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="gruut.lang.en_is_initialism">
 <span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">en_is_initialism</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.en_is_initialism" title="Permalink to this definition">¶</a></dt>
 <dd><p>True if text is of the form TTS or T.T.S.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.lang.en_parse_time">
+<span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">en_parse_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.en_parse_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse English clock time (e.g. 4:01pm)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><code class="xref py py-class docutils literal notranslate"><span class="pre">Time</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gruut.lang.en_verbalize_time">
+<span class="sig-prename descclassname"><span class="pre">gruut.lang.</span></span><span class="sig-name descname"><span class="pre">en_verbalize_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.lang.en_verbalize_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert time into words</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1398,7 +1571,7 @@ to load.</p>
 <p>Class for getting phonetic pronunciations for tokenized text</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.phonemize.SqlitePhonemizer">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.phonemize.</span></span><span class="sig-name descname"><span class="pre">SqlitePhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lexicon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g2p_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_transform_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.phonemize.</span></span><span class="sig-name descname"><span class="pre">SqlitePhonemizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_conn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lexicon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g2p_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_transform_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">casing_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.phonemize.SqlitePhonemizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Phonemizes text using a lexicon from a sqlite database</p>
 <dl class="py attribute">
@@ -1556,7 +1729,7 @@ French model is trained with “upos” label.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gruut.text_processor.TextProcessor.process">
-<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_process</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_speak_tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.text_processor.TextProcessor.process" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_process</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_speak_tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_currency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_currency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.text_processor.TextProcessor.process" title="Permalink to this definition">¶</a></dt>
 <dd><p>Processes text or SSML</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1567,7 +1740,15 @@ French model is trained with “upos” label.</p>
 <li><p><strong>pos</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if part of speech tagging should be disabled</p></li>
 <li><p><strong>phonemize</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if phonemization should be disabled</p></li>
 <li><p><strong>post_process</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if sentence/graph post-processing should be disabled</p></li>
-<li><p><strong>add_speak_tag</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if &lt;speak&gt; should not automatically be added to input text</p></li>
+<li><p><strong>add_speak_tag</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if &lt;speak&gt; should be automatically added to input text when ssml=True</p></li>
+<li><p><strong>detect_numbers</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if numbers should be annotated in text (interpret_as=”number”)</p></li>
+<li><p><strong>detect_currency</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if currency amounts should be annotated in text (interpret_as=”currency”)</p></li>
+<li><p><strong>detect_dates</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if dates should be annotated in text (interpret_as=”date”)</p></li>
+<li><p><strong>detect_times</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if clock times should be annotated in text (interpret_as=”time”)</p></li>
+<li><p><strong>verbalize_numbers</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated numbers should be expanded into words</p></li>
+<li><p><strong>verbalize_currency</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated currency amounts should be expanded into words</p></li>
+<li><p><strong>verbalize_dates</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated dates should be expanded into words</p></li>
+<li><p><strong>verbalize_times</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated clock times should be expanded into words</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1701,6 +1882,17 @@ French model is trained with “upos” label.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="gruut.utils.remove_non_word_chars">
+<span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">remove_non_word_chars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.remove_non_word_chars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes non-word characters from a string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="gruut.utils.resolve_lang">
 <span class="sig-prename descclassname"><span class="pre">gruut.utils.</span></span><span class="sig-name descname"><span class="pre">resolve_lang</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.utils.resolve_lang" title="Permalink to this definition">¶</a></dt>
 <dd><p>Try to resolve language using aliases.</p>
@@ -1768,7 +1960,7 @@ French model is trained with “upos” label.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="gruut.TextProcessor.process">
-<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_process</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_speak_tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessor.process" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_process</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_speak_tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_currency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detect_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_currency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_dates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbalize_times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessor.process" title="Permalink to this definition">¶</a></dt>
 <dd><p>Processes text or SSML</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1779,7 +1971,15 @@ French model is trained with “upos” label.</p>
 <li><p><strong>pos</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if part of speech tagging should be disabled</p></li>
 <li><p><strong>phonemize</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if phonemization should be disabled</p></li>
 <li><p><strong>post_process</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if sentence/graph post-processing should be disabled</p></li>
-<li><p><strong>add_speak_tag</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – False if &lt;speak&gt; should not automatically be added to input text</p></li>
+<li><p><strong>add_speak_tag</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if &lt;speak&gt; should be automatically added to input text when ssml=True</p></li>
+<li><p><strong>detect_numbers</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if numbers should be annotated in text (interpret_as=”number”)</p></li>
+<li><p><strong>detect_currency</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if currency amounts should be annotated in text (interpret_as=”currency”)</p></li>
+<li><p><strong>detect_dates</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if dates should be annotated in text (interpret_as=”date”)</p></li>
+<li><p><strong>detect_times</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if clock times should be annotated in text (interpret_as=”time”)</p></li>
+<li><p><strong>verbalize_numbers</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated numbers should be expanded into words</p></li>
+<li><p><strong>verbalize_currency</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated currency amounts should be expanded into words</p></li>
+<li><p><strong>verbalize_dates</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated dates should be expanded into words</p></li>
+<li><p><strong>verbalize_times</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>) – True if annotated clock times should be expanded into words</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1817,7 +2017,7 @@ French model is trained with “upos” label.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gruut.TextProcessorSettings">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">TextProcessorSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">lang</span></em>, <em class="sig-param"><span class="pre">split_words=&lt;function</span> <span class="pre">default_split_words&gt;</span></em>, <em class="sig-param"><span class="pre">join_str='</span> <span class="pre">'</span></em>, <em class="sig-param"><span class="pre">keep_whitespace=True</span></em>, <em class="sig-param"><span class="pre">is_non_word=None</span></em>, <em class="sig-param"><span class="pre">get_whitespace=&lt;function</span> <span class="pre">default_get_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">normalize_whitespace=&lt;function</span> <span class="pre">default_normalize_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">begin_punctuations=None</span></em>, <em class="sig-param"><span class="pre">begin_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">replacements=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">abbreviations=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">spell_out_words=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">minor_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">minor_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">word_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">word_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_number=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">babel_locale=None</span></em>, <em class="sig-param"><span class="pre">num2words_lang=None</span></em>, <em class="sig-param"><span class="pre">default_currency='USD'</span></em>, <em class="sig-param"><span class="pre">currencies=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">currency_symbols=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">is_maybe_currency=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">dateparser_lang=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_date=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">default_date_format=InterpretAsFormat.DATE_MDY_ORDINAL</span></em>, <em class="sig-param"><span class="pre">get_parts_of_speech=None</span></em>, <em class="sig-param"><span class="pre">is_initialism=None</span></em>, <em class="sig-param"><span class="pre">split_initialism=None</span></em>, <em class="sig-param"><span class="pre">lookup_phonemes=None</span></em>, <em class="sig-param"><span class="pre">guess_phonemes=None</span></em>, <em class="sig-param"><span class="pre">pre_process_text=None</span></em>, <em class="sig-param"><span class="pre">post_process_sentence=None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessorSettings" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">TextProcessorSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">lang</span></em>, <em class="sig-param"><span class="pre">split_words=&lt;function</span> <span class="pre">default_split_words&gt;</span></em>, <em class="sig-param"><span class="pre">join_str='</span> <span class="pre">'</span></em>, <em class="sig-param"><span class="pre">keep_whitespace=True</span></em>, <em class="sig-param"><span class="pre">is_non_word=None</span></em>, <em class="sig-param"><span class="pre">get_whitespace=&lt;function</span> <span class="pre">default_get_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">normalize_whitespace=&lt;function</span> <span class="pre">default_normalize_whitespace&gt;</span></em>, <em class="sig-param"><span class="pre">begin_punctuations=None</span></em>, <em class="sig-param"><span class="pre">begin_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations=None</span></em>, <em class="sig-param"><span class="pre">end_punctuations_pattern=None</span></em>, <em class="sig-param"><span class="pre">replacements=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">abbreviations=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">spell_out_words=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">major_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">minor_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">minor_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">word_breaks=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">word_breaks_pattern=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_number=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">get_ordinal=None</span></em>, <em class="sig-param"><span class="pre">babel_locale=None</span></em>, <em class="sig-param"><span class="pre">num2words_lang=None</span></em>, <em class="sig-param"><span class="pre">default_currency='USD'</span></em>, <em class="sig-param"><span class="pre">currencies=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">currency_symbols=&lt;factory&gt;</span></em>, <em class="sig-param"><span class="pre">is_maybe_currency=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">dateparser_lang=None</span></em>, <em class="sig-param"><span class="pre">is_maybe_date=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">default_date_format=InterpretAsFormat.DATE_MDY_ORDINAL</span></em>, <em class="sig-param"><span class="pre">is_maybe_time=&lt;function</span> <span class="pre">has_digit&gt;</span></em>, <em class="sig-param"><span class="pre">parse_time=None</span></em>, <em class="sig-param"><span class="pre">verbalize_time=None</span></em>, <em class="sig-param"><span class="pre">get_parts_of_speech=None</span></em>, <em class="sig-param"><span class="pre">is_initialism=None</span></em>, <em class="sig-param"><span class="pre">split_initialism=None</span></em>, <em class="sig-param"><span class="pre">lookup_phonemes=None</span></em>, <em class="sig-param"><span class="pre">guess_phonemes=None</span></em>, <em class="sig-param"><span class="pre">pre_process_text=None</span></em>, <em class="sig-param"><span class="pre">post_process_sentence=None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessorSettings" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Language specific settings for text processing</p>
 <dl class="py attribute">
@@ -1887,6 +2087,12 @@ French model is trained with “upos” label.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.TextProcessorSettings.get_ordinal">
+<span class="sig-name descname"><span class="pre">get_ordinal</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.TextProcessorSettings.get_ordinal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns integer value of an ordinal string (e.g., 1st -&gt; 1) or None if not an ordinal</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.TextProcessorSettings.get_parts_of_speech">
 <span class="sig-name descname"><span class="pre">get_parts_of_speech</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.GetPartsOfSpeech" title="gruut.const.GetPartsOfSpeech"><span class="pre">gruut.const.GetPartsOfSpeech</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.TextProcessorSettings.get_parts_of_speech" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional function to get part of speech for a word</p>
@@ -1941,6 +2147,17 @@ French model is trained with “upos” label.</p>
 <dt class="sig sig-object py" id="gruut.TextProcessorSettings.is_maybe_number">
 <span class="sig-name descname"><span class="pre">is_maybe_number</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessorSettings.is_maybe_number" title="Permalink to this definition">¶</a></dt>
 <dd><p>True if a word may be a number (parsing will be attempted)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gruut.TextProcessorSettings.is_maybe_time">
+<span class="sig-name descname"><span class="pre">is_maybe_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gruut.TextProcessorSettings.is_maybe_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if a word may be a clock time (parsing will be attempted)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></p>
@@ -2020,6 +2237,12 @@ French model is trained with “upos” label.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.TextProcessorSettings.parse_time">
+<span class="sig-name descname"><span class="pre">parse_time</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><span class="pre">gruut.const.Time</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.TextProcessorSettings.parse_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse word text into a Time object or None</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.TextProcessorSettings.post_process_sentence">
 <span class="sig-name descname"><span class="pre">post_process_sentence</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.PostProcessSentence" title="gruut.const.PostProcessSentence"><span class="pre">gruut.const.PostProcessSentence</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.TextProcessorSettings.post_process_sentence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional function to post-process each sentence in the graph before post_process_graph</p>
@@ -2061,6 +2284,12 @@ French model is trained with “upos” label.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="gruut.TextProcessorSettings.verbalize_time">
+<span class="sig-name descname"><span class="pre">verbalize_time</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#gruut.const.Time" title="gruut.const.Time"><span class="pre">gruut.const.Time</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#gruut.TextProcessorSettings.verbalize_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Time to words</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="gruut.TextProcessorSettings.word_breaks">
 <span class="sig-name descname"><span class="pre">word_breaks</span></span><em class="property"><span class="pre">:</span> <span class="pre">Set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#gruut.TextProcessorSettings.word_breaks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -2097,7 +2326,7 @@ French model is trained with “upos” label.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="gruut.sentences">
-<span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">sentences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'en_US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">espeak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">punctuations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">process_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.sentences" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">gruut.</span></span><span class="sig-name descname"><span class="pre">sentences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'en_US'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">espeak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">major_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minor_breaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">punctuations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">explicit_lang</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">break_phonemes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">process_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gruut.sentences" title="Permalink to this definition">¶</a></dt>
 <dd><p>Process text and return sentences</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
