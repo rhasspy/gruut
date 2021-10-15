@@ -844,7 +844,7 @@ class DelayedSqlitePhonemizer:
     ) -> typing.Optional[PHONEMES_TYPE]:
         if self.phonemizer is None:
             _LOGGER.debug("Connecting to lexicon database at %s", self.db_path)
-            db_conn = sqlite3.connect(self.db_path)
+            db_conn = sqlite3.connect(str(self.db_path))
             self.phonemizer = SqlitePhonemizer(db_conn=db_conn, **self.phonemizer_args)
 
         assert self.phonemizer is not None
