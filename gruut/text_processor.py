@@ -361,6 +361,7 @@ class TextProcessor:
         verbalize_currency: bool = True,
         verbalize_dates: bool = True,
         verbalize_times: bool = True,
+        max_passes: int = 5,
     ) -> typing.Tuple[GraphType, Node]:
         """
         Processes text or SSML
@@ -743,76 +744,90 @@ class TextProcessor:
 
         assert root is not None
 
-        # Do replacements before minor/major breaks
-        pipeline_split(self._split_replacements, graph, root)
+        # Do multiple passes over the graph
+        num_passes_left = max_passes
+        while num_passes_left > 0:
+            was_changed = False
 
-        # Split punctuations 1/2 (quotes, etc.) before breaks
-        pipeline_split(self._split_punctuations, graph, root)
+            # Do replacements before minor/major breaks
+            if pipeline_split(self._split_replacements, graph, root):
+                was_changed = True
 
-        # Split on minor breaks (commas, etc.)
-        pipeline_split(self._split_minor_breaks, graph, root)
+            # Split punctuations (quotes, etc.) before breaks
+            if pipeline_split(self._split_punctuations, graph, root):
+                was_changed = True
 
-        # Expand abbrevations before major breaks
-        pipeline_split(self._split_abbreviations, graph, root)
+            # Split on minor breaks (commas, etc.)
+            if pipeline_split(self._split_minor_breaks, graph, root):
+                was_changed = True
 
-        # Break apart initialisms 1/2 (e.g., TTS or T.T.S.) before major breaks
-        pipeline_split(self._split_initialism, graph, root)
+            # Expand abbrevations before major breaks
+            if pipeline_split(self._split_abbreviations, graph, root):
+                was_changed = True
 
-        # Split on major breaks (periods, etc.)
-        pipeline_split(self._split_major_breaks, graph, root)
+            # Break apart initialisms (e.g., TTS or T.T.S.) before major breaks
+            if pipeline_split(self._split_initialism, graph, root):
+                was_changed = True
 
-        # Split punctuations 2/2 (quotes, etc.) after breaks
-        pipeline_split(self._split_punctuations, graph, root)
+            # Split on major breaks (periods, etc.)
+            if pipeline_split(self._split_major_breaks, graph, root):
+                was_changed = True
 
-        # Break apart initialisms 2/2 (e.g., TTS. or T.T.S..) after major breaks
-        pipeline_split(self._split_initialism, graph, root)
+            # Break apart sentences using BreakWordNodes
+            if self._break_sentences(graph, root):
+                was_changed = True
 
-        # Break apart sentences using BreakWordNodes
-        self._break_sentences(graph, root)
+            # spell-out (e.g., abc -> a b c) before number expansion
+            if pipeline_split(self._split_spell_out, graph, root):
+                was_changed = True
 
-        # spell-out (e.g., abc -> a b c) before number expansion
-        pipeline_split(self._split_spell_out, graph, root)
+            # Transform text into known classes
+            if detect_numbers:
+                if pipeline_transform(self._transform_number, graph, root):
+                    was_changed = True
 
-        # Transform text into known classes
-        if detect_numbers:
-            pipeline_transform(self._transform_number, graph, root)
+            if detect_currency:
+                if pipeline_transform(self._transform_currency, graph, root):
+                    was_changed = True
 
-        if detect_currency:
-            pipeline_transform(self._transform_currency, graph, root)
+            if detect_dates:
+                if pipeline_transform(self._transform_date, graph, root):
+                    was_changed = True
 
-        if detect_dates:
-            pipeline_transform(self._transform_date, graph, root)
+            if detect_times:
+                if pipeline_transform(self._transform_time, graph, root):
+                    was_changed = True
 
-        if detect_times:
-            pipeline_transform(self._transform_time, graph, root)
+            # Verbalize known classes
+            if verbalize_dates:
+                if pipeline_transform(self._verbalize_date, graph, root):
+                    was_changed = True
 
-        # Verbalize known classes
-        if verbalize_dates:
-            pipeline_transform(self._verbalize_date, graph, root)
+            if verbalize_times:
+                if pipeline_transform(self._verbalize_time, graph, root):
+                    was_changed = True
 
-        if verbalize_times:
-            pipeline_transform(self._verbalize_time, graph, root)
+            if verbalize_numbers:
+                if pipeline_transform(self._verbalize_number, graph, root):
+                    was_changed = True
 
-        if verbalize_numbers:
-            pipeline_transform(self._verbalize_number, graph, root)
+            if verbalize_currency:
+                if pipeline_transform(self._verbalize_currency, graph, root):
+                    was_changed = True
 
-        if verbalize_currency:
-            pipeline_transform(self._verbalize_currency, graph, root)
+            # Break apart words
+            if pipeline_split(self._break_words, graph, root):
+                was_changed = True
 
-        if (
-            verbalize_numbers
-            or verbalize_currency
-            or verbalize_dates
-            or verbalize_times
-        ):
-            # Final split on minor breaks since numbers/dates can have commas, etc.
-            pipeline_split(self._split_minor_breaks, graph, root)
+            # Ignore non-words
+            if pipeline_split(self._split_ignore_non_words, graph, root):
+                was_changed = True
 
-        # Break apart words
-        pipeline_split(self._break_words, graph, root)
+            if not was_changed:
+                # No changes, so we can stop
+                break
 
-        # Ignore non-words
-        pipeline_split(self._split_ignore_non_words, graph, root)
+            num_passes_left -= 1
 
         # Gather words from leaves of the tree, group by sentence
         def process_sentence(words: typing.List[WordNode]):
@@ -892,8 +907,9 @@ class TextProcessor:
     # Pipeline (custom)
     # -------------------------------------------------------------------------
 
-    def _break_sentences(self, graph: GraphType, root: Node):
+    def _break_sentences(self, graph: GraphType, root: Node) -> bool:
         """Break sentences apart at BreakWordNode(break_type="major") nodes."""
+        was_changed = False
 
         # This involves:
         # 1. Identifying where in the edge list of sentence the break occurs
@@ -964,6 +980,10 @@ class TextProcessor:
             graph.remove_edges_from(edges_to_move)
             graph.add_edges_from([(new_s_node.node, v) for (u, v) in edges_to_move])
 
+            was_changed = True
+
+        return was_changed
+
     def _break_words(self, graph: GraphType, node: Node):
         """Break apart words according to work breaks pattern"""
         if not isinstance(node, WordNode):
@@ -1009,6 +1029,7 @@ class TextProcessor:
                 "lang": word.lang,
                 "voice": word.voice,
                 "in_lexicon": self._is_word_in_lexicon(part_text_norm, settings),
+                "is_from_broken_word": True,
             }
 
     def _split_punctuations(self, graph: GraphType, node: Node):
@@ -1440,8 +1461,8 @@ class TextProcessor:
 
         word = typing.cast(WordNode, node)
 
-        if word.interpret_as or word.in_lexicon:
-            # Don't interpret words that are spoken for
+        if word.interpret_as or word.in_lexicon or (len(word.text) < 2):
+            # Don't interpret words that are spoken for or are too short
             return
 
         settings = self.get_settings(word.lang)
@@ -1460,12 +1481,6 @@ class TextProcessor:
 
         # Split according to language-specific function
         for part_idx, part_text in enumerate(parts):
-            if part_idx == 0:
-                part_text = first_ws + part_text
-
-            if part_idx == last_part_idx:
-                part_text += last_ws
-
             part_text_norm = settings.normalize_whitespace(part_text)
             if not part_text_norm:
                 continue
@@ -1509,13 +1524,15 @@ class TextProcessor:
     # Pipeline Transformations
     # -------------------------------------------------------------------------
 
-    def _transform_number(self, graph: GraphType, node: Node):
+    def _transform_number(self, graph: GraphType, node: Node) -> bool:
         if not isinstance(node, WordNode):
-            return
+            return False
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as and (word.interpret_as != InterpretAs.NUMBER):
-            return
+        if (not word.is_maybe_number) or (
+            word.interpret_as and (word.interpret_as != InterpretAs.NUMBER)
+        ):
+            return False
 
         settings = self.get_settings(word.lang)
         assert settings.babel_locale
@@ -1527,7 +1544,7 @@ class TextProcessor:
                 word.interpret_as = InterpretAs.NUMBER
                 word.format = InterpretAsFormat.NUMBER_ORDINAL
                 word.number = Decimal(ordinal_num)
-                return
+                return False
 
         try:
             # Try to parse as a number
@@ -1547,25 +1564,29 @@ class TextProcessor:
                 # "two thousand and twenty".
                 word.format = InterpretAsFormat.NUMBER_YEAR
         except ValueError:
-            pass
+            # Probably not a number
+            word.is_maybe_number = False
 
-    def _transform_currency(
-        self, graph: GraphType, node: Node,
-    ):
+        return True
+
+    def _transform_currency(self, graph: GraphType, node: Node,) -> bool:
         if not isinstance(node, WordNode):
-            return
+            return False
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as and (word.interpret_as != InterpretAs.CURRENCY):
-            return
+        if (not word.is_maybe_currency) or (
+            word.interpret_as and (word.interpret_as != InterpretAs.CURRENCY)
+        ):
+            return False
 
         settings = self.get_settings(word.lang)
 
-        if (settings.is_maybe_currency is not None) and not settings.is_maybe_currency(
-            word.text
+        if (settings.is_maybe_currency is not None) and (
+            not settings.is_maybe_currency(word.text)
         ):
             # Probably not currency
-            return
+            word.is_maybe_currency = False
+            return False
 
         assert settings.babel_locale
 
@@ -1603,13 +1624,17 @@ class TextProcessor:
                 except ValueError:
                     pass
 
+        return True
+
     def _transform_date(self, graph: GraphType, node: Node):
         if not isinstance(node, WordNode):
-            return
+            return False
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as and (word.interpret_as != InterpretAs.DATE):
-            return
+        if (not word.is_maybe_date) or (
+            word.interpret_as and (word.interpret_as != InterpretAs.DATE)
+        ):
+            return False
 
         settings = self.get_settings(word.lang)
 
@@ -1617,7 +1642,8 @@ class TextProcessor:
             word.text
         ):
             # Probably not a date
-            return
+            word.is_maybe_date = False
+            return False
 
         assert settings.dateparser_lang
 
@@ -1637,30 +1663,37 @@ class TextProcessor:
             if date is not None:
                 word.date = date
 
+        return True
+
     def _transform_time(self, graph: GraphType, node: Node):
         if not isinstance(node, WordNode):
-            return
+            return False
 
         word = typing.cast(WordNode, node)
-        if word.interpret_as and (word.interpret_as != InterpretAs.TIME):
-            return
+        if (not word.is_maybe_time) or (
+            word.interpret_as and (word.interpret_as != InterpretAs.TIME)
+        ):
+            return False
 
         settings = self.get_settings(word.lang)
 
         if settings.parse_time is None:
             # Can't parse a time anyways
-            return
+            return False
 
         if (settings.is_maybe_time is not None) and not settings.is_maybe_time(
             word.text
         ):
             # Probably not a time
-            return
+            word.is_maybe_time = False
+            return False
 
         time = settings.parse_time(word.text)
         if time is not None:
             word.interpret_as = InterpretAs.TIME
             word.time = time
+
+        return True
 
     def _is_word_in_lexicon(
         self, word: str, settings: TextProcessorSettings

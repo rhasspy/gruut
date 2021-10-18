@@ -283,20 +283,26 @@ def leaves(graph: GraphType, node: Node):
         yield graph.nodes[dfs_node][DATA_PROP]
 
 
-def pipeline_split(
-    split_func, graph: GraphType, parent_node: Node,
-):
+def pipeline_split(split_func, graph: GraphType, parent_node: Node,) -> bool:
     """Splits leaf nodes of tree into zero or more sub-nodes"""
+    was_changed = False
+
     for leaf_node in list(leaves(graph, parent_node)):
         for node_class, node_kwargs in split_func(graph, leaf_node):
             new_node = node_class(node=len(graph), **node_kwargs)
             graph.add_node(new_node.node, data=new_node)
             graph.add_edge(leaf_node.node, new_node.node)
+            was_changed = True
+
+    return was_changed
 
 
-def pipeline_transform(
-    transform_func, graph: GraphType, parent_node: Node,
-):
+def pipeline_transform(transform_func, graph: GraphType, parent_node: Node,) -> bool:
     """Transforms leaves of tree with a custom function"""
+    was_changed = False
+
     for leaf_node in list(leaves(graph, parent_node)):
-        transform_func(graph, leaf_node)
+        if transform_func(graph, leaf_node):
+            was_changed = True
+
+    return was_changed

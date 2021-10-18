@@ -264,6 +264,14 @@ class WordNode(Node):
 
     in_lexicon: typing.Optional[bool] = None
 
+    # Assume yes until proven otherwise
+    is_maybe_number: bool = True
+    is_maybe_date: bool = True
+    is_maybe_currency: bool = True
+    is_maybe_time: bool = True
+
+    is_from_broken_word: bool = False
+
 
 @dataclass
 class BreakWordNode(Node):

@@ -941,6 +941,25 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_multiple_passes(self):
+        """Test sentence that needs multiple passes to fully resolve"""
+        processor = TextProcessor()
+        graph, root = processor("ABCD-10")
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # 1) ABCD-10 -> ABCD 10
+        # 2) ABCD 10 -> A B C D ten
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, text="A", text_with_ws="A ",),
+                Word(idx=1, text="B", text_with_ws="B ",),
+                Word(idx=2, text="C", text_with_ws="C ",),
+                Word(idx=3, text="D", text_with_ws="D ",),
+                Word(idx=4, text="ten", text_with_ws="ten",),
+            ],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""
