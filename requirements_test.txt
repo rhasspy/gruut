@@ -1,0 +1,4 @@
+codernitydb3~=0.6.0
+hazm~=0.7.0
+mishkal~=0.4.0
+pytest
