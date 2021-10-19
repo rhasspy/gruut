@@ -315,6 +315,8 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
         * date - string with "d" (cardinal day), "o" (ordinal day), "m" (month), or "y" (year)
 * `<break time="">` - Pause for given amount of time
     * time - seconds ("123s") or milliseconds ("123ms")
+* `<mark name="">` - User-defined mark (`marks_before` and `marks_after` attributes of words/sentences)
+    * name - name of mark
 * `<sub alias="">` - substitute `alias` for inner text
 * `<phoneme ph="...">` - supply phonemes for inner text
     * `ph` - phonemes for each word of inner text, separated by whitespace

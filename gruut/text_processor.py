@@ -26,6 +26,7 @@ from gruut.const import (
     IgnoreNode,
     InterpretAs,
     InterpretAsFormat,
+    MarkNode,
     Node,
     ParagraphNode,
     PunctuationWordNode,
@@ -116,7 +117,10 @@ class TextProcessor:
         sent_idx: int = 0
 
         sent_pause_before_ms: int = 0
+        sent_marks_before: typing.List[str] = []
+
         word_pause_before_ms: int = 0
+        word_marks_before: typing.List[str] = []
 
         sentences: typing.List[Sentence] = []
 
@@ -137,10 +141,12 @@ class TextProcessor:
                         voice=node.voice,
                         lang=get_lang(node.lang),
                         pause_before_ms=sent_pause_before_ms,
+                        marks_before=(sent_marks_before if sent_marks_before else None),
                     )
                 )
 
                 sent_pause_before_ms = 0
+                sent_marks_before = []
                 sent_idx += 1
             elif graph.out_degree(dfs_node) == 0:
                 if isinstance(node, WordNode):
@@ -160,10 +166,14 @@ class TextProcessor:
                             lang=get_lang(node.lang),
                             voice=node.voice,
                             pause_before_ms=word_pause_before_ms,
+                            marks_before=(
+                                word_marks_before if word_marks_before else None
+                            ),
                         )
                     )
 
                     word_pause_before_ms = 0
+                    word_marks_before = []
                 elif isinstance(node, BreakWordNode):
                     assert sentences, "No sentence"
                     sentence = sentences[-1]
@@ -193,10 +203,14 @@ class TextProcessor:
                                 lang=get_lang(node.lang),
                                 voice=node.voice,
                                 pause_before_ms=word_pause_before_ms,
+                                marks_before=(
+                                    word_marks_before if word_marks_before else None
+                                ),
                             )
                         )
 
                         word_pause_before_ms = 0
+                        word_marks_before = []
                 elif punctuations and isinstance(node, PunctuationWordNode):
                     assert sentences, "No sentence"
                     sentence = sentences[-1]
@@ -212,11 +226,16 @@ class TextProcessor:
                             is_punctuation=True,
                             lang=get_lang(punct_word_node.lang),
                             pause_before_ms=word_pause_before_ms,
+                            marks_before=(
+                                word_marks_before if word_marks_before else None
+                            ),
                         )
                     )
 
                     word_pause_before_ms = 0
+                    word_marks_before = []
                 elif isinstance(node, BreakNode):
+                    # Pause for some time
                     break_node = typing.cast(BreakNode, node)
                     break_parent = self._find_parent(
                         graph, node, (SentenceNode, ParagraphNode, SpeakNode)
@@ -256,16 +275,84 @@ class TextProcessor:
                             else:
                                 # Before any paragraphs or sentences
                                 sent_pause_before_ms += break_ms
+                elif isinstance(node, MarkNode):
+                    # User-defined mark
+                    mark_node = typing.cast(MarkNode, node)
+                    mark_name = mark_node.name
+                    mark_parent = self._find_parent(
+                        graph, node, (SentenceNode, ParagraphNode, SpeakNode)
+                    )
+
+                    if mark_parent is not None:
+                        mark_parent_edges = list(graph.out_edges(mark_parent.node))
+                        mark_edge_idx = mark_parent_edges.index(
+                            (mark_parent.node, mark_node.node)
+                        )
+                        is_last_edge = mark_edge_idx == (len(mark_parent_edges) - 1)
+
+                        if isinstance(mark_parent, SentenceNode):
+                            assert sentences
+                            sentence = sentences[-1]
+                            if is_last_edge:
+                                # End of sentence, add mark after
+                                if sentence.marks_after is None:
+                                    sentence.marks_after = []
+
+                                sentence.marks_after.append(mark_name)
+                            elif sentence.words:
+                                # Between words, add pause after previous word
+                                last_word = sentence.words[-1]
+                                if last_word.marks_after is None:
+                                    last_word.marks_after = []
+
+                                last_word.marks_after.append(mark_name)
+                            else:
+                                # Before first word, set pause for first word
+                                word_marks_before.append(mark_name)
+                        elif isinstance(mark_parent, ParagraphNode):
+                            if sentences and (sentences[-1].par_idx == par_idx):
+                                # Between sentences in the same paragraph, add pause after previous sentence
+                                last_sentence = sentences[-1]
+                                if last_sentence.marks_after is None:
+                                    last_sentence.marks_after = []
+
+                                last_sentence.marks_after.append(mark_name)
+                            else:
+                                # Add pause to beginning of next sentence
+                                sent_marks_before.append(mark_name)
+                        elif isinstance(mark_parent, SpeakNode):
+                            if sentences:
+                                # After paragraphs or sentences
+                                last_sentence = sentences[-1]
+                                if last_sentence.marks_after is None:
+                                    last_sentence.marks_after = []
+
+                                last_sentence.marks_after.append(mark_name)
+                            else:
+                                # Before any paragraphs or sentences
+                                sent_marks_before.append(mark_name)
 
         # Post-process sentences to fix up text, voice, etc.
         for sentence in sentences:
             settings = self.get_settings(sentence.lang)
             if settings.keep_whitespace:
+                # Whitespace is preseved
                 sentence.text_with_ws = "".join(w.text_with_ws for w in sentence.words)
             else:
-                sentence.text_with_ws = settings.join_str.join(
-                    w.text_with_ws for w in sentence.words
-                )
+                # Make a best guess.
+                # The join string is used before spoken words (except the first word).
+                # This should have the effect of keeping punctuation next to words.
+                word_texts: typing.List[str] = []
+                for word in sentence.words:
+                    if word.is_spoken:
+                        if word_texts:
+                            word_texts.append(f"{settings.join_str}{word.text}")
+                        else:
+                            word_texts.append(word.text)
+                    else:
+                        word_texts.append(word.text)
+
+                sentence.text_with_ws = "".join(word_texts)
 
             sentence.text = settings.normalize_whitespace(sentence.text_with_ws)
             sentence.text_spoken = settings.join_str.join(
@@ -701,6 +788,17 @@ class TextProcessor:
                     )
                     graph.add_node(break_node.node, data=break_node)
                     graph.add_edge(last_target.node, break_node.node)
+                elif elem_tag == "mark":
+                    # Mark
+                    last_target = last_sentence or last_paragraph or last_speak
+                    assert last_target is not None
+                    mark_node = MarkNode(
+                        node=len(graph),
+                        element=elem,
+                        name=attrib_no_namespace(elem, "name", ""),
+                    )
+                    graph.add_node(mark_node.node, data=mark_node)
+                    graph.add_edge(last_target.node, mark_node.node)
                 elif elem_tag == "say-as":
                     say_as_stack.append(
                         (

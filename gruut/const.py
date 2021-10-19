@@ -244,6 +244,14 @@ class BreakNode(Node):
 
 
 @dataclass
+class MarkNode(Node):
+    """Represents a user-specified mark"""
+
+    name: str = ""
+    """Name of the mark"""
+
+
+@dataclass
 class WordNode(Node):
     """Represents a single word"""
 
@@ -372,6 +380,12 @@ class Word:
     pause_after_ms: int = 0
     """Milliseconds to pause after this word"""
 
+    marks_before: typing.Optional[typing.List[str]] = None
+    """User-defined marks that occur before this word"""
+
+    marks_after: typing.Optional[typing.List[str]] = None
+    """User-defined marks that occur after this word"""
+
     def __post_init__(self):
         if self.is_break is None:
             self.is_break = self.is_major_break or self.is_minor_break
@@ -415,6 +429,12 @@ class Sentence:
 
     pause_after_ms: int = 0
     """Milliseconds to pause after this sentence"""
+
+    marks_before: typing.Optional[typing.List[str]] = None
+    """User-defined marks that occur before this sentence"""
+
+    marks_after: typing.Optional[typing.List[str]] = None
+    """User-defined marks that occur after this sentence"""
 
     def __iter__(self):
         """Iterates over words"""

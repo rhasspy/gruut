@@ -884,7 +884,7 @@ class TextProcessorTestCase(unittest.TestCase):
         )
         sentences = list(processor.sentences(graph, root, **WORDS_KWARGS))
 
-        # Single word is replaced by multiple words
+        # Break times are attached to appropriate elements
         self.assertEqual(
             sentences,
             [
@@ -903,6 +903,54 @@ class TextProcessorTestCase(unittest.TestCase):
                             text_with_ws="Break",
                             pause_before_ms=(3 * 1000),
                             pause_after_ms=(4 * 1000),
+                        ),
+                        Word(idx=1, sent_idx=0, text="here", text_with_ws="here",),
+                    ],
+                ),
+            ],
+        )
+
+    def test_mark(self):
+        """Test SSML mark tag"""
+        processor = TextProcessor(default_lang="en_US", keep_whitespace=False)
+        graph, root = processor(
+            """
+        <speak>
+          <mark name="a"/>
+          <p>
+            <mark name="b" />
+            <s>
+              <mark name="c" />
+              Mark <mark name="d" /> here
+            </s>
+            <mark name="e" />
+          </p>
+          <mark name="f" />
+        </speak>
+        """,
+            ssml=True,
+        )
+        sentences = list(processor.sentences(graph, root, **WORDS_KWARGS))
+
+        # Mark names are attached to appropriate elements
+        self.assertEqual(
+            sentences,
+            [
+                Sentence(
+                    idx=0,
+                    text="Mark here",
+                    text_with_ws="Mark here",
+                    text_spoken="Mark here",
+                    marks_before=["a", "b"],
+                    marks_after=["e", "f"],
+                    words=[
+                        Word(
+                            idx=0,
+                            sent_idx=0,
+                            text="Mark",
+                            text_with_ws="Mark",
+                            marks_before=["c"],
+                            marks_after=["d"],
                         ),
                         Word(idx=1, sent_idx=0, text="here", text_with_ws="here",),
                     ],
