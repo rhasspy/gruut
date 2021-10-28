@@ -394,14 +394,36 @@ If you'd like to add a new language to gruut, please follow these steps:
 #. Create a grapheme to phoneme (g2p) model by following the instructions in :ref:`g2p`
     * Put in data/<language>/g2p/model.crf
 #. Edit ``lang.py`` and:
-    * Add your language to ``LANG_ALIASES``
-    * Add a tokenizer and phonemizer sub-class for your language
-    * Return your tokenizer/phonemizer in ``get_tokenizer`` and ``get_phonemizer`` respectively
+    * Add your language to ``get_settings`` and create a function to return appropriate :py:class:`~gruut.const.TextProcessorSettings`
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+
+How It Works
+---------------------
+
+gruut builds a `tree <https://en.wikipedia.org/wiki/Tree_(graph_theory)>`_ from the input text, and makes many passes over the leaf nodes. The example below shows a tree of the sentence "Test 25.", which starts as the root of the tree.
+
+.. image:: graph_refinement.png
+
+In the first pass, "Test 25." is split by whitespace into "Test" and "25.". Next, "25." is split into "25" and ".", which are then tagged as a number and break respectively. The number 25 is verbalized as "twenty-five" (using ``num2words``). Finally, "twenty-five" is broken apart into "twenty" and "five". The leaves of the final tree are:
+
+1. Test
+2. twenty
+3. five
+4. "." (break)
+
+
+Most of this process can be configured through :py:class:`~gruut.const.TextProcessorSettings`. For example, the following properties were used in the example:
+
+* :py:attr:`~gruut.const.TextProcessorSettings.split_words` - splits text by whitespace normally
+* :py:attr:`~gruut.const.TextProcessorSettings.major_breaks` - strings that end sentences
+* :py:attr:`~gruut.const.TextProcessorSettings.is_maybe_number` - detects possible numbers to try parsing with ``babel``
+* :py:attr:`~gruut.const.TextProcessorSettings.word_breaks` - strings used to break apart compound words
+
+See the source to :py:meth:`~gruut.text_processor.TextProcessor.process` for details on each pass applied to the tree. gruut will continue refining the tree until either no changes have been made, or a maximum number of passes has been reached. While thorough, this approach is quite slow for large texts.
 
 Indices and tables
 ==================

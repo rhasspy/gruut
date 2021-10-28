@@ -460,9 +460,7 @@ read ɹ ˈiː d
 </li>
 <li><dl class="simple">
 <dt>Edit <code class="docutils literal notranslate"><span class="pre">lang.py</span></code> and:</dt><dd><ul class="simple">
-<li><p>Add your language to <code class="docutils literal notranslate"><span class="pre">LANG_ALIASES</span></code></p></li>
-<li><p>Add a tokenizer and phonemizer sub-class for your language</p></li>
-<li><p>Return your tokenizer/phonemizer in <code class="docutils literal notranslate"><span class="pre">get_tokenizer</span></code> and <code class="docutils literal notranslate"><span class="pre">get_phonemizer</span></code> respectively</p></li>
+<li><p>Add your language to <code class="docutils literal notranslate"><span class="pre">get_settings</span></code> and create a function to return appropriate <a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings" title="gruut.const.TextProcessorSettings"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextProcessorSettings</span></code></a></p></li>
 </ul>
 </dd>
 </dl>
@@ -470,6 +468,26 @@ read ɹ ˈiː d
 </ol>
 <div class="toctree-wrapper compound">
 </div>
+</section>
+<section id="how-it-works">
+<h2>How It Works<a class="headerlink" href="#how-it-works" title="Permalink to this headline">¶</a></h2>
+<p>gruut builds a <a class="reference external" href="https://en.wikipedia.org/wiki/Tree_(graph_theory)">tree</a> from the input text, and makes many passes over the leaf nodes. The example below shows a tree of the sentence “Test 25.”, which starts as the root of the tree.</p>
+<img alt="graph_refinement.png" src="graph_refinement.png" />
+<p>In the first pass, “Test 25.” is split by whitespace into “Test” and “25.”. Next, “25.” is split into “25” and “.”, which are then tagged as a number and break respectively. The number 25 is verbalized as “twenty-five” (using <code class="docutils literal notranslate"><span class="pre">num2words</span></code>). Finally, “twenty-five” is broken apart into “twenty” and “five”. The leaves of the final tree are:</p>
+<ol class="arabic simple">
+<li><p>Test</p></li>
+<li><p>twenty</p></li>
+<li><p>five</p></li>
+<li><p>“.” (break)</p></li>
+</ol>
+<p>Most of this process can be configured through <a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings" title="gruut.const.TextProcessorSettings"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextProcessorSettings</span></code></a>. For example, the following properties were used in the example:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings.split_words" title="gruut.const.TextProcessorSettings.split_words"><code class="xref py py-attr docutils literal notranslate"><span class="pre">split_words</span></code></a> - splits text by whitespace normally</p></li>
+<li><p><a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings.major_breaks" title="gruut.const.TextProcessorSettings.major_breaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">major_breaks</span></code></a> - strings that end sentences</p></li>
+<li><p><a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings.is_maybe_number" title="gruut.const.TextProcessorSettings.is_maybe_number"><code class="xref py py-attr docutils literal notranslate"><span class="pre">is_maybe_number</span></code></a> - detects possible numbers to try parsing with <code class="docutils literal notranslate"><span class="pre">babel</span></code></p></li>
+<li><p><a class="reference internal" href="gruut.html#gruut.const.TextProcessorSettings.word_breaks" title="gruut.const.TextProcessorSettings.word_breaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">word_breaks</span></code></a> - strings used to break apart compound words</p></li>
+</ul>
+<p>See the source to <a class="reference internal" href="gruut.html#gruut.text_processor.TextProcessor.process" title="gruut.text_processor.TextProcessor.process"><code class="xref py py-meth docutils literal notranslate"><span class="pre">process()</span></code></a> for details on each pass applied to the tree. gruut will continue refining the tree until either no changes have been made, or a maximum number of passes has been reached. While thorough, this approach is quite slow for large texts.</p>
 </section>
 </section>
 <section id="indices-and-tables">
@@ -505,6 +523,7 @@ read ɹ ˈiː d
 <li><a class="reference internal" href="#pos-taggers">POS Taggers</a></li>
 <li><a class="reference internal" href="#espeak-phonemes">eSpeak Phonemes</a></li>
 <li><a class="reference internal" href="#adding-a-new-language">Adding a New Language</a></li>
+<li><a class="reference internal" href="#how-it-works">How It Works</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
