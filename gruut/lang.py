@@ -352,7 +352,7 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             r"^([lL])td\.": r"\1imited",  # -> ltd. -> limited
             r"^([mM])r\.": r"\1ister",  # -> mr. -> mister
             r"^([mM])s\.": r"\1iss",  # -> ms. -> miss
-            r"^([mM])rs\.": r"\1isess",  # -> mrs. -> misess
+            r"^([mM])rs\.": r"\1issus",  # -> mrs. -> missus
             r"^([sS])t\.": r"\1treet",  # -> st. -> street
             r"^([vV])s\.?": r"\1ersus",  # -> vs. -> versus
             r"(.*\d)%": r"\1 percent",  # % -> percent

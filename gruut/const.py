@@ -793,7 +793,7 @@ class TextProcessorSettings:
                     babel.numbers.get_currency_symbol(cn): cn
                     for cn in locale_obj.currency_symbols
                 }
-            except babel.core.UnknownLocaleError:
+            except Exception:
                 # No automatic currencies
                 pass
 
