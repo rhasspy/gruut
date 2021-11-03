@@ -664,7 +664,7 @@ class TextProcessor:
                     elif end_tag == "speak":
                         # End of speak
                         last_speak = root
-                    elif end_tag == "s":
+                    elif end_tag == "sub":
                         # End of sub
                         last_alias = None
                     elif end_tag in {"metadata", "meta"}:
