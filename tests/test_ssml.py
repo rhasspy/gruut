@@ -247,7 +247,16 @@ class SSMLTestCase(unittest.TestCase):
 
         self.assertEqual(
             results,
-            [(0, 0, "World"), (0, 1, "Wide"), (0, 2, "Web"), (0, 3, "Consortium"), (0, 4, "is"), (0, 5, "an"), (0, 6, "international"), (0, 7, "community")],
+            [
+                (0, 0, "World"),
+                (0, 1, "Wide"),
+                (0, 2, "Web"),
+                (0, 3, "Consortium"),
+                (0, 4, "is"),
+                (0, 5, "an"),
+                (0, 6, "international"),
+                (0, 7, "community"),
+            ],
         )
 
     def test_lang_element(self):
