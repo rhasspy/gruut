@@ -359,6 +359,8 @@ class TextProcessorTestCase(unittest.TestCase):
         )
         words = list(processor.words(graph, root, **WORDS_KWARGS))
 
+        print_graph(graph, root)
+
         # Word should be split into letters
         self.assertEqual(
             words,
@@ -585,7 +587,7 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test date verbalization (SSML, multiple languages)"""
         processor = TextProcessor(default_lang="en_US", word_breaks={"-"})
         graph, root = processor(
-            '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s></speak>',
+            '<speak><s>4/1/1999</s> <s lang="fr_FR">4/1/1999</s><s lang="de_DE">01.04.1999</s></speak>',
             ssml=True,
             phonemize=False,  # ensure French year is split
         )
@@ -661,6 +663,28 @@ class TextProcessorTestCase(unittest.TestCase):
                 ),
                 Word(lang="fr_FR", idx=7, sent_idx=1, text="dix", text_with_ws="dix "),
                 Word(lang="fr_FR", idx=8, sent_idx=1, text="neuf", text_with_ws="neuf"),
+                # German
+                Word(
+                    lang="de_DE",
+                    idx=0,
+                    sent_idx=2,
+                    text="erste",
+                    text_with_ws="erste ",
+                ),
+                Word(
+                    lang="de_DE",
+                    idx=1,
+                    sent_idx=2,
+                    text="April",
+                    text_with_ws="April ",
+                ),
+                Word(
+                    lang="de_DE",
+                    idx=2,
+                    sent_idx=2,
+                    text="neunzehnhundertneunundneunzig",
+                    text_with_ws="neunzehnhundertneunundneunzig",
+                ),
             ],
         )
 

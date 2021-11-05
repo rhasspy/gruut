@@ -293,6 +293,11 @@ def en_parse_time(text: str) -> typing.Optional[Time]:
             period = "A.M."
         else:
             period = "P.M."
+    else:
+        if ":" not in text:
+            # Require a colon if no period is specified to avoid parsing plain
+            # numbers like "1" into time expressions.
+            return None
 
     return Time(hours=hours, minutes=minutes, period=period)
 

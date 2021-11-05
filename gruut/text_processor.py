@@ -879,17 +879,24 @@ class TextProcessor:
             if pipeline_split(self._split_spell_out, graph, root):
                 was_changed = True
 
-            # Transform text into known classes
-            if detect_numbers:
-                if pipeline_transform(self._transform_number, graph, root):
+            # Transform text into known classes.
+            #
+            # The order here is very important, since words with "interpret_as"
+            # set will be skipped by later transformations.
+            #
+            # Dates are detected first so words like "1.1.2000" are not parsed
+            # as numbers by Babel (the de_DE locale will parse this as 112000).
+            #
+            if detect_dates:
+                if pipeline_transform(self._transform_date, graph, root):
                     was_changed = True
 
             if detect_currency:
                 if pipeline_transform(self._transform_currency, graph, root):
                     was_changed = True
 
-            if detect_dates:
-                if pipeline_transform(self._transform_date, graph, root):
+            if detect_numbers:
+                if pipeline_transform(self._transform_number, graph, root):
                     was_changed = True
 
             if detect_times:
