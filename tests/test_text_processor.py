@@ -1008,6 +1008,21 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_number_nonfinite(self):
+        """Test sentence with nan or inf"""
+        processor = TextProcessor()
+        graph, root = processor("nan inf")
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # Words should not be parsed as numbers
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, text="nan", text_with_ws="nan ",),
+                Word(idx=1, text="inf", text_with_ws="inf",),
+            ],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""

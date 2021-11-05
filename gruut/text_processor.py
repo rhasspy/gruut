@@ -404,7 +404,7 @@ class TextProcessor:
             return lang_settings
 
         _LOGGER.debug(
-            "No settings for language %s (%s). Creating default settings.",
+            "No custom settings for language %s (%s). Creating default settings.",
             lang,
             resolved_lang,
         )
@@ -1650,6 +1650,10 @@ class TextProcessor:
             number = babel.numbers.parse_decimal(
                 word.text, locale=settings.babel_locale
             )
+
+            if not number.is_finite():
+                raise ValueError("Not parsing nan or inf")
+
             word.interpret_as = InterpretAs.NUMBER
             word.format = InterpretAsFormat.NUMBER_CARDINAL
             word.number = number
