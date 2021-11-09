@@ -24,8 +24,10 @@ from gruut.const import (
     EndElement,
     GraphType,
     IgnoreNode,
+    InlineLexicon,
     InterpretAs,
     InterpretAsFormat,
+    Lexeme,
     MarkNode,
     Node,
     ParagraphNode,
@@ -33,6 +35,7 @@ from gruut.const import (
     Sentence,
     SentenceNode,
     SpeakNode,
+    SSMLParsingState,
     TextProcessorSettings,
     Word,
     WordNode,
@@ -501,6 +504,7 @@ class TextProcessor:
         last_sentence: typing.Optional[SentenceNode] = None
         last_speak: typing.Optional[SpeakNode] = None
         root: typing.Optional[SpeakNode] = None
+        parsing_state = SSMLParsingState.DEFAULT
 
         # [voice]
         voice_stack: typing.List[str] = []
@@ -512,8 +516,13 @@ class TextProcessor:
         lang_stack: typing.List[typing.Tuple[str, str]] = []
         current_lang: str = lang or self.default_lang
 
-        # True if currently inside <w> or <token>
-        in_word: bool = False
+        # [lexicon.id]
+        lookup_stack: typing.List[str] = []
+        lexicon_id: typing.Optional[str] = None
+        lexeme: typing.Optional[Lexeme] = None
+
+        # id -> lexicon
+        inline_lexicons: typing.Dict[str, InlineLexicon] = {}
 
         # True if current word is the last one
         is_last_word: bool = False
@@ -545,6 +554,10 @@ class TextProcessor:
                 if word_role is not None:
                     scope["role"] = word_role
 
+                if lookup_stack:
+                    # Lexicon ids in order of look up
+                    scope["lexicon_ids"] = list(reversed(lookup_stack))
+
             return scope
 
         # Process sub-elements and text chunks
@@ -556,6 +569,31 @@ class TextProcessor:
 
                 # Text chunk
                 text = typing.cast(str, elem_or_text)
+
+                # <grapheme> inside <lexicon>
+                if parsing_state == SSMLParsingState.IN_LEXICON_GRAPHEME:
+                    assert lexeme is not None
+                    lexeme.grapheme = text.strip()
+                    continue
+
+                # <phoneme> inside <lexicon>
+                if parsing_state == SSMLParsingState.IN_LEXICON_PHONEME:
+                    assert lexeme is not None
+                    text = text.strip()
+                    lexicon_alphabet = "ipa"
+
+                    if lexicon_id is not None:
+                        lexicon = inline_lexicons.get(lexicon_id)
+                        if lexicon is not None:
+                            lexicon_alphabet = lexicon.alphabet
+
+                    if (lexicon_alphabet == "ipa") and (" " in text):
+                        # Assume phonemes are separated by whitespace
+                        lexeme.phonemes = text.split()
+                    else:
+                        # Assume graphemes = phonemes
+                        lexeme.phonemes = list(text)
+                    continue
 
                 if last_alias is not None:
                     # Iniside a <sub>
@@ -594,7 +632,7 @@ class TextProcessor:
 
                 assert last_sentence is not None
 
-                if in_word:
+                if parsing_state == SSMLParsingState.IN_WORD:
                     # No splitting
                     word_text = text
                     settings = self.get_settings(current_lang)
@@ -641,6 +679,53 @@ class TextProcessor:
                 elif end_tag == "say-as":
                     if say_as_stack:
                         say_as_stack.pop()
+                elif end_tag == "lookup":
+                    if lookup_stack:
+                        lookup_stack.pop()
+                elif end_tag == "lexicon":
+                    # Done parsing <lexicon>
+                    parsing_state = SSMLParsingState.DEFAULT
+                    lexicon_id = None
+                elif (end_tag == "grapheme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON_GRAPHEME
+                ):
+                    # Done with lexicon grapheme
+                    parsing_state = SSMLParsingState.IN_LEXICON
+                elif (end_tag == "phoneme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON_PHONEME
+                ):
+                    # Done with lexicon phoneme
+                    parsing_state = SSMLParsingState.IN_LEXICON
+                elif (end_tag == "lexeme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON
+                ):
+                    # Done with lexicon entry
+                    assert lexeme is not None, "No lexeme"
+                    assert (
+                        lexeme.phonemes is not None
+                    ), f"No phoneme for lexeme: {lexeme}"
+
+                    assert lexicon_id is not None, "No lexicon id"
+                    lexicon = inline_lexicons.get(lexicon_id)
+                    assert lexicon is not None, f"No lexicon for id {lexicon_id}"
+
+                    # Get or create role -> phonemes map
+                    role_phonemes: typing.Dict[str, PHONEMES_TYPE] = lexicon.words.get(
+                        lexeme.grapheme, {}
+                    )
+
+                    if lexeme.roles:
+                        # Add phonemes for each role
+                        for role in lexeme.roles:
+                            role_phonemes[role] = lexeme.phonemes
+                    else:
+                        # Default (empty) role only
+                        role_phonemes[WordRole.DEFAULT] = lexeme.phonemes
+
+                    lexicon.words[lexeme.grapheme] = role_phonemes
+
+                    # Reset state
+                    lexeme = None
                 else:
                     if lang_stack and (lang_stack[-1][0] == end_tag):
                         lang_stack.pop()
@@ -652,7 +737,7 @@ class TextProcessor:
 
                     if end_tag in {"w", "token"}:
                         # End of word
-                        in_word = False
+                        parsing_state = SSMLParsingState.DEFAULT
                         is_last_word = False
                         word_role = None
                     elif end_tag == "s":
@@ -767,7 +852,7 @@ class TextProcessor:
                     last_sentence = s_node
                 elif elem_tag in {"w", "token"}:
                     # Explicit word
-                    in_word = True
+                    parsing_state = SSMLParsingState.IN_WORD
                     is_last_word = (
                         elem_metadata.get("is_last", False) if elem_metadata else False
                     )
@@ -812,7 +897,9 @@ class TextProcessor:
                 elif elem_tag in {"metadata", "meta"}:
                     # Metadata
                     skip_elements = True
-                elif elem_tag == "phoneme":
+                elif (elem_tag == "phoneme") and (
+                    parsing_state != SSMLParsingState.IN_LEXICON
+                ):
                     # Phonemes
                     word_phonemes_strs = attrib_no_namespace(elem, "ph", "").split()
                     word_phonemes_alphabet = (
@@ -839,6 +926,40 @@ class TextProcessor:
                     if maybe_lang:
                         lang_stack.append((elem_tag, maybe_lang))
                         current_lang = maybe_lang
+                elif elem_tag == "lookup":
+                    lookup_id = attrib_no_namespace(elem, "ref")
+                    assert lookup_id is not None, f"Lookup id required ({elem})"
+                    lookup_stack.append(lookup_id)
+                elif elem_tag == "lexicon":
+                    # Inline pronunciaton lexicon
+                    lexicon_id = attrib_no_namespace(elem, "id")
+                    assert lexicon_id is not None, f"Lexicon id required ({elem})"
+
+                    parsing_state = SSMLParsingState.IN_LEXICON
+                    lexicon_alphabet = (
+                        attrib_no_namespace(elem, "alphabet", "").strip().lower()
+                    )
+                    inline_lexicons[lexicon_id] = InlineLexicon(
+                        lexicon_id=lexicon_id, alphabet=lexicon_alphabet
+                    )
+                elif (elem_tag == "grapheme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON
+                ):
+                    # Inline pronunciaton lexicon (grapheme)
+                    parsing_state = SSMLParsingState.IN_LEXICON_GRAPHEME
+                    if lexeme is None:
+                        lexeme = Lexeme()
+
+                    role_str = attrib_no_namespace(elem, "role")
+                    if role_str:
+                        lexeme.roles = set(role_str.strip().split())
+                elif (elem_tag == "phoneme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON
+                ):
+                    # Inline pronunciaton lexicon (phoneme)
+                    parsing_state = SSMLParsingState.IN_LEXICON_PHONEME
+                    if lexeme is None:
+                        lexeme = Lexeme()
 
         assert root is not None
 
@@ -953,6 +1074,36 @@ class TextProcessor:
                 for word in words:
                     if word.phonemes:
                         # Word already has phonemes
+                        continue
+
+                    if word.lexicon_ids:
+                        # Look up phonemes from inline <lexicon>
+                        for lexicon_id in word.lexicon_ids:
+                            lexicon = inline_lexicons.get(lexicon_id)
+                            if lexicon is None:
+                                continue
+
+                            maybe_role_phonemes = lexicon.words.get(word.text)
+                            if maybe_role_phonemes is None:
+                                continue
+
+                            maybe_phonemes = maybe_role_phonemes.get(word.role)
+
+                            if (maybe_phonemes is None) and (
+                                word.role != WordRole.DEFAULT
+                            ):
+                                # Try again with default role
+                                maybe_phonemes = maybe_role_phonemes.get(
+                                    WordRole.DEFAULT
+                                )
+
+                            if maybe_phonemes is not None:
+                                # Found inline pronunciation
+                                word.phonemes = maybe_phonemes
+                                break
+
+                    if word.phonemes:
+                        # Got phonemes from inline lexicon
                         continue
 
                     phonemize_settings = self.get_settings(word.lang)

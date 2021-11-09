@@ -207,6 +207,46 @@ class WordRole(str, Enum):
     """Word should be pronounced as a letter (a = /eɪ/ instead of /ə/)"""
 
 
+class SSMLParsingState(int, Enum):
+    """Current state of SSML parsing"""
+
+    DEFAULT = 0
+
+    IN_WORD = 1
+    """Inside <w> or <token>"""
+
+    IN_LEXICON = 2
+    """Inside <lexicon>"""
+
+    IN_LEXICON_GRAPHEME = 3
+    """Inside <lexicon><grapheme>..."""
+
+    IN_LEXICON_PHONEME = 4
+    """Inside <lexicon><phoneme>..."""
+
+
+@dataclass
+class InlineLexicon:
+    """SSML lexicon defined inline (not standards compliant)"""
+
+    lexicon_id: str
+    alphabet: str = ""
+
+    # word -> role -> [phoneme]
+    words: typing.Dict[str, typing.Dict[str, PHONEMES_TYPE]] = field(
+        default_factory=dict
+    )
+
+
+@dataclass
+class Lexeme:
+    """Entry of an inline lexicon"""
+
+    grapheme: str = ""
+    phonemes: typing.Optional[PHONEMES_TYPE] = None
+    roles: typing.Optional[typing.Set[str]] = None
+
+
 @dataclass
 class Node:
     """Base class of all text processing graph nodes"""
@@ -271,6 +311,7 @@ class WordNode(Node):
     phonemes: typing.Optional[typing.Sequence[str]] = None
 
     in_lexicon: typing.Optional[bool] = None
+    lexicon_ids: typing.Optional[typing.Sequence[str]] = None
 
     # Assume yes until proven otherwise
     is_maybe_number: bool = True

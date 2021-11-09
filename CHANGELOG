@@ -1,3 +1,18 @@
+## [2.1.0]
+
+### Added
+
+- Support for inline SSML pronunciation lexicons (<lexicon>, <lookup>)
+
+### Changed
+
+- Moved English data files to separate Python package so core can be updated without large download
+
+### Fixed
+
+- <sub> tag
+- Avoid parsing non-finite numbers as words (nan, inf)
+
 ## [2.0.0] - 2021 Oct 14
 
 ### Added

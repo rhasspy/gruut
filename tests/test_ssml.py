@@ -301,6 +301,59 @@ class SSMLTestCase(unittest.TestCase):
             ],
         )
 
+    def test_lexicon(self):
+        """Test <lexicon> and <lookup>"""
+        text = """<?xml version="1.0"?>
+<speak version="1.1"
+       xmlns="http://www.w3.org/2001/10/synthesis"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+       xml:lang="en-US">
+
+  <lexicon xml:id="test" alphabet="ipa">
+    <lexeme>
+      <grapheme>
+        tomato
+      </grapheme>
+      <phoneme>
+        <!-- Individual phonemes are separated by whitespace -->
+        t ə m ˈɑ t oʊ
+      </phoneme>
+    </lexeme>
+    <lexeme>
+      <grapheme role="fake-role">
+        tomato
+      </grapheme>
+      <phoneme>
+        <!-- Made up pronunciation for fake word role -->
+        t ə m ˈi t oʊ
+      </phoneme>
+    </lexeme>
+  </lexicon>
+
+  <w>tomato</w>
+  <lookup ref="test">
+    <w>tomato</w>
+    <w role="fake-role">tomato</w>
+  </lookup>
+</speak>"""
+
+        results = [
+            (w.sent_idx, w.idx, w.phonemes)
+            for sent in sentences(text, ssml=True)
+            for w in sent
+        ]
+
+        self.assertEqual(
+            results,
+            [
+                (0, 0, ["t", "ə", "m", "ˈeɪ", "t", "oʊ"]),
+                (0, 1, ["t", "ə", "m", "ˈɑ", "t", "oʊ"]),
+                (0, 2, ["t", "ə", "m", "ˈi", "t", "oʊ"]),
+            ],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""
