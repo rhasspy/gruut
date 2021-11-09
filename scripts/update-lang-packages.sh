@@ -7,6 +7,8 @@ src_dir="$(realpath "${this_dir}/..")"
 
 # -----------------------------------------------------------------------------
 
+lang_version='2.0.0'
+
 # Update setup.py, VERSION, and language files files
 echo "Language data modules"
 find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
@@ -28,8 +30,9 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
         module_dir="${lang_dir}/gruut_lang_${lang_code}"
 
         # Update version
-        cp "${src_dir}/gruut/VERSION" \
-           "${module_dir}/"
+        if [[ ! -s "${module_dir}/VERSION" ]]; then
+            echo "${lang_version}" > "${module_dir}/VERSION";
+        fi
 
         # Update lexicon.db and g2p/model.crf
         data_dir="${src_dir}/data/${full_lang}"
@@ -62,26 +65,6 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
 
         echo "${full_lang} ${lang_code} ${lang_dir}"
     done
-
-# -----------------------------------------------------------------------------
-
-# English
-data_dir="${src_dir}/data/en-us"
-module_dir="${src_dir}/gruut/data/en-us"
-
-cp "${data_dir}/lexicon.db" \
-   "${module_dir}/"
-
-cp "${data_dir}/g2p/model.crf" \
-   "${module_dir}/g2p/"
-
-cp "${data_dir}/espeak/lexicon.db" \
-   "${module_dir}/espeak/"
-
-cp "${data_dir}/espeak/g2p/model.crf" \
-   "${module_dir}/espeak/g2p/"
-
-echo "en-us en-us ${module_dir}"
 
 # -----------------------------------------------------------------------------
 

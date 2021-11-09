@@ -68,7 +68,6 @@ def find_lang_dir(
 
        * ``search_dirs``
        * ``$XDG_CONFIG_HOME/gruut``
-       * A "data" directory inside gruut module
        * A "data" directory next to the gruut module
 
     Args:
@@ -78,16 +77,17 @@ def find_lang_dir(
     Returns:
         Path to the language model directory or None if it can't be found
     """
+    base_lang = LANG_SPLIT_PATTERN.split(lang)[0].lower()
+    lang_module_name = f"gruut_lang_{base_lang}"
+
     try:
-        base_lang = LANG_SPLIT_PATTERN.split(lang)[0].lower()
-        lang_module_name = f"gruut_lang_{base_lang}"
         lang_module = __import__(lang_module_name)
 
         _LOGGER.debug("(%s) successfully imported %s", lang, lang_module_name)
 
         return lang_module.get_lang_dir()
     except ImportError:
-        _LOGGER.debug("(%s) unable to import module", lang)
+        _LOGGER.debug("(%s) couldn't import module %s", lang, lang_module_name)
         pass
 
     search_dirs = typing.cast(typing.List[Path], [Path(p) for p in search_dirs or []])
@@ -98,9 +98,6 @@ def find_lang_dir(
         search_dirs.append(Path(maybe_config_home) / "gruut")
     else:
         search_dirs.append(Path.home() / ".config" / "gruut")
-
-    # Data directory *inside* gruut
-    search_dirs.append(_DIR / "data")
 
     # Data directory *next to* gruut
     search_dirs.append(_DIR.parent / "data")

@@ -25,8 +25,8 @@ version_path = module_dir / "VERSION"
 with open(version_path, "r", encoding="utf-8") as version_file:
     version = version_file.read().strip()
 
-# x.y.z -> x.y.0
-base_version = ".".join(version.split(".")[:-1] + ["0"])
+# x.y.z -> x.0.0
+base_version = ".".join(version.split(".")[:-2] + ["0", "0"])
 
 # -----------------------------------------------------------------------------
 # extras_require
@@ -45,7 +45,20 @@ extras = {
 }
 
 # Create language-specific extras
-for lang in ["ar", "cs", "de", "es", "fa", "fr", "it", "nl", "pt", "ru", "sv", "sw"]:
+for lang in [
+    "ar",
+    "cs",
+    "de",
+    "es",
+    "fa",
+    "fr",
+    "it",
+    "nl",
+    "pt",
+    "ru",
+    "sv",
+    "sw",
+]:
     extras[f"gruut_lang_{lang}~={base_version}"] = [lang]
 
 # Add "all" tag

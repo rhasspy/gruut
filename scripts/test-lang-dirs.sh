@@ -91,24 +91,6 @@ voices['sw']='sw'
 
 # -----------------------------------------------------------------------------
 
-# English
-full_lang='en-us'
-sentence="${sentences["${full_lang}"]}"
-
-# With gruut phonemes
-phonemes="$(gruut "${full_lang}" "${sentence}")"
-echo "${full_lang}: ${phonemes}"
-
-# With espeak phonemes
-espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
-echo "${full_lang}: ${espeak_phonemes}"
-
-# Check against espeak
-expected_espeak_phonemes="$(espeak "${voices["${full_lang}"]}" "${sentence}")"
-check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
-
-echo ''
-
 find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | sort | \
     while read -r lang_dir; do
           if [[ ! -f "${lang_dir}/setup.py" ]]; then
