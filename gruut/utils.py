@@ -8,6 +8,7 @@ import xml.etree.ElementTree as etree
 from pathlib import Path
 
 import networkx as nx
+from gruut_ipa import IPA
 
 from gruut.const import (
     DATA_PROP,
@@ -242,6 +243,16 @@ NON_WORDS_PATTERN = re.compile(r"\W")
 def remove_non_word_chars(s: str) -> str:
     """Removes non-word characters from a string"""
     return NON_WORDS_PATTERN.sub("", s)
+
+
+def maybe_split_ipa(s: str) -> typing.List[str]:
+    """Split on whitespace if a space is present, otherwise return string as list of graphemes"""
+    if " " in s:
+        # Manual separation
+        return s.split()
+
+    # Automatic separation
+    return IPA.graphemes(s)
 
 
 # -----------------------------------------------------------------------------

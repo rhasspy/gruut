@@ -6,6 +6,7 @@ import dataclasses
 import logging
 import os
 import sys
+from enum import Enum
 from pathlib import Path
 
 import jsonlines
@@ -20,6 +21,20 @@ _LOGGER = logging.getLogger("gruut")
 
 # Path to gruut base directory
 _DIR = Path(__file__).parent
+
+
+class StdinFormat(str, Enum):
+    """Format of standard input"""
+
+    AUTO = "auto"
+    """Choose based on SSML state"""
+
+    LINES = "lines"
+    """Each line is a separate sentence/document"""
+
+    DOCUMENT = "document"
+    """Entire input is one document"""
+
 
 # -----------------------------------------------------------------------------
 
@@ -62,7 +77,18 @@ def main():
         lines = args.text
     else:
         # Use stdin
-        lines = sys.stdin
+        stdin_format = StdinFormat.LINES
+
+        if (args.stdin_format == StdinFormat.AUTO) and args.ssml:
+            # Assume SSML input is entire document
+            stdin_format = StdinFormat.DOCUMENT
+
+        if stdin_format == StdinFormat.DOCUMENT:
+            # One big line
+            lines = [sys.stdin.read()]
+        else:
+            # Multiple lines
+            lines = sys.stdin
 
         if os.isatty(sys.stdin.fileno()):
             print("Reading input from stdin...", file=sys.stderr)
@@ -174,6 +200,12 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("text", nargs="*", help="Text to tokenize (default: stdin)")
     parser.add_argument(
         "--ssml", action="store_true", help="Input text is SSML",
+    )
+    parser.add_argument(
+        "--stdin-format",
+        choices=[str(v.value) for v in StdinFormat],
+        default=StdinFormat.AUTO,
+        help="Format of stdin text (default: auto)",
     )
 
     # Disable features

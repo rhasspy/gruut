@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tokenizes, verbalizes, and phonemizes text and SSML"""
+import itertools
 import logging
 import re
 import typing
@@ -11,7 +12,7 @@ import babel
 import babel.numbers
 import dateparser
 import networkx as nx
-from gruut_ipa import IPA, Pronunciation
+from gruut_ipa import IPA
 from num2words import num2words
 
 from gruut.const import (
@@ -45,6 +46,7 @@ from gruut.lang import get_settings
 from gruut.utils import (
     attrib_no_namespace,
     leaves,
+    maybe_split_ipa,
     pipeline_split,
     pipeline_transform,
     resolve_lang,
@@ -55,6 +57,8 @@ from gruut.utils import (
 # -----------------------------------------------------------------------------
 
 _LOGGER = logging.getLogger("gruut.text_processor")
+
+DEFAULT_LEXICON_ID = ""
 
 
 # -----------------------------------------------------------------------------
@@ -560,6 +564,32 @@ class TextProcessor:
 
             return scope
 
+        def in_inline_lexicon(
+            word_text: str, word_role: typing.Optional[str] = None
+        ) -> bool:
+            if inline_lexicons:
+                for inline_lexicon_id in itertools.chain(
+                    lookup_stack, [DEFAULT_LEXICON_ID]
+                ):
+                    maybe_lexicon = inline_lexicons.get(inline_lexicon_id)
+                    if maybe_lexicon is None:
+                        continue
+
+                    maybe_role_phonemes = maybe_lexicon.words.get(word_text)
+                    if maybe_role_phonemes is None:
+                        continue
+
+                    if (word_role is not None) and (word_role in maybe_role_phonemes):
+                        # Role-specific pronunciation
+                        return True
+
+                    if WordRole.DEFAULT in maybe_role_phonemes:
+                        # Default pronunciation
+                        return True
+
+            # No inline pronunciation
+            return False
+
         # Process sub-elements and text chunks
         for elem_or_text in iter_elements():
             if isinstance(elem_or_text, str):
@@ -580,19 +610,11 @@ class TextProcessor:
                 if parsing_state == SSMLParsingState.IN_LEXICON_PHONEME:
                     assert lexeme is not None
                     text = text.strip()
-                    lexicon_alphabet = "ipa"
 
-                    if lexicon_id is not None:
-                        lexicon = inline_lexicons.get(lexicon_id)
-                        if lexicon is not None:
-                            lexicon_alphabet = lexicon.alphabet
-
-                    if (lexicon_alphabet == "ipa") and (" " in text):
-                        # Assume phonemes are separated by whitespace
-                        lexeme.phonemes = text.split()
-                    else:
-                        # Assume graphemes = phonemes
-                        lexeme.phonemes = list(text)
+                    # Phonemes will be split on whitespace if at least one
+                    # space is present, otherwise assume phonemes =
+                    # graphemes.
+                    lexeme.phonemes = maybe_split_ipa(text)
                     continue
 
                 if last_alias is not None:
@@ -653,7 +675,10 @@ class TextProcessor:
                         node=len(graph),
                         text=word_text_norm,
                         text_with_ws=word_text,
-                        in_lexicon=self._is_word_in_lexicon(word_text_norm, settings),
+                        in_lexicon=(
+                            in_inline_lexicon(word_text_norm, word_role)
+                            or self._is_word_in_lexicon(word_text_norm, settings)
+                        ),
                         **word_kwargs,
                     )
                     graph.add_node(word_node.node, data=word_node)
@@ -666,6 +691,7 @@ class TextProcessor:
                         text,
                         word_phonemes=word_phonemes,
                         scope_kwargs=scope_kwargs(WordNode),
+                        in_inline_lexicon=in_inline_lexicon,
                     )
 
             elif isinstance(elem_or_text, EndElement):
@@ -902,22 +928,15 @@ class TextProcessor:
                 ):
                     # Phonemes
                     word_phonemes_strs = attrib_no_namespace(elem, "ph", "").split()
-                    word_phonemes_alphabet = (
-                        attrib_no_namespace(elem, "alphabet", "").strip().lower()
-                    )
 
                     if word_phonemes_strs:
-                        if word_phonemes_alphabet == "ipa":
-                            # Split IPA intelligently (grouping elongation, stress, etc.)
-                            word_phonemes = [
-                                [p.text for p in Pronunciation.from_string(phoneme_str)]
-                                for phoneme_str in word_phonemes_strs
-                            ]
-                        else:
-                            # Assume graphemes = phonemes
-                            word_phonemes = [
-                                list(phoneme_str) for phoneme_str in word_phonemes_strs
-                            ]
+                        # Phonemes will be split on whitespace if at least one
+                        # space is present, otherwise assume phonemes =
+                        # graphemes.
+                        word_phonemes = [
+                            maybe_split_ipa(phoneme_str)
+                            for phoneme_str in word_phonemes_strs
+                        ]
                     else:
                         word_phonemes = None
                 elif elem_tag == "lang":
@@ -932,8 +951,9 @@ class TextProcessor:
                     lookup_stack.append(lookup_id)
                 elif elem_tag == "lexicon":
                     # Inline pronunciaton lexicon
-                    lexicon_id = attrib_no_namespace(elem, "id")
-                    assert lexicon_id is not None, f"Lexicon id required ({elem})"
+                    # NOTE: Empty lexicon id means the "default" inline lexicon (lookup not required)
+                    lexicon_id = attrib_no_namespace(elem, "id", DEFAULT_LEXICON_ID)
+                    assert lexicon_id is not None
 
                     parsing_state = SSMLParsingState.IN_LEXICON
                     lexicon_alphabet = (
@@ -1076,31 +1096,33 @@ class TextProcessor:
                         # Word already has phonemes
                         continue
 
+                    lexicon_ids: typing.List[str] = []
+
                     if word.lexicon_ids:
-                        # Look up phonemes from inline <lexicon>
-                        for lexicon_id in word.lexicon_ids:
-                            lexicon = inline_lexicons.get(lexicon_id)
-                            if lexicon is None:
-                                continue
+                        lexicon_ids.extend(word.lexicon_ids)
 
-                            maybe_role_phonemes = lexicon.words.get(word.text)
-                            if maybe_role_phonemes is None:
-                                continue
+                    lexicon_ids.append(DEFAULT_LEXICON_ID)
 
-                            maybe_phonemes = maybe_role_phonemes.get(word.role)
+                    # Look up phonemes from inline <lexicon>
+                    for lexicon_id in lexicon_ids:
+                        lexicon = inline_lexicons.get(lexicon_id)
+                        if lexicon is None:
+                            continue
 
-                            if (maybe_phonemes is None) and (
-                                word.role != WordRole.DEFAULT
-                            ):
-                                # Try again with default role
-                                maybe_phonemes = maybe_role_phonemes.get(
-                                    WordRole.DEFAULT
-                                )
+                        maybe_role_phonemes = lexicon.words.get(word.text)
+                        if maybe_role_phonemes is None:
+                            continue
 
-                            if maybe_phonemes is not None:
-                                # Found inline pronunciation
-                                word.phonemes = maybe_phonemes
-                                break
+                        maybe_phonemes = maybe_role_phonemes.get(word.role)
+
+                        if (maybe_phonemes is None) and (word.role != WordRole.DEFAULT):
+                            # Try again with default role
+                            maybe_phonemes = maybe_role_phonemes.get(WordRole.DEFAULT)
+
+                        if maybe_phonemes is not None:
+                            # Found inline pronunciation
+                            word.phonemes = maybe_phonemes
+                            break
 
                     if word.phonemes:
                         # Got phonemes from inline lexicon
@@ -1528,6 +1550,9 @@ class TextProcessor:
         text,
         word_phonemes: typing.Optional[typing.List[typing.List[str]]] = None,
         scope_kwargs=None,
+        in_inline_lexicon: typing.Optional[
+            typing.Callable[[str, typing.Optional[str]], bool]
+        ] = None,
     ):
         """Splits text into word nodes"""
         if scope_kwargs is None:
@@ -1557,12 +1582,25 @@ class TextProcessor:
             if word_phonemes:
                 word_kwargs = {**scope_kwargs, "phonemes": word_phonemes.pop()}
 
+            # Determine if word is in a lexicon.
+            # If so, it will not be interpreted as an initialism, split apart, etc.
+            in_lexicon: typing.Optional[bool] = None
+            if in_inline_lexicon is not None:
+                # Check inline <lexicon> first
+                in_lexicon = in_inline_lexicon(
+                    word_text_norm, scope_kwargs.get("word_role")
+                )
+
+            if not in_lexicon:
+                # Check main language lexicon
+                in_lexicon = self._is_word_in_lexicon(word_text_norm, settings)
+
             word_node = WordNode(
                 node=len(graph),
                 text=word_text_norm,
                 text_with_ws=word_text,
                 implicit=True,
-                in_lexicon=self._is_word_in_lexicon(word_text_norm, settings),
+                in_lexicon=in_lexicon,
                 **word_kwargs,
             )
             graph.add_node(word_node.node, data=word_node)

@@ -152,6 +152,9 @@ class InterpretAs(str, Enum):
     TIME = "time"
     """Word should be interpreted as a time on the clock"""
 
+    WORD = "word"
+    """Interpret as regular word"""
+
 
 class InterpretAsFormat(str, Enum):
     """Supported options for format attribute of <say-as>"""

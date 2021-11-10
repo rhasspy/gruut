@@ -7,6 +7,7 @@
 ### Changed
 
 - Moved English data files to separate Python package so core can be updated without large download
+- With --ssml, input from stdin is assumed to be one document instead of lines (override with --stdin-format lines)
 
 ### Fixed
 

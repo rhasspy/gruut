@@ -321,10 +321,104 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
 * `<phoneme ph="...">` - supply phonemes for inner text
     * `ph` - phonemes for each word of inner text, separated by whitespace
     * `alphabet` - if "ipa", phonemes are intelligently split ("aːˈb" -> "aː", "ˈb")
+* `<lexicon id="...">` - inline pronunciation lexicon
+    * `id` - unique id of lexicon (used in `<lookup ref="...">`)
+    * One or more `<lexeme>` child elements with:
+        * `<grapheme role="...">WORD</grapheme>` - word text (optional [role][#word-roles])
+        * `<phoneme>P H O N E M E S</phoneme>` - word pronunciation (phonemes separated by whitespace)
+* `<lookup ref="...">` - use inline pronunciation lexicon for child elements
+    * `ref` - id from a `<lexicon id="...">`
 
 #### Word Roles
 
 During phonemization, word roles are used to disambiguate pronunciations. Unless manually specified, a word's role is derived from its part of speech tag as `gruut:<TAG>`. For initialisms and `spell-out`, the role `gruut:letter` is used to indicate that e.g., "a" should be spoken as `/eɪ/` instead of `/ə/`.
+
+For `en-us`, the following additional roles are available from the part-of-speech tagger:
+
+* `gruut:CD` - number
+* `gruut:DT` - determiner
+* `gruut:IN` - preposition or subordinating conjunction 
+* `gruut:JJ` - adjective
+* `gruut:NN` - noun
+* `gruut:PRP` - personal pronoun
+* `gruut:RB` - adverb
+* `gruut:VB` - verb
+* `gruut:VB` - verb (past tense)
+
+#### Inline Lexicons
+
+Inline [pronunciation lexicons](https://www.w3.org/TR/2008/REC-pronunciation-lexicon-20081014/) are supported via the `<lexicon>` and `<lookup>` tags. gruut diverges slightly from the [SSML standard](https://www.w3.org/TR/speech-synthesis11/) here by only allowing lexicons to be defined within the SSML document itself. Additionally, the `id` attribute of the `<lexicon>` element can be left off to indicate a "default" inline lexicon that does not require a corresponding `<lookup>` tag.
+
+For example, the following document will yield three different pronunciations for the word "tomato":
+
+``` xml
+<?xml version="1.0"?>
+<speak version="1.1"
+       xmlns="http://www.w3.org/2001/10/synthesis"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+       xml:lang="en-US">
+
+  <lexicon xml:id="test" alphabet="ipa">
+    <lexeme>
+      <grapheme>
+        tomato
+      </grapheme>
+      <phoneme>
+        <!-- Individual phonemes are separated by whitespace -->
+        t ə m ˈɑ t oʊ
+      </phoneme>
+    </lexeme>
+    <lexeme>
+      <grapheme role="fake-role">
+        tomato
+      </grapheme>
+      <phoneme>
+        <!-- Made up pronunciation for fake word role -->
+        t ə m ˈi t oʊ
+      </phoneme>
+    </lexeme>
+  </lexicon>
+
+  <w>tomato</w>
+  <lookup ref="test">
+    <w>tomato</w>
+    <w role="fake-role">tomato</w>
+  </lookup>
+</speak>
+```
+
+The first "tomato" will be looked up in the U.S. English lexicon (`/t ə m ˈeɪ t oʊ/`). Within the `<lookup>` tag's scope, the second and third "tomato" words will be looked up in the inline lexicon. The third "tomato" word has a [role](#word-roles) attached  (selecting a made up pronunciation in this case).
+
+Even further from the SSML standard, gruut allows you to leave off the `<lexicon>` id entirely. With no `id`, a `<lookup>` tag is no longer needed, allowing you to override the pronunciation of any word in the document: 
+
+``` xml
+<?xml version="1.0"?>
+<speak version="1.1"
+       xmlns="http://www.w3.org/2001/10/synthesis"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+       xml:lang="en-US">
+
+  <!-- No id means change all words without a lookup -->
+  <lexicon>
+    <lexeme>
+      <grapheme>
+        tomato
+      </grapheme>
+      <phoneme>
+        t ə m ˈɑ t oʊ
+      </phoneme>
+    </lexeme>
+  </lexicon>
+
+  <w>tomato</w>
+</speak>
+```
+
+This will yield a pronunciation of `/t ə m ˈɑ t oʊ/` for all instances of "tomato" in the document (unless they have a `<lookup>`).
 
 ## Intended Audience
 

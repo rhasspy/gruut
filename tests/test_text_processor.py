@@ -1047,6 +1047,45 @@ class TextProcessorTestCase(unittest.TestCase):
             ],
         )
 
+    def test_override_initialism(self):
+        """Test use of inline lexicon pronunciation to override an initialism"""
+        processor = TextProcessor()
+        graph, root = processor("ROOFUS")
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # Word is interpreted as initialism
+        self.assertEqual(
+            words,
+            [
+                Word(idx=0, text="R", text_with_ws="R ",),
+                Word(idx=1, text="O", text_with_ws="O ",),
+                Word(idx=2, text="O", text_with_ws="O ",),
+                Word(idx=3, text="F", text_with_ws="F ",),
+                Word(idx=4, text="U", text_with_ws="U ",),
+                Word(idx=5, text="S", text_with_ws="S",),
+            ],
+        )
+
+        graph, root = processor(
+            """
+        <speak>
+          <lexicon>
+            <lexeme>
+              <grapheme>ROOFUS</grapheme>
+              <phoneme>ɹ ˈu f ə s</phoneme>
+            </lexeme>
+          </lexicon>
+          <s>ROOFUS</s>
+        </speak>""",
+            ssml=True,
+        )
+        words = list(processor.words(graph, root, **WORDS_KWARGS))
+
+        # Word is *not* interpreted as initialism
+        self.assertEqual(
+            words, [Word(idx=0, text="ROOFUS", text_with_ws="ROOFUS",)],
+        )
+
 
 def print_graph_stderr(graph, root):
     """Print graph to stderr"""
