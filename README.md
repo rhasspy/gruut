@@ -320,7 +320,6 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
 * `<sub alias="">` - substitute `alias` for inner text
 * `<phoneme ph="...">` - supply phonemes for inner text
     * `ph` - phonemes for each word of inner text, separated by whitespace
-    * `alphabet` - if "ipa", phonemes are intelligently split ("aːˈb" -> "aː", "ˈb")
 * `<lexicon id="...">` - inline pronunciation lexicon
     * `id` - unique id of lexicon (used in `<lookup ref="...">`)
     * One or more `<lexeme>` child elements with:
