@@ -142,6 +142,10 @@ def get_settings(
     if lang_only == "it-it":
         # Italian
         return get_it_settings(lang_dir, **settings_args)
+    
+    if lang_only == "lb-lb":
+        # Lëtzebuergesch
+        return get_lb_settings(lang_dir, **settings_args)
 
     if lang_only == "nl":
         # Dutch
@@ -657,6 +661,25 @@ def get_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     }
     return TextProcessorSettings(lang="it_IT", **settings_args)
 
+# -----------------------------------------------------------------------------
+# Luxembourgish (lb-lb, Lëtzebuergesch)
+# -----------------------------------------------------------------------------
+
+
+def get_lb_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Luxembourgish"""
+    settings_args = {
+        "major_breaks": {".", "?", "!"},
+        "minor_breaks": {",", ";", ":", "..."},
+        "word_breaks": {"-", "_"},
+        "begin_punctuations": {'"', "“", "«", "[", "(", "<", "„"},
+        "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+        "default_currency": "EUR",
+        "default_date_format": InterpretAsFormat.DATE_DMY,
+        "replacements": [("’", "'")],  # normalize apostrophe
+        **settings_args,
+    }
+    return TextProcessorSettings(lang="lb_LU", **settings_args)
 
 # -----------------------------------------------------------------------------
 # Dutch (nl, Nederlands)
