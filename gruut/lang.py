@@ -679,7 +679,7 @@ def get_lb_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "replacements": [("’", "'")],  # normalize apostrophe
         **settings_args,
     }
-    return TextProcessorSettings(lang="lb_LU", **settings_args)
+    return TextProcessorSettings(lang="lb", **settings_args)
 
 # -----------------------------------------------------------------------------
 # Dutch (nl, Nederlands)
