@@ -143,7 +143,7 @@ def get_settings(
         # Italian
         return get_it_settings(lang_dir, **settings_args)
     
-    if lang_only == "lb-lb":
+    if lang_only == "lb":
         # Lëtzebuergesch
         return get_lb_settings(lang_dir, **settings_args)
 
