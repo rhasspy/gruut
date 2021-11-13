@@ -116,7 +116,7 @@ gruut currently supports:
 * Farsi/Persian (`fa`)
 * French (`fr` or `fr-fr`)
 * Italian (`it` or `it-it`)
-* Luxembourgish (`lb` or `lb-lb`)
+* Luxembourgish (`lb`)
 * Dutch (`nl`)
 * Russian (`ru` or `ru-ru`)
 * Swedish (`sv` or `sv-se`)
