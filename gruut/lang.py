@@ -662,7 +662,7 @@ def get_it_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     return TextProcessorSettings(lang="it_IT", **settings_args)
 
 # -----------------------------------------------------------------------------
-# Luxembourgish (lb-lb, Lëtzebuergesch)
+# Luxembourgish (lb, Lëtzebuergesch)
 # -----------------------------------------------------------------------------
 
 
