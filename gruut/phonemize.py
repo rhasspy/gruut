@@ -67,7 +67,10 @@ class SqlitePhonemizer:
 
             # Any role
             if role_to_word:
-                return next(iter(role_to_word.values()))
+                # Use last value since it will be the first pronunciation in the
+                # lexicon.
+                *_, last_phonemes = iter(role_to_word.values())
+                return last_phonemes
 
             # Not in lexicon (or database) for sure because role_to_word was present.
             return None
