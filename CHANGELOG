@@ -1,3 +1,13 @@
+## [2.2.0] - 2021 Dec 3
+
+### Added
+
+- Support for Luxembourgish (credit: mbarnig)
+
+### Fixed
+
+- Choose first word pronunciation when all pronunciations have roles instead of last
+
 ## [2.1.0] - 2021 Nov 10
 
 ### Added

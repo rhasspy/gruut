@@ -67,10 +67,7 @@ class SqlitePhonemizer:
 
             # Any role
             if role_to_word:
-                # Use last value since it will be the first pronunciation in the
-                # lexicon.
-                *_, last_phonemes = iter(role_to_word.values())
-                return last_phonemes
+                return next(iter(role_to_word.values()))
 
             # Not in lexicon (or database) for sure because role_to_word was present.
             return None
@@ -91,11 +88,8 @@ class SqlitePhonemizer:
                 continue
 
             # Load pronunciations for word from database.
-            #
-            # Ordered by pronunciation descending because so duplicate roles
-            # will be overwritten by earlier pronunciation.
             cursor = self.db_conn.execute(
-                "SELECT role, phonemes FROM word_phonemes WHERE word = ? ORDER BY pron_order DESC",
+                "SELECT role, phonemes FROM word_phonemes WHERE word = ? ORDER BY pron_order",
                 (lookup_word,),
             )
 
@@ -106,7 +100,9 @@ class SqlitePhonemizer:
                     self.lexicon[word] = role_to_word
 
                 db_role, db_phonemes = row[0], row[1].split()
-                role_to_word[db_role] = db_phonemes
+
+                if db_role not in role_to_word:
+                    role_to_word[db_role] = db_phonemes
 
             if role_to_word is not None:
                 # Link to transformed word
