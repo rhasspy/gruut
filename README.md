@@ -8,8 +8,9 @@ from gruut import sentences
 text = 'He wound it around the wound, saying "I read it was $10 to read."'
 
 for sent in sentences(text, lang="en-us"):
-    if word.phonemes:
-        print(word.text, *word.phonemes)
+    for word in sent:
+        if word.phonemes:
+            print(word.text, *word.phonemes)
 ```
 
 which outputs:
