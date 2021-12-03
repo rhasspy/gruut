@@ -53,6 +53,7 @@ for lang in [
     "fa",
     "fr",
     "it",
+    "lb",
     "nl",
     "pt",
     "ru",

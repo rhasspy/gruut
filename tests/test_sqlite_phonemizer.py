@@ -165,6 +165,27 @@ class PhonemizerTestCase(unittest.TestCase):
             ],
         )
 
+    def test_lb(self):
+        """Luxembourgish test"""
+        self.assertEqual(
+            get_phonemes(
+                "An der Zäit hunn sech den Nordwand an d’Sonn gestridden.", "lb_LB"
+            ),
+            [
+                ("An", ["ɑ", "n"]),
+                ("der", ["d", "ɐ"],),
+                ("Zäit", ["ʦ", "æːɪ", "t"]),
+                ("hunn", ["h", "u", "n"]),
+                ("sech", ["z", "ə", "ɕ"]),
+                ("den", ["d", "ə", "n"]),
+                ("Nordwand", ["n", "o", "ʀ", "d", "v", "ɑ", "n", "t"]),
+                ("an", ["ɑ", "n"]),
+                ("d'Sonn", ["d", "z", "o", "n"]),
+                ("gestridden", ["g", "ə", "ʃ", "t", "ʀ", "i", "d", "ə", "n"]),
+                (".", ["‖"]),
+            ],
+        )
+
     def test_nl(self):
         """Dutch test"""
         self.assertEqual(

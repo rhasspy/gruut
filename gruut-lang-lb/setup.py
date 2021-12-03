@@ -33,11 +33,11 @@ for maybe_extra_str in maybe_extra_files:
 
 setuptools.setup(
     name=module_name,
-    description="Luxembourgish language files for gruut tokenizer/phonemizer",
+    description="Lëtzebuergesch language files for gruut tokenizer/phonemizer",
     version=version,
-    author="Marco Barnig",
-    author_email="mbarnig@pt.lu",
-    url="https://github.com/mbarnig/gruut-lb",
+    author="Michael Hansen",
+    author_email="mike@rhasspy.org",
+    url="https://github.com/rhasspy/gruut",
     packages=setuptools.find_packages(),
     package_data={
         module_name: [

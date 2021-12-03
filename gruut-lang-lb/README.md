@@ -1,3 +1,3 @@
-# gruut Luxembourgish
+# gruut Lëtzebuergesch
 
-Language-specific files for Luxembourgish (lb) in [gruut](https://github.com/rhasspy/gruut)
+Language-specific files for Lëtzebuergesch (lb) in [gruut](https://github.com/rhasspy/gruut)

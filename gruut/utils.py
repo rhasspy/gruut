@@ -10,15 +10,7 @@ from pathlib import Path
 import networkx as nx
 from gruut_ipa import IPA
 
-from gruut.const import (
-    DATA_PROP,
-    KNOWN_LANGS,
-    LANG_ALIASES,
-    NODE_TYPE,
-    EndElement,
-    GraphType,
-    Node,
-)
+from gruut.const import DATA_PROP, LANG_ALIASES, NODE_TYPE, EndElement, GraphType, Node
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
@@ -40,19 +32,9 @@ def resolve_lang(lang: str) -> str:
     Returns:
         Resolved language name
     """
-    lang = lang.lower()
-    lang = LANG_ALIASES.get(lang, lang)
+    lang = lang.lower().replace("_", "-")
 
-    if lang not in KNOWN_LANGS:
-        # Try with _ replaced by -
-        if "_" in lang:
-            lang_parts = lang.split("_")
-            maybe_lang = f"{lang_parts[0]}-{lang_parts[1]}"
-
-            if maybe_lang in KNOWN_LANGS:
-                lang = maybe_lang
-
-    return lang
+    return LANG_ALIASES.get(lang, lang)
 
 
 def find_lang_dir(

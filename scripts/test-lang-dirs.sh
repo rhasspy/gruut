@@ -107,13 +107,16 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | sort | 
           phonemes="$(gruut "${full_lang}" "${sentence}")"
           echo "${full_lang}: ${phonemes}"
 
-          # With espeak phonemes
-          espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
-          echo "${full_lang}: ${espeak_phonemes}"
+          # No Luxembourgish voice for espeak
+          if [[ "${full_lang}" != 'lb-lb' ]]; then
+            # With espeak phonemes
+            espeak_phonemes="$(gruut "${full_lang}" "${sentence}" --model-prefix espeak)"
+            echo "${full_lang}: ${espeak_phonemes}"
 
-          # Check against espeak
-          expected_espeak_phonemes="$(espeak "${voices["${full_lang}"]}" "${sentence}")"
-          check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
+            # Check against espeak
+            expected_espeak_phonemes="$(espeak "${voices["${full_lang}"]}" "${sentence}")"
+            check_espeak "${expected_espeak_phonemes}" "${espeak_phonemes}"
+          fi
 
           echo ''
     done
