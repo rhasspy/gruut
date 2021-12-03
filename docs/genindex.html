@@ -72,11 +72,13 @@
       </ul></li>
       <li><a href="gruut.html#gruut.const.GraphType.add_edge">add_edge() (gruut.const.GraphType method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.GraphType.add_edges_from">add_edges_from() (gruut.const.GraphType method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.GraphType.add_node">add_node() (gruut.const.GraphType method)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.InlineLexicon.alphabet">alphabet (gruut.const.InlineLexicon attribute)</a>
 </li>
       <li><a href="gruut.html#gruut.lang.ArabicPreProcessText">ArabicPreProcessText (class in gruut.lang)</a>
 </li>
@@ -188,8 +190,12 @@
         <li><a href="gruut.html#gruut.pos.PartOfSpeechTagger.decode_string">(gruut.pos.PartOfSpeechTagger static method)</a>
 </li>
       </ul></li>
-      <li><a href="gruut.html#gruut.const.WordRole.DEFAULT">DEFAULT (gruut.const.WordRole attribute)</a>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState.DEFAULT">DEFAULT (gruut.const.SSMLParsingState attribute)</a>
+
+      <ul>
+        <li><a href="gruut.html#gruut.const.WordRole.DEFAULT">(gruut.const.WordRole attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.TextProcessorSettings.default_currency">default_currency (gruut.const.TextProcessorSettings attribute)</a>
@@ -380,6 +386,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="gruut.html#gruut.const.Lexeme.grapheme">grapheme (gruut.const.Lexeme attribute)</a>
+</li>
       <li><a href="gruut.html#gruut.g2p.GraphemesToPhonemes.grapheme2features">grapheme2features() (gruut.g2p.GraphemesToPhonemes static method)</a>
 </li>
       <li><a href="gruut.html#gruut.g2p.GraphemesToPhonemes">GraphemesToPhonemes (class in gruut.g2p)</a>
@@ -501,7 +509,17 @@
 </li>
       <li><a href="gruut.html#gruut.const.Node.implicit">implicit (gruut.const.Node attribute)</a>
 </li>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState.IN_LEXICON">IN_LEXICON (gruut.const.SSMLParsingState attribute)</a>
+</li>
       <li><a href="gruut.html#gruut.const.WordNode.in_lexicon">in_lexicon (gruut.const.WordNode attribute)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState.IN_LEXICON_GRAPHEME">IN_LEXICON_GRAPHEME (gruut.const.SSMLParsingState attribute)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState.IN_LEXICON_PHONEME">IN_LEXICON_PHONEME (gruut.const.SSMLParsingState attribute)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState.IN_WORD">IN_WORD (gruut.const.SSMLParsingState attribute)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.InlineLexicon">InlineLexicon (class in gruut.const)</a>
 </li>
       <li><a href="gruut.html#gruut.const.WordNode.interpret_as">interpret_as (gruut.const.WordNode attribute)</a>
 </li>
@@ -521,12 +539,12 @@
       </ul></li>
       <li><a href="gruut.html#gruut.is_language_supported">is_language_supported() (in module gruut)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.Word.is_major_break">is_major_break (gruut.const.Word attribute)</a>
 </li>
       <li><a href="gruut.html#gruut.const.WordNode.is_maybe_currency">is_maybe_currency (gruut.const.WordNode attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.TextProcessorSettings.is_maybe_currency">is_maybe_currency() (gruut.const.TextProcessorSettings method)</a>
 
       <ul>
@@ -613,11 +631,17 @@
       </ul></li>
       <li><a href="gruut.html#gruut.const.Word.leading_ws">leading_ws (gruut.const.Word attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.utils.leaves">leaves() (in module gruut.utils)</a>
 </li>
       <li><a href="gruut.html#gruut.const.WordRole.LETTER">LETTER (gruut.const.WordRole attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="gruut.html#gruut.const.Lexeme">Lexeme (class in gruut.const)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.InlineLexicon.lexicon_id">lexicon_id (gruut.const.InlineLexicon attribute)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.WordNode.lexicon_ids">lexicon_ids (gruut.const.WordNode attribute)</a>
 </li>
       <li><a href="gruut.html#gruut.g2p_phonetisaurus.PhonetisaurusGraph.load">load() (gruut.g2p_phonetisaurus.PhonetisaurusGraph static method)</a>
 </li>
@@ -679,10 +703,12 @@
       </ul></li>
       <li><a href="gruut.html#gruut.const.maybe_compile_regex">maybe_compile_regex() (in module gruut.const)</a>
 </li>
-      <li><a href="gruut.html#gruut.const.BreakType.MINOR">MINOR (gruut.const.BreakType attribute)</a>
+      <li><a href="gruut.html#gruut.utils.maybe_split_ipa">maybe_split_ipa() (in module gruut.utils)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="gruut.html#gruut.const.BreakType.MINOR">MINOR (gruut.const.BreakType attribute)</a>
+</li>
       <li><a href="gruut.html#gruut.const.TextProcessorSettings.minor_breaks">minor_breaks (gruut.const.TextProcessorSettings attribute)</a>
 
       <ul>
@@ -824,9 +850,11 @@
       </ul></li>
       <li><a href="gruut.html#gruut.const.Time.period">period (gruut.const.Time attribute)</a>
 </li>
-      <li><a href="gruut.html#gruut.const.Word.phonemes">phonemes (gruut.const.Word attribute)</a>
+      <li><a href="gruut.html#gruut.const.Lexeme.phonemes">phonemes (gruut.const.Lexeme attribute)</a>
 
       <ul>
+        <li><a href="gruut.html#gruut.const.Word.phonemes">(gruut.const.Word attribute)</a>
+</li>
         <li><a href="gruut.html#gruut.const.WordNode.phonemes">(gruut.const.WordNode attribute)</a>
 </li>
       </ul></li>
@@ -898,6 +926,8 @@
 </li>
       <li><a href="gruut.html#gruut.const.WordNode.role">role (gruut.const.WordNode attribute)</a>
 </li>
+      <li><a href="gruut.html#gruut.const.Lexeme.roles">roles (gruut.const.Lexeme attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -947,6 +977,8 @@
 </li>
       </ul></li>
       <li><a href="gruut.html#gruut.phonemize.SqlitePhonemizer">SqlitePhonemizer (class in gruut.phonemize)</a>
+</li>
+      <li><a href="gruut.html#gruut.const.SSMLParsingState">SSMLParsingState (class in gruut.const)</a>
 </li>
       <li><a href="gruut.html#gruut.const.GraphType.successors">successors() (gruut.const.GraphType method)</a>
 </li>
@@ -1044,6 +1076,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="gruut.html#gruut.const.Word">Word (class in gruut.const)</a>
 </li>
+      <li><a href="gruut.html#gruut.const.InterpretAs.WORD">WORD (gruut.const.InterpretAs attribute)</a>
+</li>
       <li><a href="gruut.html#gruut.g2p.GraphemesToPhonemes.word2features">word2features() (gruut.g2p.GraphemesToPhonemes static method)</a>
 
       <ul>
@@ -1068,8 +1102,12 @@
 </li>
       <li><a href="gruut.html#gruut.const.WordRole">WordRole (class in gruut.const)</a>
 </li>
-      <li><a href="gruut.html#gruut.const.Sentence.words">words (gruut.const.Sentence attribute)</a>
+      <li><a href="gruut.html#gruut.const.InlineLexicon.words">words (gruut.const.InlineLexicon attribute)</a>
+
+      <ul>
+        <li><a href="gruut.html#gruut.const.Sentence.words">(gruut.const.Sentence attribute)</a>
 </li>
+      </ul></li>
       <li><a href="gruut.html#gruut.text_processor.TextProcessor.words">words() (gruut.text_processor.TextProcessor method)</a>
 
       <ul>

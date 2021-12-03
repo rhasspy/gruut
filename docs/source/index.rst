@@ -251,7 +251,6 @@ A subset of `the SSML standard <https://www.w3.org/TR/speech-synthesis11/>`_ is 
 * ``<sub alias="">`` - substitute ``alias`` for inner text
 * ``<phoneme ph="...">`` - supply phonemes for inner text
     * ``ph`` - phonemes for each word of inner text, separated by whitespace
-    * ``alphabet`` - if "ipa", phonemes are intelligently split ("aːˈb" -> "aː", "ˈb")
 
 
 .. _database:
