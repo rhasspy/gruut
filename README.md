@@ -2,6 +2,8 @@
 
 A tokenizer, text cleaner, and [IPA](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) phonemizer for several human languages that supports [SSML](#ssml).
 
+This fork adds [Luxembourgish](https://en.wikipedia.org/wiki/Luxembourgish) as addditional language to Rhasspy/Gruut. See the [Wiki page](https://github.com/mbarnig/gruut-lb/wiki) for details.
+
 ```python
 from gruut import sentences
 
@@ -115,6 +117,7 @@ gruut currently supports:
 * Farsi/Persian (`fa`)
 * French (`fr` or `fr-fr`)
 * Italian (`it` or `it-it`)
+* Luxembourgish (`lb`)
 * Dutch (`nl`)
 * Russian (`ru` or `ru-ru`)
 * Swedish (`sv` or `sv-se`)

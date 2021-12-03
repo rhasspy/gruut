@@ -25,6 +25,7 @@ LANG_ALIASES = {
     "fa": "fa",
     "fr": "fr-fr",
     "it": "it-it",
+    "lb-lb": "lb",
     "nl": "nl",
     "nl-nl": "nl",
     "pt-br": "pt",
