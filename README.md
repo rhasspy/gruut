@@ -350,7 +350,7 @@ For `en-us`, the following additional roles are available from the part-of-speec
 
 #### Inline Lexicons
 
-Inline [pronunciation lexicons](https://www.w3.org/TR/2008/REC-pronunciation-lexicon-20081014/) are supported via the `<lexicon>` and `<lookup>` tags. gruut diverges slightly from the [SSML standard](https://www.w3.org/TR/speech-synthesis11/) here by only allowing lexicons to be defined within the SSML document itself. Additionally, the `id` attribute of the `<lexicon>` element can be left off to indicate a "default" inline lexicon that does not require a corresponding `<lookup>` tag.
+Inline [pronunciation lexicons](https://www.w3.org/TR/2008/REC-pronunciation-lexicon-20081014/) are supported via the `<lexicon>` and `<lookup>` tags. gruut diverges slightly from the [SSML standard](https://www.w3.org/TR/speech-synthesis11/) here by allowing lexicons to be defined within the SSML document itself (`url` is blank or missing). Additionally, the `id` attribute of the `<lexicon>` element can be left off to indicate a "default" inline lexicon that does not require a corresponding `<lookup>` tag.
 
 For example, the following document will yield three different pronunciations for the word "tomato":
 
