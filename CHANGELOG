@@ -3,10 +3,12 @@
 ### Added
 
 - Support for Luxembourgish (credit: mbarnig)
+- External pronunciation lexicons with <lexicon uri="...">
 
 ### Fixed
 
 - Choose first word pronunciation when all pronunciations have roles instead of last
+- Word role is on <lexeme> instead of <grapheme>
 
 ## [2.1.0] - 2021 Nov 10
 

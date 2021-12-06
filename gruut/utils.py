@@ -3,14 +3,26 @@ import itertools
 import logging
 import os
 import re
+import ssl
 import typing
 import xml.etree.ElementTree as etree
 from pathlib import Path
+from urllib.request import urlopen
 
 import networkx as nx
 from gruut_ipa import IPA
 
-from gruut.const import DATA_PROP, LANG_ALIASES, NODE_TYPE, EndElement, GraphType, Node
+from gruut.const import (
+    DATA_PROP,
+    LANG_ALIASES,
+    NODE_TYPE,
+    EndElement,
+    GraphType,
+    InlineLexicon,
+    Lexeme,
+    Node,
+    WordRole,
+)
 
 _DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
@@ -213,6 +225,50 @@ def text_and_elements(element, is_last=False):
     tail = element.tail if element.tail is not None else ""
     if tail.strip():
         yield tail
+
+
+def load_lexicon(
+    uri: str,
+    lexicon: InlineLexicon,
+    ssl_context: typing.Optional[ssl.SSLContext] = None,
+):
+    """Loads a pronunciation lexicon from a URI"""
+    if ssl_context is None:
+        ssl_context = ssl.create_default_context()
+
+    with urlopen(uri, context=ssl_context) as response:
+        tree = etree.parse(response)
+        for lexeme_elem in tree.getroot():
+            if tag_no_namespace(lexeme_elem.tag) != "lexeme":
+                continue
+
+            lexeme = Lexeme()
+
+            role_str = attrib_no_namespace(lexeme_elem, "role")
+            if role_str:
+                lexeme.roles = set(role_str.strip().split())
+
+            for lexeme_child in lexeme_elem:
+
+                child_tag = tag_no_namespace(lexeme_child.tag)
+                if child_tag == "grapheme":
+                    if lexeme_child.text:
+                        lexeme.grapheme = lexeme_child.text.strip()
+                elif child_tag == "phoneme":
+                    if lexeme_child.text:
+                        lexeme.phonemes = maybe_split_ipa(lexeme_child.text.strip())
+
+            if lexeme.grapheme and lexeme.phonemes:
+                role_phonemes = lexicon.words.get(lexeme.grapheme)
+                if role_phonemes is None:
+                    role_phonemes = {}
+                    lexicon.words[lexeme.grapheme] = role_phonemes
+
+                assert role_phonemes is not None
+
+                roles = lexeme.roles or [WordRole.DEFAULT]
+                for role in roles:
+                    role_phonemes[role] = lexeme.phonemes
 
 
 # -----------------------------------------------------------------------------

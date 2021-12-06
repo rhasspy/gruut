@@ -46,6 +46,7 @@ from gruut.lang import get_settings
 from gruut.utils import (
     attrib_no_namespace,
     leaves,
+    load_lexicon,
     maybe_split_ipa,
     pipeline_split,
     pipeline_transform,
@@ -951,17 +952,36 @@ class TextProcessor:
                     lookup_stack.append(lookup_id)
                 elif elem_tag == "lexicon":
                     # Inline pronunciaton lexicon
-                    # NOTE: Empty lexicon id means the "default" inline lexicon (lookup not required)
+                    # NOTE: Empty lexicon id means the "default" inline lexicon (<lookup> not required)
                     lexicon_id = attrib_no_namespace(elem, "id", DEFAULT_LEXICON_ID)
                     assert lexicon_id is not None
 
-                    parsing_state = SSMLParsingState.IN_LEXICON
                     lexicon_alphabet = (
                         attrib_no_namespace(elem, "alphabet", "").strip().lower()
                     )
                     inline_lexicons[lexicon_id] = InlineLexicon(
                         lexicon_id=lexicon_id, alphabet=lexicon_alphabet
                     )
+
+                    lexicon_uri = attrib_no_namespace(elem, "uri", "")
+                    if lexicon_uri:
+                        # Lexicon defined externally
+                        _LOGGER.debug(
+                            "Loading pronunciation lexicon from %s", lexicon_uri
+                        )
+                        load_lexicon(lexicon_uri, inline_lexicons[lexicon_id])
+                    else:
+                        # Lexicon defined within this document
+                        parsing_state = SSMLParsingState.IN_LEXICON
+                elif (elem_tag == "lexeme") and (
+                    parsing_state == SSMLParsingState.IN_LEXICON
+                ):
+                    if lexeme is None:
+                        lexeme = Lexeme()
+
+                    role_str = attrib_no_namespace(elem, "role")
+                    if role_str:
+                        lexeme.roles = set(role_str.strip().split())
                 elif (elem_tag == "grapheme") and (
                     parsing_state == SSMLParsingState.IN_LEXICON
                 ):
@@ -969,10 +989,6 @@ class TextProcessor:
                     parsing_state = SSMLParsingState.IN_LEXICON_GRAPHEME
                     if lexeme is None:
                         lexeme = Lexeme()
-
-                    role_str = attrib_no_namespace(elem, "role")
-                    if role_str:
-                        lexeme.roles = set(role_str.strip().split())
                 elif (elem_tag == "phoneme") and (
                     parsing_state == SSMLParsingState.IN_LEXICON
                 ):

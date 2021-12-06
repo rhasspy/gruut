@@ -2,9 +2,12 @@
 """Tests for SSML"""
 import sys
 import unittest
+from pathlib import Path
 
 from gruut import sentences
 from gruut.utils import print_graph
+
+_DIR = Path(__file__).parent
 
 
 class SSMLTestCase(unittest.TestCase):
@@ -321,8 +324,8 @@ class SSMLTestCase(unittest.TestCase):
         t ə m ˈɑ t oʊ
       </phoneme>
     </lexeme>
-    <lexeme>
-      <grapheme role="fake-role">
+    <lexeme role="fake-role">
+      <grapheme>
         tomato
       </grapheme>
       <phoneme>
@@ -352,6 +355,35 @@ class SSMLTestCase(unittest.TestCase):
                 (0, 1, ["t", "ə", "m", "ˈɑ", "t", "oʊ"]),
                 (0, 2, ["t", "ə", "m", "ˈi", "t", "oʊ"]),
             ],
+        )
+
+    def test_lexicon_external(self):
+        """Test <lexicon> from URI"""
+        lexicon_path = (_DIR.parent / "etc" / "sample_lexicon.xml").absolute()
+
+        text = f"""<?xml version="1.0"?>
+<speak version="1.1"
+       xmlns="http://www.w3.org/2001/10/synthesis"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.w3.org/2001/10/synthesis
+                 http://www.w3.org/TR/speech-synthesis11/synthesis.xsd"
+       xml:lang="en-US">
+
+  <lexicon xml:id="test" alphabet="ipa" uri="file://{lexicon_path}" />
+
+  <lookup ref="test">
+    <w>tomato</w>
+  </lookup>
+</speak>"""
+
+        results = [
+            (w.sent_idx, w.idx, w.phonemes)
+            for sent in sentences(text, ssml=True)
+            for w in sent
+        ]
+
+        self.assertEqual(
+            results, [(0, 0, ["t", "ə", "m", "e", "i̥", "ɾ", "o", "u̥"])],
         )
 
 

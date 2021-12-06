@@ -324,12 +324,14 @@ A subset of [SSML](https://www.w3.org/TR/speech-synthesis11/) is supported:
 * `<sub alias="">` - substitute `alias` for inner text
 * `<phoneme ph="...">` - supply phonemes for inner text
     * `ph` - phonemes for each word of inner text, separated by whitespace
-* `<lexicon id="...">` - inline pronunciation lexicon
+* `<lexicon id="...">` - inline or external pronunciation lexicon
     * `id` - unique id of lexicon (used in `<lookup ref="...">`)
+    * `uri` - if empty or missing, lexicon is inline
     * One or more `<lexeme>` child elements with:
-        * `<grapheme role="...">WORD</grapheme>` - word text (optional [role][#word-roles])
+        *  Optional `role="..."` ([word roles][#word-roles] separated by whitespace)
+        * `<grapheme>WORD</grapheme>` - word text
         * `<phoneme>P H O N E M E S</phoneme>` - word pronunciation (phonemes separated by whitespace)
-* `<lookup ref="...">` - use inline pronunciation lexicon for child elements
+* `<lookup ref="...">` - use pronunciation lexicon for child elements
     * `ref` - id from a `<lexicon id="...">`
 
 #### Word Roles
