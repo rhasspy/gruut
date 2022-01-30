@@ -2,12 +2,10 @@
 """Tests for SSML"""
 import sys
 import unittest
-from pathlib import Path
 
 from gruut import sentences
+from gruut.resources import _DIR
 from gruut.utils import print_graph
-
-_DIR = Path(__file__).parent
 
 
 class SSMLTestCase(unittest.TestCase):

@@ -1,7 +1,20 @@
 """Italian language resources"""
+import os
+import typing
 from pathlib import Path
 
-_DIR = Path(__file__).parent
+try:
+    import importlib.resources
+
+    files = importlib.resources.files
+except (ImportError, AttributeError):
+    # Backport for Python < 3.9
+    import importlib_resources  # type: ignore
+
+    files = importlib_resources.files
+
+_PACKAGE = "gruut_lang_it"
+_DIR = Path(typing.cast(os.PathLike, files(_PACKAGE)))
 
 
 def get_lang_dir() -> Path:

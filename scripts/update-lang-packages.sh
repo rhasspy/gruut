@@ -7,7 +7,7 @@ src_dir="$(realpath "${this_dir}/..")"
 
 # -----------------------------------------------------------------------------
 
-lang_version='2.0.0'
+lang_version='2.0.1'
 
 # Update setup.py, VERSION, and language files files
 echo "Language data modules"
@@ -28,6 +28,10 @@ find "${src_dir}" -mindepth 1 -maxdepth 1 -name 'gruut-lang-*' -type d | \
                  > "${lang_dir}/README.md"
 
         module_dir="${lang_dir}/gruut_lang_${lang_code}"
+
+        LANG_NAME="${lang_name}" LANG_CODE="${lang_code}" \
+                 envsubst < "${src_dir}/etc/__init__.py.in" \
+                 > "${module_dir}/__init__.py"
 
         # Update version
         if [[ ! -s "${module_dir}/VERSION" ]]; then

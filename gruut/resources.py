@@ -1,4 +1,4 @@
-"""Swedish language resources"""
+"""Resource paths"""
 import os
 import typing
 from pathlib import Path
@@ -13,10 +13,5 @@ except (ImportError, AttributeError):
 
     files = importlib_resources.files
 
-_PACKAGE = "gruut_lang_sv"
+_PACKAGE = "gruut"
 _DIR = Path(typing.cast(os.PathLike, files(_PACKAGE)))
-
-
-def get_lang_dir() -> Path:
-    """Get directory with language resources"""
-    return _DIR

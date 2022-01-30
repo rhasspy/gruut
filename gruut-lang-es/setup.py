@@ -14,7 +14,7 @@ module_dir = this_dir / module_name
 long_description: str = ""
 readme_path = this_dir / "README.md"
 if readme_path.is_file():
-    long_description = readme_path.read_text(encoding="UTF-8")
+    long_description = readme_path.read_text(encoding="utf-8")
 
 version_path = module_dir / "VERSION"
 with open(version_path, "r", encoding="utf-8") as version_file:

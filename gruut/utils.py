@@ -23,8 +23,8 @@ from gruut.const import (
     Node,
     WordRole,
 )
+from gruut.resources import _DIR
 
-_DIR = Path(__file__).parent
 _LOGGER = logging.getLogger("gruut.utils")
 
 # -----------------------------------------------------------------------------

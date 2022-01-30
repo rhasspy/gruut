@@ -13,7 +13,7 @@ module_dir = this_dir / "gruut"
 long_description: str = ""
 readme_path = this_dir / "README.md"
 if readme_path.is_file():
-    long_description = readme_path.read_text(encoding="UTF-8")
+    long_description = readme_path.read_text(encoding="utf-8")
 
 requirements = []
 requirements_path = this_dir / "requirements.txt"
@@ -96,6 +96,7 @@ setuptools.setup(
     install_requires=requirements,
     extras_require={
         ':python_version<"3.7"': ["dataclasses", "types-dataclasses"],
+        ':python_version<"3.9"': ["importlib_resources"],
         **extras_require,
     },
     entry_points={"console_scripts": ["gruut = gruut.__main__:main"]},

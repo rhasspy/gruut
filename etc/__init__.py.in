@@ -1,4 +1,4 @@
-"""Swedish language resources"""
+"""${LANG_NAME} language resources"""
 import os
 import typing
 from pathlib import Path
@@ -13,7 +13,7 @@ except (ImportError, AttributeError):
 
     files = importlib_resources.files
 
-_PACKAGE = "gruut_lang_sv"
+_PACKAGE = "gruut_lang_${LANG_CODE}"
 _DIR = Path(typing.cast(os.PathLike, files(_PACKAGE)))
 
 

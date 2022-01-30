@@ -9,15 +9,15 @@ from enum import Enum
 from pathlib import Path
 
 from gruut.const import KNOWN_LANGS, TextProcessorSettings
+from gruut.resources import _DIR, _PACKAGE
 from gruut.text_processor import Sentence, TextProcessor
 from gruut.utils import resolve_lang
 
 # -----------------------------------------------------------------------------
 
-_DIR = Path(__file__).parent
-_LOGGER = logging.getLogger("gruut")
+_LOGGER = logging.getLogger(_PACKAGE)
 
-__version__ = (_DIR / "VERSION").read_text().strip()
+__version__ = (_DIR / "VERSION").read_text(encoding="utf-8").strip()
 __author__ = "Michael Hansen (synesthesiam)"
 __all__ = [
     "sentences",
