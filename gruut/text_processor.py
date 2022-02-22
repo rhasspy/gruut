@@ -1952,30 +1952,37 @@ class TextProcessor:
 
         settings = self.get_settings(word.lang)
 
-        if (settings.is_maybe_date is not None) and not settings.is_maybe_date(
-            word.text
-        ):
-            # Probably not a date
-            word.is_maybe_date = False
-            return False
+        try:
+            if (settings.is_maybe_date is not None) and not settings.is_maybe_date(
+                word.text
+            ):
+                # Probably not a date
+                word.is_maybe_date = False
+                return False
 
-        assert settings.dateparser_lang
+            assert settings.dateparser_lang
 
-        dateparser_kwargs: typing.Dict[str, typing.Any] = {
-            "settings": {"STRICT_PARSING": True},
-            "languages": [settings.dateparser_lang],
-        }
+            dateparser_kwargs: typing.Dict[str, typing.Any] = {
+                "settings": {"STRICT_PARSING": True},
+                "languages": [settings.dateparser_lang],
+            }
 
-        date = dateparser.parse(word.text, **dateparser_kwargs)
-        if date is not None:
-            word.interpret_as = InterpretAs.DATE
-            word.date = date
-        elif word.interpret_as == InterpretAs.DATE:
-            # Try again without strict parsing
-            dateparser_kwargs["settings"]["STRICT_PARSING"] = False
             date = dateparser.parse(word.text, **dateparser_kwargs)
             if date is not None:
+                word.interpret_as = InterpretAs.DATE
                 word.date = date
+            elif word.interpret_as == InterpretAs.DATE:
+                # Try again without strict parsing
+                dateparser_kwargs["settings"]["STRICT_PARSING"] = False
+                date = dateparser.parse(word.text, **dateparser_kwargs)
+                if date is not None:
+                    word.date = date
+        except Exception:
+            _LOGGER.exception("transform_date")
+
+            # Not a date
+            word.is_maybe_date = False
+            return False
 
         return True
 
@@ -1995,17 +2002,24 @@ class TextProcessor:
             # Can't parse a time anyways
             return False
 
-        if (settings.is_maybe_time is not None) and not settings.is_maybe_time(
-            word.text
-        ):
-            # Probably not a time
+        try:
+            if (settings.is_maybe_time is not None) and not settings.is_maybe_time(
+                word.text
+            ):
+                # Probably not a time
+                word.is_maybe_time = False
+                return False
+
+            time = settings.parse_time(word.text)
+            if time is not None:
+                word.interpret_as = InterpretAs.TIME
+                word.time = time
+        except Exception:
+            _LOGGER.exception("transform_time")
+
+            # Not a time
             word.is_maybe_time = False
             return False
-
-        time = settings.parse_time(word.text)
-        if time is not None:
-            word.interpret_as = InterpretAs.TIME
-            word.time = time
 
         return True
 
