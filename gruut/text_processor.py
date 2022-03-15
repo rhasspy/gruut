@@ -1867,7 +1867,11 @@ class TextProcessor:
                 raise ValueError("Not parsing nan or inf")
 
             word.interpret_as = InterpretAs.NUMBER
-            word.format = InterpretAsFormat.NUMBER_CARDINAL
+
+            if not word.format:
+                # Retain ordinal, etc.
+                word.format = InterpretAsFormat.NUMBER_CARDINAL
+
             word.number = number
 
             if (1000 < number < 3000) and (re.match(r"^\d+$", word.text) is not None):
