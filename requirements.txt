@@ -1,5 +1,5 @@
 Babel>=2.8.0,<3.0.0
-dateparser~=1.0.0
+dateparser~=1.1.0
 gruut-ipa>=0.12.0,<1.0
 gruut_lang_en~=2.0.0
 jsonlines~=1.2.0
