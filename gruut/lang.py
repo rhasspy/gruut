@@ -397,7 +397,10 @@ def get_de_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "’"},
         "default_currency": "EUR",
         "default_date_format": InterpretAsFormat.DATE_DMY_ORDINAL,
-        "replacements": [("’", "'")],  # normalize apostrophe
+        "replacements": [
+            ("’", "'"),  # normalize apostrophe
+            ("ß", "ss"),  # normalize Eszett
+        ],
         **settings_args,
     }
     return TextProcessorSettings(lang="de_DE", **settings_args)
