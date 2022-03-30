@@ -50,6 +50,7 @@ from gruut.utils import (
     maybe_split_ipa,
     pipeline_split,
     pipeline_transform,
+    pipeline_transform_window,
     resolve_lang,
     tag_no_namespace,
     text_and_elements,
@@ -1057,6 +1058,11 @@ class TextProcessor:
                     was_changed = True
 
             if detect_times:
+                if pipeline_transform_window(
+                    self._collapse_time, graph, root, window_size=2
+                ):
+                    was_changed = True
+
                 if pipeline_transform(self._transform_time, graph, root):
                     was_changed = True
 
@@ -1986,6 +1992,60 @@ class TextProcessor:
 
             # Not a date
             word.is_maybe_date = False
+            return False
+
+        return True
+
+    def _collapse_time(self, graph: GraphType, nodes: typing.Iterable[Node]):
+        """Collapse times like '4:01 p.m.' into '4:01pm'"""
+        words: typing.List[WordNode] = []
+
+        for node in nodes:
+            if not isinstance(node, WordNode):
+                return False
+
+            word = typing.cast(WordNode, node)
+            if (not word.is_maybe_time) or (
+                word.interpret_as and (word.interpret_as != InterpretAs.TIME)
+            ):
+                return False
+
+            words.append(word)
+
+        if not words:
+            # No words
+            return
+
+        # Assume all words have the same language
+        settings = self.get_settings(words[0].lang)
+
+        if settings.parse_time is None:
+            # Can't parse a time anyways
+            return False
+
+        try:
+            text = "".join(w.text for w in words)
+
+            if (settings.is_maybe_time is not None) and not settings.is_maybe_time(
+                text
+            ):
+                # Probably not a time
+                return False
+
+            time = settings.parse_time(text)
+            if time is not None:
+                # Collapse into a single word
+                new_node = WordNode(
+                    node=len(graph), text=text, interpret_as=InterpretAs.TIME, time=time
+                )
+                graph.add_node(new_node.node, data=new_node)
+
+                for old_word in words:
+                    graph.add_edge(old_word.node, new_node.node)
+        except Exception:
+            _LOGGER.exception("collapse_time")
+
+            # Not a time
             return False
 
         return True

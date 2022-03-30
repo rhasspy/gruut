@@ -258,7 +258,7 @@ EN_TIME_PATTERN = re.compile(
     r"""^((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3]))  # hours
          (?::
          ([0-5][0-9]))?                          # minutes
-         \s*(a\\.m\\.|am|pm|p\\.m\\.|a\\.m|p\\.m)? # am/pm
+         \s*(a\.m\.|am|pm|p\.m\.|a\.m|p\.m)? # am/pm
          $""",
     re.IGNORECASE | re.X,
 )

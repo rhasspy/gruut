@@ -329,7 +329,7 @@ def leaves(graph: GraphType, node: Node):
         yield graph.nodes[dfs_node][DATA_PROP]
 
 
-def pipeline_split(split_func, graph: GraphType, parent_node: Node,) -> bool:
+def pipeline_split(split_func, graph: GraphType, parent_node: Node) -> bool:
     """Splits leaf nodes of tree into zero or more sub-nodes"""
     was_changed = False
 
@@ -343,12 +343,27 @@ def pipeline_split(split_func, graph: GraphType, parent_node: Node,) -> bool:
     return was_changed
 
 
-def pipeline_transform(transform_func, graph: GraphType, parent_node: Node,) -> bool:
+def pipeline_transform(transform_func, graph: GraphType, parent_node: Node) -> bool:
     """Transforms leaves of tree with a custom function"""
     was_changed = False
 
     for leaf_node in list(leaves(graph, parent_node)):
         if transform_func(graph, leaf_node):
+            was_changed = True
+
+    return was_changed
+
+
+def pipeline_transform_window(
+    transform_func, graph: GraphType, parent_node: Node, window_size: int
+) -> bool:
+    """Transforms leaves of tree with a custom function using a rolling window"""
+    was_changed = False
+
+    graph_leaves = list(leaves(graph, parent_node))
+
+    for leaf_nodes in sliding_window(graph_leaves, n=window_size):
+        if transform_func(graph, leaf_nodes):
             was_changed = True
 
     return was_changed

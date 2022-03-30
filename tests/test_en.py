@@ -151,6 +151,16 @@ class EnglishTestCase(unittest.TestCase):
             [word.text for word in sentence],
         )
 
+    def test_times(self):
+        """Test expansion of times"""
+        text = "4:01am and 4:01 p.m."
+        sentence = next(sentences(text, lang="en_US"))
+
+        self.assertEqual(
+            ["four", "oh", "one", "A", "M", "and", "four", "oh", "one", "P", "M"],
+            [word.text for word in sentence],
+        )
+
 
 # -----------------------------------------------------------------------------
 
