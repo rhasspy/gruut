@@ -310,13 +310,11 @@ def en_verbalize_time(time: Time) -> typing.Iterable[str]:
     """Convert time into words"""
 
     hour = time.hours
-    past_noon = hour >= 12
 
     if hour > 12:
         hour -= 12
     elif hour == 0:
         hour = 12
-        past_noon = True
 
     yield str(hour)
 
@@ -327,12 +325,7 @@ def en_verbalize_time(time: Time) -> typing.Iterable[str]:
 
         yield str(minute)
 
-    if time.period is None:
-        if past_noon:
-            yield "P.M."
-        else:
-            yield "A.M."
-    else:
+    if time.period is not None:
         yield time.period
 
 
