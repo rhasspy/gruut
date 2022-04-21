@@ -360,6 +360,13 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             r"(.*\d)%": r"\1 percent",  # % -> percent
             r"^&(\s*)$": r"and\1",  # &-> and
             r"^([mM])t\.": r"\1ount",  # -> mt. -> mount
+            # Roman numerals
+            "^II$": "two",
+            "^III$": "three",
+            "^IV$": "four",
+            "^VI$": "six",
+            "^VII$": "seven",
+            "^VIII$": "eight",
         },
         "spell_out_words": {
             ".": "dot",
