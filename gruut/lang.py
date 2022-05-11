@@ -76,6 +76,7 @@ def get_settings(
                 # Transformations to apply to words when they can't be found in the lexicon
                 phonemizer_args = {
                     "word_transform_funcs": [
+                        str.lower,
                         remove_non_word_chars,
                         lambda s: remove_non_word_chars(s.lower()),
                     ],
