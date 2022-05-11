@@ -7,12 +7,13 @@
 
 set -e
 
-if [[ -z "$1" ]]; then
-    echo "Usage: build-gruut-db.sh <LANG>"
+if [[ -z "$2" ]]; then
+    echo "Usage: build-gruut-db.sh <LANG> <CASING>"
     exit 0
 fi
 
 lang="$1"
+casing="$2"
 
 # Directory of *this* script
 this_dir="$( cd "$( dirname "$0" )" && pwd )"
@@ -47,7 +48,7 @@ fi
 lexicon_db="${lang_dir}/lexicon.db"
 echo "Adding lexicon to database (${lexicon_db})"
 python3 -m gruut.lexicon2db \
-        --casing lower \
+        --casing "${casing}" \
         --lexicon "${lexicon_text}" \
         --database "${lexicon_db}" "${lexicon_args[@]}"
 

@@ -79,7 +79,6 @@ def get_settings(
                         remove_non_word_chars,
                         lambda s: remove_non_word_chars(s.lower()),
                     ],
-                    "casing_func": str.lower,
                 }
 
                 settings_args["lookup_phonemes"] = DelayedSqlitePhonemizer(
