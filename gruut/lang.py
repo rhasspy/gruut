@@ -264,7 +264,7 @@ EN_TIME_PATTERN = re.compile(
 )
 
 EN_MAYBE_DATE_PATTERN = re.compile(r"[0-9]+[-/][0-9]+")
-EN_MAYBE_TIME_PATTERN = re.compile(r"[0-9]+:[0-9]+")
+EN_MAYBE_TIME_PATTERN = re.compile(r"[0-9]+[:ap]", re.IGNORECASE)
 
 
 def en_is_initialism(text: str) -> bool:
