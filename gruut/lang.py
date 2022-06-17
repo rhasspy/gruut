@@ -263,6 +263,9 @@ EN_TIME_PATTERN = re.compile(
     re.IGNORECASE | re.X,
 )
 
+EN_MAYBE_DATE_PATTERN = re.compile(r"[0-9]+[-/][0-9]+")
+EN_MAYBE_TIME_PATTERN = re.compile(r"[0-9]+:[0-9]+")
+
 
 def en_is_initialism(text: str) -> bool:
     """True if text is of the form TTS or T.T.S."""
@@ -329,6 +332,16 @@ def en_verbalize_time(time: Time) -> typing.Iterable[str]:
         yield time.period
 
 
+def en_is_maybe_date(s: str) -> bool:
+    """True if string is maybe a U.S. English date"""
+    return EN_MAYBE_DATE_PATTERN.match(s) is not None
+
+
+def en_is_maybe_time(s: str) -> bool:
+    """True if string is maybe a U.S. English time"""
+    return EN_MAYBE_TIME_PATTERN.match(s) is not None
+
+
 def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     """Create settings for English"""
     settings_args = {
@@ -376,6 +389,8 @@ def get_en_us_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             "+": "plus",
             "/": "slash",
         },
+        "is_maybe_time": en_is_maybe_time,
+        "is_maybe_date": en_is_maybe_date,
         **settings_args,
     }
 
