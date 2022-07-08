@@ -483,6 +483,120 @@ class TextProcessor:
             graph, root: text graph and root node
 
         """
+        # Create __init__ args for new Node
+        def scope_kwargs(target_class):
+            scope = {}
+            if voice_stack:
+                scope["voice"] = voice_stack[-1]
+
+            scope["lang"] = current_lang
+
+            if target_class is WordNode:
+                if say_as_stack:
+                    scope["interpret_as"], scope["format"] = say_as_stack[-1]
+
+                if word_role is not None:
+                    scope["role"] = word_role
+
+                if lookup_stack:
+                    # Lexicon ids in order of look up
+                    scope["lexicon_ids"] = list(reversed(lookup_stack))
+
+            return scope
+
+        def in_inline_lexicon(
+            word_text: str, word_role: typing.Optional[str] = None
+        ) -> bool:
+            if inline_lexicons:
+                for inline_lexicon_id in itertools.chain(
+                    lookup_stack, [DEFAULT_LEXICON_ID]
+                ):
+                    maybe_lexicon = inline_lexicons.get(inline_lexicon_id)
+                    if maybe_lexicon is None:
+                        continue
+
+                    maybe_role_phonemes = maybe_lexicon.words.get(word_text)
+                    if maybe_role_phonemes is None:
+                        continue
+
+                    if (word_role is not None) and (word_role in maybe_role_phonemes):
+                        # Role-specific pronunciation
+                        return True
+
+                    if WordRole.DEFAULT in maybe_role_phonemes:
+                        # Default pronunciation
+                        return True
+
+            # No inline pronunciation
+            return False
+
+        # Gather words from leaves of the tree, group by sentence
+        def process_sentence(words: typing.List[WordNode]):
+            if pos:
+                pos_settings = self.get_settings(node.lang)
+                if pos_settings.get_parts_of_speech is not None:
+                    pos_tags = pos_settings.get_parts_of_speech(
+                        [word.text for word in words]
+                    )
+                    for word, pos_tag in zip(words, pos_tags):
+                        word.pos = pos_tag
+
+                        if not word.role:
+                            word.role = f"gruut:{pos_tag}"
+
+            if phonemize:
+                # Add phonemes to word
+                for word in words:
+                    if word.phonemes:
+                        # Word already has phonemes
+                        continue
+
+                    lexicon_ids: typing.List[str] = []
+
+                    if word.lexicon_ids:
+                        lexicon_ids.extend(word.lexicon_ids)
+
+                    lexicon_ids.append(DEFAULT_LEXICON_ID)
+
+                    # Look up phonemes from inline <lexicon>
+                    for lexicon_id in lexicon_ids:
+                        lexicon = inline_lexicons.get(lexicon_id)
+                        if lexicon is None:
+                            continue
+
+                        maybe_role_phonemes = lexicon.words.get(word.text)
+                        if maybe_role_phonemes is None:
+                            continue
+
+                        maybe_phonemes = maybe_role_phonemes.get(word.role)
+
+                        if (maybe_phonemes is None) and (word.role != WordRole.DEFAULT):
+                            # Try again with default role
+                            maybe_phonemes = maybe_role_phonemes.get(WordRole.DEFAULT)
+
+                        if maybe_phonemes is not None:
+                            # Found inline pronunciation
+                            word.phonemes = maybe_phonemes
+                            break
+
+                    if word.phonemes:
+                        # Got phonemes from inline lexicon
+                        continue
+
+                    phonemize_settings = self.get_settings(word.lang)
+                    if phonemize_settings.lookup_phonemes is not None:
+                        word.phonemes = phonemize_settings.lookup_phonemes(
+                            word.text, word.role
+                        )
+
+                    if (not word.phonemes) and (
+                        phonemize_settings.guess_phonemes is not None
+                    ):
+                        word.phonemes = phonemize_settings.guess_phonemes(
+                            word.text, word.role
+                        )
+
+        #process main
         if ssml:
             try:
                 root_element = etree.fromstring(text)
@@ -544,53 +658,6 @@ class TextProcessor:
 
         # Phonemes to use for next word(s)
         word_phonemes: typing.Optional[typing.List[typing.List[str]]] = None
-
-        # Create __init__ args for new Node
-        def scope_kwargs(target_class):
-            scope = {}
-            if voice_stack:
-                scope["voice"] = voice_stack[-1]
-
-            scope["lang"] = current_lang
-
-            if target_class is WordNode:
-                if say_as_stack:
-                    scope["interpret_as"], scope["format"] = say_as_stack[-1]
-
-                if word_role is not None:
-                    scope["role"] = word_role
-
-                if lookup_stack:
-                    # Lexicon ids in order of look up
-                    scope["lexicon_ids"] = list(reversed(lookup_stack))
-
-            return scope
-
-        def in_inline_lexicon(
-            word_text: str, word_role: typing.Optional[str] = None
-        ) -> bool:
-            if inline_lexicons:
-                for inline_lexicon_id in itertools.chain(
-                    lookup_stack, [DEFAULT_LEXICON_ID]
-                ):
-                    maybe_lexicon = inline_lexicons.get(inline_lexicon_id)
-                    if maybe_lexicon is None:
-                        continue
-
-                    maybe_role_phonemes = maybe_lexicon.words.get(word_text)
-                    if maybe_role_phonemes is None:
-                        continue
-
-                    if (word_role is not None) and (word_role in maybe_role_phonemes):
-                        # Role-specific pronunciation
-                        return True
-
-                    if WordRole.DEFAULT in maybe_role_phonemes:
-                        # Default pronunciation
-                        return True
-
-            # No inline pronunciation
-            return False
 
         # Process sub-elements and text chunks
         for elem_or_text in iter_elements():
@@ -1097,71 +1164,7 @@ class TextProcessor:
 
             num_passes_left -= 1
 
-        # Gather words from leaves of the tree, group by sentence
-        def process_sentence(words: typing.List[WordNode]):
-            if pos:
-                pos_settings = self.get_settings(node.lang)
-                if pos_settings.get_parts_of_speech is not None:
-                    pos_tags = pos_settings.get_parts_of_speech(
-                        [word.text for word in words]
-                    )
-                    for word, pos_tag in zip(words, pos_tags):
-                        word.pos = pos_tag
 
-                        if not word.role:
-                            word.role = f"gruut:{pos_tag}"
-
-            if phonemize:
-                # Add phonemes to word
-                for word in words:
-                    if word.phonemes:
-                        # Word already has phonemes
-                        continue
-
-                    lexicon_ids: typing.List[str] = []
-
-                    if word.lexicon_ids:
-                        lexicon_ids.extend(word.lexicon_ids)
-
-                    lexicon_ids.append(DEFAULT_LEXICON_ID)
-
-                    # Look up phonemes from inline <lexicon>
-                    for lexicon_id in lexicon_ids:
-                        lexicon = inline_lexicons.get(lexicon_id)
-                        if lexicon is None:
-                            continue
-
-                        maybe_role_phonemes = lexicon.words.get(word.text)
-                        if maybe_role_phonemes is None:
-                            continue
-
-                        maybe_phonemes = maybe_role_phonemes.get(word.role)
-
-                        if (maybe_phonemes is None) and (word.role != WordRole.DEFAULT):
-                            # Try again with default role
-                            maybe_phonemes = maybe_role_phonemes.get(WordRole.DEFAULT)
-
-                        if maybe_phonemes is not None:
-                            # Found inline pronunciation
-                            word.phonemes = maybe_phonemes
-                            break
-
-                    if word.phonemes:
-                        # Got phonemes from inline lexicon
-                        continue
-
-                    phonemize_settings = self.get_settings(word.lang)
-                    if phonemize_settings.lookup_phonemes is not None:
-                        word.phonemes = phonemize_settings.lookup_phonemes(
-                            word.text, word.role
-                        )
-
-                    if (not word.phonemes) and (
-                        phonemize_settings.guess_phonemes is not None
-                    ):
-                        word.phonemes = phonemize_settings.guess_phonemes(
-                            word.text, word.role
-                        )
 
         # Process tree leaves
         sentence_words: typing.List[WordNode] = []
