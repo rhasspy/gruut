@@ -34,10 +34,10 @@ except ImportError as e:
     raise e
 
 try:
-    from rapidfuzz.string_metric import levenshtein
+    from rapidfuzz.distance.Levenshtein import distance as levenshtein
 except ImportError as e:
     _LOGGER.critical("rapidfuzz library is needed for levenshtein distance")
-    _LOGGER.critical("pip install 'rapidfuzz>=1.4.1'")
+    _LOGGER.critical("pip install 'rapidfuzz>=2.11.1'")
     raise e
 
 

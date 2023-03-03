@@ -36,7 +36,8 @@ base_version = ".".join(version.split(".")[:-2] + ["0", "0"])
 extras = {
     "hazm~=0.7.0": ["fa"],
     "conllu>=4.4": ["train"],
-    "rapidfuzz>=1.4.1": ["train"],
+    # final version supporting Python 3.6
+    "rapidfuzz>=2.11.1": ["train"],
     "aeneas~=1.7.3.0": ["align"],  # requires numpy to install
     "pydub~=0.24.1": ["align"],
     "mishkal~=0.4.0": ["ar"],
