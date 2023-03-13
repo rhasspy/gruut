@@ -835,7 +835,7 @@ class TextProcessorSettings:
 
                 # $ -> USD
                 self.currencies = {
-                    babel.numbers.get_currency_symbol(cn): cn
+                    babel.numbers.get_currency_symbol(cn, locale_obj): cn
                     for cn in locale_obj.currency_symbols
                 }
             except Exception:
