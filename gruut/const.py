@@ -16,6 +16,7 @@ import babel.numbers
 # alias -> full language name
 LANG_ALIASES = {
     "ar": "ar",
+    "ca": "ca",
     "cs": "cs-cz",
     "de": "de-de",
     "en": "en-us",
@@ -39,7 +40,8 @@ ENGLISH_LANGS = {"en-us", "en-gb"}
 
 # Languages that are expected to have a model directory
 KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, LANG_ALIASES.values()))
-
+# TEST
+#print(f"[const.py] KNOWN_LANGS : {KNOWN_LANGS}")
 
 try:
     # Python >= 3.7

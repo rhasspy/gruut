@@ -102,3 +102,6 @@ def is_language_supported(lang: str) -> bool:
 def get_supported_languages() -> typing.Set[str]:
     """Set of supported gruut languages"""
     return set(KNOWN_LANGS)
+
+# TEST
+#print("Finished with __init__.py")
