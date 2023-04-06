@@ -1,0 +1,46 @@
+# https://en.wikipedia.org/wiki/Spanish_phonology
+
+# Vowels
+a p[a]so
+e p[e]so
+i p[i]so
+o p[o]so
+u p[u]jo
+
+# Dipthongs
+ai [ai]re
+au p[au]sa
+ei r[ey]
+eu n[eu]tro
+oi h[oy]
+ou b[ou]
+
+ja hacia
+je t[ie]rra
+jo rad[io]
+ju v[iu]da
+wa c[ua]dro
+we f[ue]go
+wi b[ui]tre
+wo c[uo]ta
+
+# Consonants
+b [b]ueno β
+d [d]os ð
+g [g]racias ɣ
+m [m]ucho
+n [n]os ŋ
+ɲ ni[ñ]o
+p [p]or
+t [t]u
+t͡ʃ mu[ch]a tʃ
+k [q]ué
+f per[f]ecto
+θ gra[c]ias
+s [s]í z
+ʝ grac[i]as j
+x [j]efe
+l e[l]
+ʎ [ll]ega
+ɾ ot[r]a
+r co[rr]ecto
