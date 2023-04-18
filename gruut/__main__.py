@@ -148,9 +148,9 @@ def main():
                 sentence_dict = dataclasses.asdict(sentence)
                 #writer.write(sentence_dict)
                 
+                # TEST
                 import json
                 print("-"*50)
-                #parsed = json.loads(sentence)
                 print(json.dumps(sentence_dict, indent=4))
                 print("-"*50)
 
