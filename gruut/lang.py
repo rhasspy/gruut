@@ -31,6 +31,9 @@ def get_settings(
     **settings_args,
 ) -> TextProcessorSettings:
     """Get settings for a specific language"""
+    
+    _LOGGER.debug(f"[TEST] Entered get_settings method.")
+
     model_prefix = model_prefix or ""
 
     # Resolve language
@@ -170,6 +173,10 @@ def get_settings(
     if lang_only == "zh-cn":
         # Chinese
         return get_zh_settings(lang_dir, **settings_args)
+
+    if lang_only == "ca":
+        # Catalan
+        return get_ca_settings(lang_dir, **settings_args)
 
     # Default settings only
     return TextProcessorSettings(lang=lang, **settings_args)
@@ -898,3 +905,25 @@ class DelayedSqlitePhonemizer:
 
         assert self.phonemizer is not None
         return self.phonemizer(word, role=role, do_transforms=do_transforms)
+
+
+# -----------------------------------------------------------------------------
+# Catalan (ca, Catalan)
+# -----------------------------------------------------------------------------
+
+
+def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    """Create settings for Catalan"""
+    settings_args = {
+        "major_breaks": {".", "?", "!"},
+        "minor_breaks": {",", ";", ":", "..."},
+        "word_breaks": {"-", "_"},
+        "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
+        "end_punctuations": {'"', "”", "»", "]", ")", ">"},
+        "default_currency": "EUR",
+        "default_date_format": InterpretAsFormat.DATE_DMY,
+        "replacements": [("’", "'")],  # normalize apostrophe
+        **settings_args,
+    }
+    return TextProcessorSettings(lang="ca", **settings_args)
+

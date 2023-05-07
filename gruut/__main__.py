@@ -17,6 +17,9 @@ from gruut.utils import print_graph
 
 # -----------------------------------------------------------------------------
 
+# TEST
+#print("[__main__.py] Entered __main__.py")
+
 _LOGGER = logging.getLogger("gruut")
 
 # Path to gruut base directory
@@ -40,6 +43,7 @@ class StdinFormat(str, Enum):
 
 
 def main():
+
     """Main entry point"""
     if len(sys.argv) < 2:
         # Print known languages and exit
@@ -58,6 +62,9 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
+    # TEST
+    _LOGGER.debug("[TEST] Entered main")
+
     _LOGGER.debug(args)
 
     if args.espeak:
@@ -65,6 +72,14 @@ def main():
 
     # -------------------------------------------------------------------------
 
+    # TEST
+    #print(f"[__main__.py] args.language = {args.language}")
+    #print(f"[__main__.py] args.model_prefix = {args.model_prefix}")
+    #print(f"[__main__.py] args.no_lexicon = {args.no_lexicon}")
+    #print(f"[__main__.py] phonemize = {(not (args.no_lexicon and args.no_g2p))}")
+
+    # TEST
+    _LOGGER.debug(f"[TEST] First instanciation of TextProcessor")
     text_processor = TextProcessor(
         default_lang=args.language, model_prefix=args.model_prefix,
     )
@@ -131,7 +146,13 @@ def main():
         def output_sentences(sentences, writer, text_data=None):
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
-                writer.write(sentence_dict)
+                #writer.write(sentence_dict)
+                
+                # TEST
+                import json
+                print("-"*50)
+                print(json.dumps(sentence_dict, indent=4))
+                print("-"*50)
 
     for text, text_data in input_text(lines):
         try:
@@ -146,6 +167,10 @@ def main():
                 verbalize_dates=(not args.no_dates),
                 verbalize_times=(not args.no_times),
             )
+
+            # TEST
+            #print(f"[__main__.py] graph = {graph}")
+            #print(f"[__main__.py] root = {root}")
 
             if args.debug:
                 print_graph(
@@ -168,11 +193,13 @@ def main():
             )
 
             output_sentences(sentences, writer, text_data)
+        
         except Exception as e:
             _LOGGER.exception(text)
 
             if not args.no_fail:
                 raise TextProcessingError(text) from e
+
 
 
 # -----------------------------------------------------------------------------
