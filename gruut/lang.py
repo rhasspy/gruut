@@ -932,7 +932,7 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "default_date_format": InterpretAsFormat.DATE_DMY,
         "replacements": [
             ("’", "'"), # normalize apostrophe
-            ("'", " "), # remove orthographic apostrophe
+            ("'", ""), # remove orthographic apostrophe
             ],  
         **settings_args,
     }

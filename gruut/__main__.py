@@ -280,19 +280,6 @@ def main():
             #maybe use _is_word_in_lexicon method of text_processor
             #b = text_processor._is_word_in_lexicon("altres", text_processor.get_settings(lang = args.language))
             #print(f"[TEST] b: {b}")
-            if False:
-                print(f"[TEST] type(graph): {type(graph)}")
-                print(f"[TEST] graph.nodes: {graph.nodes}")
-                print(f"[TEST] graph[3]: {type(graph[3])}")
-                for node in graph.nodes:
-                    #print(f"[TEST] graph[{node}]: {graph[node]['data']}")
-                    print(f"[TEST] isinstance(node, WordNode)]: {isinstance(graph[node], WordNode)}")
-                    #print(f"[TEST] graph[{node}]: {graph.Element}")
-                for item in graph:
-                    print(f"[TEST] item: {item}")
-                print(f"[TEST] root: {graph.leaves}")
-                for succ_node in graph.successors(0):
-                    print(f"[TEST] succ_node: {succ_node}")
             
             word_begin_sep = '['
             word_end_sep = ']'
