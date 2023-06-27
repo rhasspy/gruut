@@ -81,7 +81,7 @@ class TextProcessor:
         **kwargs,
     ):
         
-        _LOGGER.debug(f"[TEST] entered __init_ method.")
+        #_LOGGER.debug(f"[TEST] Entered __init__ method.")
         
         self.default_lang = default_lang
         self.default_settings_kwargs = kwargs
@@ -102,9 +102,6 @@ class TextProcessor:
 
         self.settings = settings
 
-        _LOGGER.debug(f"[TEST] self.settings: {self.settings}")
-        _LOGGER.debug(f"[TEST] exit __init_ method.")
-
     def sentences(
         self,
         graph: GraphType,
@@ -119,6 +116,8 @@ class TextProcessor:
     ) -> typing.Iterable[Sentence]:
         """Processes text and returns each sentence"""
 
+        #_LOGGER.debug(f"[TEST] Entered sentences method.")
+        
         def get_lang(lang: str) -> str:
             if explicit_lang or (lang != self.default_lang):
                 return lang
@@ -398,6 +397,9 @@ class TextProcessor:
 
     def words(self, graph: GraphType, root: Node, **kwargs) -> typing.Iterable[Word]:
         """Processes text and returns each word"""
+        
+        #_LOGGER.debug(f"[TEST] Entered words method.")
+        
         for sent in self.sentences(graph, root, **kwargs):
             for word in sent:
                 yield word
@@ -405,12 +407,13 @@ class TextProcessor:
     def get_settings(self, lang: typing.Optional[str] = None) -> TextProcessorSettings:
         """Gets or creates settings for a language"""
 
-        _LOGGER.debug(f"[TEST] Entered get_settings method.")
+        #_LOGGER.debug(f"[TEST] Entered get_settings method.")
 
         lang = lang or self.default_lang
         lang_settings = self.settings.get(lang)
-        _LOGGER.debug(f"[TEST] 1 - lang: {lang}")
-        _LOGGER.debug(f"[TEST] 1 - lang_settings: {lang_settings}")
+        #_LOGGER.debug(f"[TEST] lang: {lang}")
+        #_LOGGER.debug(f"[TEST] self.settings: {self.settings}")
+        #_LOGGER.debug(f"[TEST] lang_settings: {lang_settings}")
         
         if lang_settings is not None:
             return lang_settings
@@ -418,9 +421,9 @@ class TextProcessor:
         # Try again with resolved language
         resolved_lang = resolve_lang(lang)
         lang_settings = self.settings.get(resolved_lang)
-        _LOGGER.debug(f"[TEST] Try again with resolved language.")
-        _LOGGER.debug(f"[TEST] 2 - resolved_lang: {resolved_lang}")
-        _LOGGER.debug(f"[TEST] 2 - lang_settings: {lang_settings}")
+        #_LOGGER.debug(f"[TEST] Try again with resolved language.")
+        #_LOGGER.debug(f"[TEST] resolved_lang: {resolved_lang}")
+        #_LOGGER.debug(f"[TEST] lang_settings: {lang_settings}")
 
         if lang_settings is not None:
             # Patch for the future
@@ -434,12 +437,12 @@ class TextProcessor:
         )
 
         # Create default settings for language
-        _LOGGER.debug(f"[TEST] 3 - Create default settings for language.")
+        #_LOGGER.debug(f"[TEST] Create default settings for language.")
         lang_dir = self.lang_dirs.get(lang)
-        _LOGGER.debug(f"[TEST] 3 - lang_dir: {lang_dir}")
-        _LOGGER.debug(f"[TEST] 3 - self.model_prefix: {self.model_prefix}")
-        _LOGGER.debug(f"[TEST] 3 - self.search_dirs: {self.search_dirs}")
-        _LOGGER.debug(f"[TEST] 3 - self.default_settings_kwargs: {self.default_settings_kwargs}")
+        #_LOGGER.debug(f"[TEST] lang_dir: {lang_dir}")
+        #_LOGGER.debug(f"[TEST] self.model_prefix: {self.model_prefix}")
+        #_LOGGER.debug(f"[TEST] self.search_dirs: {self.search_dirs}")
+        #_LOGGER.debug(f"[TEST] self.default_settings_kwargs: {self.default_settings_kwargs}")
         lang_settings = get_settings(
             lang,
             lang_dir=lang_dir,
@@ -450,9 +453,9 @@ class TextProcessor:
         self.settings[lang] = lang_settings
         self.settings[resolved_lang] = lang_settings
 
-        _LOGGER.debug(f"[TEST] 3 - lang_settings: {lang_settings}")
+        #_LOGGER.debug(f"[TEST] lang_settings: {lang_settings}")
 
-        _LOGGER.debug(f"[TEST] Exit get_settings method.")
+        #_LOGGER.debug(f"[TEST] Exit get_settings method.")
 
         return lang_settings
 
@@ -462,8 +465,7 @@ class TextProcessor:
 
     def __call__(self, *args, **kwargs):
         """Processes text or SSML"""
-        _LOGGER.debug(f"[TEST] entered __call__ method.")
-        _LOGGER.debug(f"[TEST] exit __call__ method.")
+        #_LOGGER.debug(f"[TEST] entered __call__ method.")
         return self.process(*args, **kwargs)
 
     def process(
@@ -510,7 +512,7 @@ class TextProcessor:
 
         """
         
-        _LOGGER.debug(f"[TEST] entered process method.")
+        #_LOGGER.debug(f"[TEST] entered process method.")
         
         if ssml:
             try:
@@ -1037,18 +1039,18 @@ class TextProcessor:
             # Do replacements before minor/major breaks
             if pipeline_split(self._split_replacements, graph, root):
                 was_changed = True
-                _LOGGER.debug(f"[TEST] Do replacements before minor/major breaks.")
+                ##_LOGGER.debug(f"[TEST] Do replacements before minor/major breaks.")
 
             # Split punctuations (quotes, etc.) before breaks
             if pipeline_split(self._split_punctuations, graph, root):
                 was_changed = True
-                _LOGGER.debug(f"[TEST] Split punctuations (quotes, etc.) before breaks.")
+                ##_LOGGER.debug(f"[TEST] Split punctuations (quotes, etc.) before breaks.")
 
             # Split on minor breaks (commas, etc.)
-            #_LOGGER.debug(f"[TEST] self._split_minor_breaks: {self._split_minor_breaks}")
+            ###_LOGGER.debug(f"[TEST] self._split_minor_breaks: {self._split_minor_breaks}")
             if pipeline_split(self._split_minor_breaks, graph, root):
                 was_changed = True
-                _LOGGER.debug(f"[TEST] Split on minor breaks (commas, etc.).")
+                ##_LOGGER.debug(f"[TEST] Split on minor breaks (commas, etc.).")
 
             # Expand abbrevations before major breaks
             if pipeline_split(self._split_abbreviations, graph, root):
@@ -1061,7 +1063,7 @@ class TextProcessor:
             # Split on major breaks (periods, etc.)
             if pipeline_split(self._split_major_breaks, graph, root):
                 was_changed = True
-                _LOGGER.debug(f"[TEST] Split on major breaks (periods, etc.).")
+                ##_LOGGER.debug(f"[TEST] Split on major breaks (periods, etc.).")
 
             # Break apart sentences using BreakWordNodes
             if self._break_sentences(graph, root):
@@ -1231,12 +1233,15 @@ class TextProcessor:
             # Post process entire graph
             self.post_process_graph(graph, root)
 
-        _LOGGER.debug(f"[TEST] exit process method.")
+        #_LOGGER.debug(f"[TEST] exit process method.")
         
         return graph, root
 
     def post_process_graph(self, graph: GraphType, root: Node):
         """User-defined post-processing of entire graph"""
+
+        #_LOGGER.debug(f"[TEST] Entered post_process_graph method.")
+
         pass
 
     # -------------------------------------------------------------------------
@@ -1245,6 +1250,9 @@ class TextProcessor:
 
     def _break_sentences(self, graph: GraphType, root: Node) -> bool:
         """Break sentences apart at BreakWordNode(break_type="major") nodes."""
+
+        #_LOGGER.debug(f"[TEST] Entered _break_sentences method.")
+
         was_changed = False
 
         # This involves:
@@ -1322,6 +1330,9 @@ class TextProcessor:
 
     def _break_words(self, graph: GraphType, node: Node):
         """Break apart words according to work breaks pattern"""
+
+        #_LOGGER.debug(f"[TEST] Entered _break_words method.")
+
         if not isinstance(node, WordNode):
             return
 
@@ -1369,6 +1380,7 @@ class TextProcessor:
             }
 
     def _split_punctuations(self, graph: GraphType, node: Node):
+        #_LOGGER.debug(f"[TEST] Entered _split_punctuations method.")
         if not isinstance(node, WordNode):
             return
 
@@ -1481,6 +1493,7 @@ class TextProcessor:
             }
 
     def _split_major_breaks(self, graph: GraphType, node: Node):
+        #_LOGGER.debug(f"[TEST] Entered _split_major_breaks method.")
         if not isinstance(node, WordNode):
             return
 
@@ -1528,10 +1541,10 @@ class TextProcessor:
 
     def _split_minor_breaks(self, graph: GraphType, node: Node):
 
-        _LOGGER.debug(f"[TEST] Entered _split_minor_breaks method")
+        #_LOGGER.debug(f"[TEST] Entered _split_minor_breaks method")
 
         if not isinstance(node, WordNode):
-            _LOGGER.debug(f"[TEST] Entered if not isinstance(node, WordNode)")
+            ##_LOGGER.debug(f"[TEST] Entered if not isinstance(node, WordNode)")
             return
 
         word = typing.cast(WordNode, node)
@@ -1540,10 +1553,10 @@ class TextProcessor:
             return
 
         settings = self.get_settings(word.lang)
-        _LOGGER.debug(f"[TEST] word.lang: {word.lang}")
-        _LOGGER.debug(f"[TEST] settings: {settings}")
+        ##_LOGGER.debug(f"[TEST] word.lang: {word.lang}")
+        ##_LOGGER.debug(f"[TEST] settings: {settings}")
         if settings.minor_breaks_pattern is None:
-            _LOGGER.debug(f"[TEST] Entered if settings.minor_breaks_pattern is None")
+            ##_LOGGER.debug(f"[TEST] Entered if settings.minor_breaks_pattern is None")
             # No pattern set for this language
             return
 
@@ -1577,6 +1590,7 @@ class TextProcessor:
 
     def _find_parent(self, graph, node, *classes):
         """Tries to find a node whose type is in classes in the tree above node"""
+        #_LOGGER.debug(f"[TEST] Entered _find_parent method.")
         parents = []
         for parent_node in graph.predecessors(node.node):
             parent = graph.nodes[parent_node][DATA_PROP]
@@ -1598,6 +1612,7 @@ class TextProcessor:
         break_type: typing.Union[str, BreakType],
         lang: typing.Optional[str] = None,
     ) -> typing.Optional[PHONEMES_TYPE]:
+        #_LOGGER.debug(f"[TEST] Entered _phonemes_for_break method.")
         if break_type == BreakType.MAJOR:
             return [IPA.BREAK_MAJOR.value]
 
@@ -1620,6 +1635,7 @@ class TextProcessor:
         ] = None,
     ):
         """Splits text into word nodes"""
+        #_LOGGER.debug(f"[TEST] Entered _pipeline_tokenize method.")
         if scope_kwargs is None:
             scope_kwargs = {}
 
@@ -2134,6 +2150,7 @@ class TextProcessor:
         self, word: str, settings: TextProcessorSettings
     ) -> typing.Optional[bool]:
         """True if word is in the lexicon"""
+        #_LOGGER.debug(f"[TEST] Entered _is_word_in_lexicon method.")
         if settings.lookup_phonemes is None:
             return None
 

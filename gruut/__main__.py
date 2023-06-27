@@ -8,7 +8,6 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-
 import jsonlines
 
 from gruut.const import KNOWN_LANGS
@@ -16,9 +15,6 @@ from gruut.text_processor import TextProcessor
 from gruut.utils import print_graph
 
 # -----------------------------------------------------------------------------
-
-# TEST
-#print("[__main__.py] Entered __main__.py")
 
 _LOGGER = logging.getLogger("gruut")
 
@@ -62,9 +58,6 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    # TEST
-    _LOGGER.debug("[TEST] Entered main")
-
     _LOGGER.debug(args)
 
     if args.espeak:
@@ -72,24 +65,28 @@ def main():
 
     # -------------------------------------------------------------------------
 
-    # TEST
-    #print(f"[__main__.py] args.language = {args.language}")
-    #print(f"[__main__.py] args.model_prefix = {args.model_prefix}")
-    #print(f"[__main__.py] args.no_lexicon = {args.no_lexicon}")
-    #print(f"[__main__.py] phonemize = {(not (args.no_lexicon and args.no_g2p))}")
-
-    # TEST
-    _LOGGER.debug(f"[TEST] First instanciation of TextProcessor")
     text_processor = TextProcessor(
         default_lang=args.language, model_prefix=args.model_prefix,
     )
 
     if args.debug:
-        _LOGGER.debug(text_processor.settings)
+        _LOGGER.debug(f"settings: {text_processor.settings}")
 
-    if args.text:
+    # lines definition
+    if args.input_csv_path:
+        with open(args.input_csv_path) as csvfile:
+            reader = csv.reader(csvfile, delimiter = args.input_csv_delimiter)
+            lines_ids = [row[0] for row in reader]
+            csvfile.close()
+        with open(args.input_csv_path) as csvfile:
+            reader = csv.reader(csvfile, delimiter = args.input_csv_delimiter)
+            lines = [row[1] for row in reader]
+            csvfile.close()
+    
+    elif args.text:
         # Use arguments
         lines = args.text
+    
     else:
         # Use stdin
         stdin_format = StdinFormat.LINES
@@ -108,7 +105,59 @@ def main():
         if os.isatty(sys.stdin.fileno()):
             print("Reading input from stdin...", file=sys.stderr)
 
-    if args.csv:
+    # writer, input_text an output_sentences definition
+    if args.output_csv_path:
+
+        # Clean output file if exists
+        with open(args.output_csv_path, 'w') as outcsvfile:
+            outcsvfile.close()
+
+        def input_text(lines):
+            for line_num, line in enumerate(lines):
+                text = line
+                text_id = lines_ids[line_num]
+                yield (text, text_id)
+
+        def output_sentences(sentences, writer, text_data=None):
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                writer.write(sentence_dict)
+                
+        def output_transcription(
+                sentences, 
+                writer, 
+                text_data=None, 
+                word_begin_sep = '[', 
+                word_end_sep = ']',
+                g2p_word_begin_sep = '{', 
+                g2p_word_end_sep = '}',
+                ):
+
+            transcription = ""
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                for word_dict in sentence_dict["words"]:
+                    word_phonemes = word_dict["phonemes"]
+                    in_lexicon = text_processor._is_word_in_lexicon(
+                        word_dict["text"], 
+                        text_processor.get_settings(lang = args.language),
+                        )
+                    if in_lexicon == False:
+                        transcription = f"{transcription.strip()} {' '.join([g2p_word_begin_sep] + word_phonemes + [g2p_word_end_sep]).strip()}".strip()
+                    else:
+                        transcription = f"{transcription.strip()} {' '.join([word_begin_sep] + word_phonemes + [word_end_sep]).strip()}".strip()
+            
+            row_to_write = f"{text_data}{args.output_csv_delimiter}{transcription}"
+            row_to_write = [text_data, transcription]
+            writer.writerow(row_to_write)  
+
+        def output_json(sentences, writer, text_data=None):
+            import json
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                print(json.dumps(sentence_dict, indent=4))
+
+    elif args.csv:
         writer = csv.writer(sys.stdout, delimiter=args.csv_delimiter)
 
         def input_text(lines):
@@ -135,7 +184,7 @@ def main():
 
             row.append(args.phoneme_word_separator.join(phonemes))
             writer.writerow(row)
-
+    
     else:
         writer = jsonlines.Writer(sys.stdout, flush=True)
 
@@ -146,15 +195,47 @@ def main():
         def output_sentences(sentences, writer, text_data=None):
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
-                #writer.write(sentence_dict)
+                writer.write(sentence_dict)
                 
-                # TEST
-                import json
-                print("-"*50)
-                print(json.dumps(sentence_dict, indent=4))
-                print("-"*50)
+        # TEST
+        def output_transcription(
+                sentences, 
+                writer, 
+                text_data=None,
+                word_begin_sep = '[', 
+                word_end_sep = ']',
+                g2p_word_begin_sep = '{', 
+                g2p_word_end_sep = '}',
+                ):
+            
+            transcription = ""
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                for word_dict in sentence_dict["words"]:
+                    word_phonemes = word_dict["phonemes"]
+                    in_lexicon = text_processor._is_word_in_lexicon(
+                        word_dict["text"], 
+                        text_processor.get_settings(lang = args.language),
+                        )
+                    if in_lexicon == False:
+                        transcription = f"{transcription.strip()} {' '.join([g2p_word_begin_sep] + word_phonemes + [g2p_word_end_sep]).strip()}".strip()
+                    else:
+                        transcription = f"{transcription.strip()} {' '.join([word_begin_sep] + word_phonemes + [word_end_sep]).strip()}".strip()
+            
+            writer.write(transcription)
 
+        def output_json(sentences, writer, text_data=None):
+            import json
+            for sentence in sentences:
+                sentence_dict = dataclasses.asdict(sentence)
+                print(json.dumps(sentence_dict, indent=4))
+
+    # Transcription output
     for text, text_data in input_text(lines):
+
+        # I think lowercase is not applied before!
+        text = text.lower()
+
         try:
             graph, root = text_processor(
                 text,
@@ -167,10 +248,6 @@ def main():
                 verbalize_dates=(not args.no_dates),
                 verbalize_times=(not args.no_times),
             )
-
-            # TEST
-            #print(f"[__main__.py] graph = {graph}")
-            #print(f"[__main__.py] root = {root}")
 
             if args.debug:
                 print_graph(
@@ -191,15 +268,37 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
-
-            output_sentences(sentences, writer, text_data)
+            
+            if args.output_csv_path:
+                with open(args.output_csv_path, 'a') as outcsvfile:
+                    writer = csv.writer(outcsvfile, delimiter = args.output_csv_delimiter)
+                    output_transcription(
+                        sentences, 
+                        writer, 
+                        text_data, 
+                        word_begin_sep = args.word_begin_sep, 
+                        word_end_sep = args.word_end_sep,
+                        g2p_word_begin_sep = args.g2p_word_begin_sep,
+                        g2p_word_end_sep = args.g2p_word_end_sep,
+                        )
+                    outcsvfile.close()
+            else:
+                output_transcription(
+                    sentences, 
+                    writer, 
+                    text_data, 
+                    word_begin_sep = args.word_begin_sep, 
+                    word_end_sep = args.word_end_sep,
+                    g2p_word_begin_sep = args.g2p_word_begin_sep,
+                    g2p_word_end_sep = args.g2p_word_end_sep,
+                    )
+            
         
         except Exception as e:
             _LOGGER.exception(text)
 
             if not args.no_fail:
                 raise TextProcessingError(text) from e
-
 
 
 # -----------------------------------------------------------------------------
@@ -216,7 +315,9 @@ class TextProcessingError(Exception):
 
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
+
     parser = argparse.ArgumentParser(prog="gruut")
+
     parser.add_argument(
         "-l",
         "--language",
@@ -225,9 +326,11 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument("text", nargs="*", help="Text to tokenize (default: stdin)")
+    
     parser.add_argument(
         "--ssml", action="store_true", help="Input text is SSML",
     )
+    
     parser.add_argument(
         "--stdin-format",
         choices=[str(v.value) for v in StdinFormat],
@@ -241,50 +344,61 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Disable number replacement (1 -> one)",
     )
+
     parser.add_argument(
         "--no-currency",
         action="store_true",
         help="Disable currency replacement ($1 -> one dollar)",
     )
+
     parser.add_argument(
         "--no-dates",
         action="store_true",
         help="Disable date replacement (4/1/2021 -> April first twenty twenty one)",
     )
+
     parser.add_argument(
         "--no-times",
         action="store_true",
         help="Disable time replacement (4:01pm -> four oh one P M)",
     )
+
     parser.add_argument(
         "--no-pos", action="store_true", help="Disable part of speech tagger",
     )
+
     parser.add_argument(
         "--no-lexicon", action="store_true", help="Disable phoneme lexicon database",
     )
+
     parser.add_argument(
         "--no-g2p", action="store_true", help="Disable grapheme to phoneme guesser",
     )
+
     parser.add_argument(
         "--no-punctuation",
         action="store_true",
         help="Don't output punctuations (quotes, brackets, etc.)",
     )
+
     parser.add_argument(
         "--no-major-breaks",
         action="store_true",
         help="Don't output major breaks (periods, question marks, etc.)",
     )
+
     parser.add_argument(
         "--no-minor-breaks",
         action="store_true",
         help="Don't output minor breaks (commas, semicolons, etc.)",
     )
+
     parser.add_argument(
         "--no-post-process",
         action="store_true",
         help="Disable post-processing of sentences (e.g., liasons)",
     )
+
     parser.add_argument(
         "--no-fail", action="store_true", help="Skip lines that result in errors",
     )
@@ -295,36 +409,80 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Use eSpeak versions of lexicons (overrides --model-prefix)",
     )
+
     parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",
     )
+
     parser.add_argument(
         "--csv", action="store_true", help="Input text is id|text (see --csv-delimiter)"
     )
+
     parser.add_argument(
-        "--csv-delimiter", default="|", help="Delimiter for input text with --csv"
+        "--input-csv-path", help="Input csv path",
     )
+
+    parser.add_argument(
+        "--output-csv-path", help="Output csv path",
+    )
+
+    parser.add_argument(
+        "--input-csv-delimiter", default="|", help="Delimiter for input csv"
+    )
+
+    parser.add_argument(
+        "--output-csv-delimiter", default="|", help="Delimiter for output csv"
+    )
+
     parser.add_argument(
         "--sentence-separator",
         default=". ",
         help="String used to separate sentences in CSV output",
     )
+
     parser.add_argument(
         "--word-separator",
         default=" ",
         help="String used to separate words in CSV output",
     )
+
     parser.add_argument(
         "--phoneme-word-separator",
         default="#",
         help="String used to separate phonemes in CSV output",
     )
+
     parser.add_argument(
         "--phoneme-separator",
         default=" ",
         help="String used to separate words in CSV output phonemes",
     )
+
+    parser.add_argument(
+        "--word_begin_sep",
+        default="[",
+        help="String used to indicate the begining of words transcribed using the lexicon.",
+    )
+
+    parser.add_argument(
+        "--word_end_sep",
+        default="]",
+        help="String used to indicate the ending of words transcribed using the lexicon.",
+    )
+
+    parser.add_argument(
+        "--g2p_word_begin_sep",
+        default="{",
+        help="String used to indicate the begining of words transcribed using the g2p model.",
+    )
+
+    parser.add_argument(
+        "--g2p_word_end_sep",
+        default="}",
+        help="String used to indicate the ending of words transcribed using the g2p model.",
+    )
+
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"
     )

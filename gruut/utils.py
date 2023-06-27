@@ -44,6 +44,9 @@ def resolve_lang(lang: str) -> str:
     Returns:
         Resolved language name
     """
+    
+    _LOGGER.debug(f"Entered resolve_lang method.")
+    
     lang = lang.lower().replace("_", "-")
 
     return LANG_ALIASES.get(lang, lang)
@@ -72,6 +75,8 @@ def find_lang_dir(
     Returns:
         Path to the language model directory or None if it can't be found
     """
+    _LOGGER.debug(f"Entered find_lang_dir method.")
+
     base_lang = LANG_SPLIT_PATTERN.split(lang)[0].lower()
     lang_module_name = f"gruut_lang_{base_lang}"
 
