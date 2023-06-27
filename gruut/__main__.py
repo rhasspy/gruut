@@ -8,7 +8,6 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-
 import jsonlines
 
 from gruut.const import KNOWN_LANGS
@@ -124,7 +123,6 @@ def main():
                 sentence_dict = dataclasses.asdict(sentence)
                 writer.write(sentence_dict)
                 
-        # TEST
         def output_transcription(
                 sentences, 
                 writer, 
@@ -232,10 +230,10 @@ def main():
                 sentence_dict = dataclasses.asdict(sentence)
                 print(json.dumps(sentence_dict, indent=4))
 
-    # Output the transcription
+    # Transcription output
     for text, text_data in input_text(lines):
 
-        # TEST I think lowercase is not done, strange!
+        # I think lowercase is not applied before!
         text = text.lower()
 
         try:
@@ -270,21 +268,7 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
-
-            #from gruut.const import WordNode
-            #from gruut.utils import leaves
-            #for leaf_node in list(leaves(graph, root)):
-            #    print(f"[TEST] leaf_node: {leaf_node.text}")
-            #    print(f"[TEST] leaf_node.in_lexicon: {leaf_node.in_lexicon}")
-            #    print(f"[TEST] isinstance(leaf_node, WordNode): {isinstance(leaf_node, WordNode)}")
-            #maybe use _is_word_in_lexicon method of text_processor
-            #b = text_processor._is_word_in_lexicon("altres", text_processor.get_settings(lang = args.language))
-            #print(f"[TEST] b: {b}")
             
-            word_begin_sep = '['
-            word_end_sep = ']'
-            g2p_word_begin_sep = '{'
-            g2p_word_end_sep = '}'
             if args.output_csv_path:
                 with open(args.output_csv_path, 'a') as outcsvfile:
                     writer = csv.writer(outcsvfile, delimiter = args.output_csv_delimiter)
@@ -292,10 +276,10 @@ def main():
                         sentences, 
                         writer, 
                         text_data, 
-                        word_begin_sep = word_begin_sep, 
-                        word_end_sep = word_end_sep,
-                        g2p_word_begin_sep = g2p_word_begin_sep,
-                        g2p_word_end_sep = g2p_word_end_sep,
+                        word_begin_sep = args.word_begin_sep, 
+                        word_end_sep = args.word_end_sep,
+                        g2p_word_begin_sep = args.g2p_word_begin_sep,
+                        g2p_word_end_sep = args.g2p_word_end_sep,
                         )
                     outcsvfile.close()
             else:
@@ -303,15 +287,11 @@ def main():
                     sentences, 
                     writer, 
                     text_data, 
-                    word_begin_sep = word_begin_sep, 
-                    word_end_sep = word_end_sep,
-                    g2p_word_begin_sep = g2p_word_begin_sep,
-                    g2p_word_end_sep = g2p_word_end_sep,
+                    word_begin_sep = args.word_begin_sep, 
+                    word_end_sep = args.word_end_sep,
+                    g2p_word_begin_sep = args.g2p_word_begin_sep,
+                    g2p_word_end_sep = args.g2p_word_end_sep,
                     )
-            
-            #output_sentences(sentences, writer, text_data)
-            #print("-"*50)
-            #output_json(sentences, writer, text_data)
             
         
         except Exception as e:
@@ -335,7 +315,9 @@ class TextProcessingError(Exception):
 
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
+
     parser = argparse.ArgumentParser(prog="gruut")
+
     parser.add_argument(
         "-l",
         "--language",
@@ -344,9 +326,11 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument("text", nargs="*", help="Text to tokenize (default: stdin)")
+    
     parser.add_argument(
         "--ssml", action="store_true", help="Input text is SSML",
     )
+    
     parser.add_argument(
         "--stdin-format",
         choices=[str(v.value) for v in StdinFormat],
@@ -360,50 +344,61 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Disable number replacement (1 -> one)",
     )
+
     parser.add_argument(
         "--no-currency",
         action="store_true",
         help="Disable currency replacement ($1 -> one dollar)",
     )
+
     parser.add_argument(
         "--no-dates",
         action="store_true",
         help="Disable date replacement (4/1/2021 -> April first twenty twenty one)",
     )
+
     parser.add_argument(
         "--no-times",
         action="store_true",
         help="Disable time replacement (4:01pm -> four oh one P M)",
     )
+
     parser.add_argument(
         "--no-pos", action="store_true", help="Disable part of speech tagger",
     )
+
     parser.add_argument(
         "--no-lexicon", action="store_true", help="Disable phoneme lexicon database",
     )
+
     parser.add_argument(
         "--no-g2p", action="store_true", help="Disable grapheme to phoneme guesser",
     )
+
     parser.add_argument(
         "--no-punctuation",
         action="store_true",
         help="Don't output punctuations (quotes, brackets, etc.)",
     )
+
     parser.add_argument(
         "--no-major-breaks",
         action="store_true",
         help="Don't output major breaks (periods, question marks, etc.)",
     )
+
     parser.add_argument(
         "--no-minor-breaks",
         action="store_true",
         help="Don't output minor breaks (commas, semicolons, etc.)",
     )
+
     parser.add_argument(
         "--no-post-process",
         action="store_true",
         help="Disable post-processing of sentences (e.g., liasons)",
     )
+
     parser.add_argument(
         "--no-fail", action="store_true", help="Skip lines that result in errors",
     )
@@ -414,45 +409,80 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Use eSpeak versions of lexicons (overrides --model-prefix)",
     )
+
     parser.add_argument(
         "--model-prefix",
         help="Sub-directory of gruut language data files with different lexicon, etc. (e.g., espeak)",
     )
+
     parser.add_argument(
         "--csv", action="store_true", help="Input text is id|text (see --csv-delimiter)"
     )
+
     parser.add_argument(
         "--input-csv-path", help="Input csv path",
     )
+
     parser.add_argument(
         "--output-csv-path", help="Output csv path",
     )
+
     parser.add_argument(
         "--input-csv-delimiter", default="|", help="Delimiter for input csv"
     )
+
     parser.add_argument(
         "--output-csv-delimiter", default="|", help="Delimiter for output csv"
     )
+
     parser.add_argument(
         "--sentence-separator",
         default=". ",
         help="String used to separate sentences in CSV output",
     )
+
     parser.add_argument(
         "--word-separator",
         default=" ",
         help="String used to separate words in CSV output",
     )
+
     parser.add_argument(
         "--phoneme-word-separator",
         default="#",
         help="String used to separate phonemes in CSV output",
     )
+
     parser.add_argument(
         "--phoneme-separator",
         default=" ",
         help="String used to separate words in CSV output phonemes",
     )
+
+    parser.add_argument(
+        "--word_begin_sep",
+        default="[",
+        help="String used to indicate the begining of words transcribed using the lexicon.",
+    )
+
+    parser.add_argument(
+        "--word_end_sep",
+        default="]",
+        help="String used to indicate the ending of words transcribed using the lexicon.",
+    )
+
+    parser.add_argument(
+        "--g2p_word_begin_sep",
+        default="{",
+        help="String used to indicate the begining of words transcribed using the g2p model.",
+    )
+
+    parser.add_argument(
+        "--g2p_word_end_sep",
+        default="}",
+        help="String used to indicate the ending of words transcribed using the g2p model.",
+    )
+
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"
     )

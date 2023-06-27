@@ -31,8 +31,6 @@ def get_settings(
     **settings_args,
 ) -> TextProcessorSettings:
     """Get settings for a specific language"""
-    
-    #_LOGGER.debug(f"[TEST] Entered get_settings method.")
 
     model_prefix = model_prefix or ""
 
@@ -120,8 +118,6 @@ def get_settings(
 
     if lang_only == "ca":
         # Catalan
-        #_LOGGER.debug(f"[TEST] Entered lang_only == 'ca' option.")
-        #_LOGGER.debug(f"[TEST] lang_dir: {lang_dir}")
         return get_ca_settings(lang_dir, **settings_args)
 
     if lang_only == "cs-cz":
@@ -925,7 +921,7 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     settings_args = {
         "major_breaks": {".", "?", "!"},
         "minor_breaks": {",", ";", ":", "..."},
-        "word_breaks": {"-", "_", "·"}, #{"-", "_", "·", ".", "?", "!", ",", ";", ":", "..."}
+        "word_breaks": {"_"},
         "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
         "end_punctuations": {'"', "”", "»", "]", ")", ">", "!", "?"},
         "default_currency": "EUR",
@@ -933,6 +929,8 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         "replacements": [
             ("’", "'"), # normalize apostrophe
             ("'", ""), # remove orthographic apostrophe
+            ("-", ""),
+            ("l·l", "l"),
             ],  
         **settings_args,
     }
