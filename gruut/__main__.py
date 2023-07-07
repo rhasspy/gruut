@@ -167,7 +167,7 @@ def main():
                 )
             )
 
-            output_sentences(sentences, writer, text_data)       
+            output_sentences(sentences, writer, text_data)
         except Exception as e:
             _LOGGER.exception(text)
 
