@@ -166,8 +166,8 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
+
             output_sentences(sentences, writer, text_data)       
-        
         except Exception as e:
             _LOGGER.exception(text)
 
@@ -303,6 +303,7 @@ def get_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
 
 # -----------------------------------------------------------------------------
 
