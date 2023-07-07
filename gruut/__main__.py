@@ -120,6 +120,7 @@ def main():
 
             row.append(args.phoneme_word_separator.join(phonemes))
             writer.writerow(row)
+
     else:
         writer = jsonlines.Writer(sys.stdout, flush=True)
 
@@ -133,7 +134,6 @@ def main():
                 writer.write(sentence_dict)
 
     for text, text_data in input_text(lines):
-
         try:
             graph, root = text_processor(
                 text,
@@ -166,7 +166,6 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
-
             output_sentences(sentences, writer, text_data)       
         
         except Exception as e:
@@ -190,7 +189,6 @@ class TextProcessingError(Exception):
 
 def get_args() -> argparse.Namespace:
     """Parse command-line arguments"""
-
     parser = argparse.ArgumentParser(prog="gruut")
     parser.add_argument(
         "-l",
@@ -198,6 +196,7 @@ def get_args() -> argparse.Namespace:
         default="en-us",
         help="Default language code (default: en-us)",
     )
+
     parser.add_argument("text", nargs="*", help="Text to tokenize (default: stdin)")
     parser.add_argument(
         "--ssml", action="store_true", help="Input text is SSML",
@@ -208,6 +207,7 @@ def get_args() -> argparse.Namespace:
         default=StdinFormat.AUTO,
         help="Format of stdin text (default: auto)",
     )
+
     # Disable features
     parser.add_argument(
         "--no-numbers",
@@ -261,6 +261,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-fail", action="store_true", help="Skip lines that result in errors",
     )
+
     # Miscellaneous
     parser.add_argument(
         "--espeak",
@@ -275,7 +276,7 @@ def get_args() -> argparse.Namespace:
         "--csv", action="store_true", help="Input text is id|text (see --csv-delimiter)"
     )
     parser.add_argument(
-        "--output-csv-path", help="Output csv path",
+        "--csv-delimiter", default="|", help="Delimiter for input text with --csv"
     )
     parser.add_argument(
         "--sentence-separator",
