@@ -8,6 +8,7 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
+
 import jsonlines
 
 from gruut.const import KNOWN_LANGS
@@ -39,7 +40,6 @@ class StdinFormat(str, Enum):
 
 
 def main():
-
     """Main entry point"""
     if len(sys.argv) < 2:
         # Print known languages and exit
@@ -72,21 +72,9 @@ def main():
     if args.debug:
         _LOGGER.debug(f"settings: {text_processor.settings}")
 
-    # lines definition
-    if args.input_csv_path:
-        with open(args.input_csv_path) as csvfile:
-            reader = csv.reader(csvfile, delimiter = args.input_csv_delimiter)
-            lines_ids = [row[0] for row in reader]
-            csvfile.close()
-        with open(args.input_csv_path) as csvfile:
-            reader = csv.reader(csvfile, delimiter = args.input_csv_delimiter)
-            lines = [row[1] for row in reader]
-            csvfile.close()
-    
-    elif args.text:
+    if args.text:
         # Use arguments
         lines = args.text
-    
     else:
         # Use stdin
         stdin_format = StdinFormat.LINES
@@ -106,58 +94,7 @@ def main():
             print("Reading input from stdin...", file=sys.stderr)
 
     # writer, input_text an output_sentences definition
-    if args.output_csv_path:
-
-        # Clean output file if exists
-        with open(args.output_csv_path, 'w') as outcsvfile:
-            outcsvfile.close()
-
-        def input_text(lines):
-            for line_num, line in enumerate(lines):
-                text = line
-                text_id = lines_ids[line_num]
-                yield (text, text_id)
-
-        def output_sentences(sentences, writer, text_data=None):
-            for sentence in sentences:
-                sentence_dict = dataclasses.asdict(sentence)
-                writer.write(sentence_dict)
-                
-        def output_transcription(
-                sentences, 
-                writer, 
-                text_data=None, 
-                word_begin_sep = '[', 
-                word_end_sep = ']',
-                g2p_word_begin_sep = '{', 
-                g2p_word_end_sep = '}',
-                ):
-
-            transcription = ""
-            for sentence in sentences:
-                sentence_dict = dataclasses.asdict(sentence)
-                for word_dict in sentence_dict["words"]:
-                    word_phonemes = word_dict["phonemes"]
-                    in_lexicon = text_processor._is_word_in_lexicon(
-                        word_dict["text"], 
-                        text_processor.get_settings(lang = args.language),
-                        )
-                    if in_lexicon == False:
-                        transcription = f"{transcription.strip()} {' '.join([g2p_word_begin_sep] + word_phonemes + [g2p_word_end_sep]).strip()}".strip()
-                    else:
-                        transcription = f"{transcription.strip()} {' '.join([word_begin_sep] + word_phonemes + [word_end_sep]).strip()}".strip()
-            
-            row_to_write = f"{text_data}{args.output_csv_delimiter}{transcription}"
-            row_to_write = [text_data, transcription]
-            writer.writerow(row_to_write)  
-
-        def output_json(sentences, writer, text_data=None):
-            import json
-            for sentence in sentences:
-                sentence_dict = dataclasses.asdict(sentence)
-                print(json.dumps(sentence_dict, indent=4))
-
-    elif args.csv:
+    if args.csv:
         writer = csv.writer(sys.stdout, delimiter=args.csv_delimiter)
 
         def input_text(lines):
