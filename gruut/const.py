@@ -41,6 +41,7 @@ ENGLISH_LANGS = {"en-us", "en-gb"}
 # Languages that are expected to have a model directory
 KNOWN_LANGS = set(itertools.chain(ENGLISH_LANGS, LANG_ALIASES.values()))
 
+
 try:
     # Python >= 3.7
     REGEX_PATTERN = re.Pattern  # type: ignore
