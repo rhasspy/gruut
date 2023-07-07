@@ -112,7 +112,7 @@ class TextProcessor:
         pos: bool = True,
     ) -> typing.Iterable[Sentence]:
         """Processes text and returns each sentence"""
-        
+
         def get_lang(lang: str) -> str:
             if explicit_lang or (lang != self.default_lang):
                 return lang
@@ -392,24 +392,21 @@ class TextProcessor:
 
     def words(self, graph: GraphType, root: Node, **kwargs) -> typing.Iterable[Word]:
         """Processes text and returns each word"""
-        
         for sent in self.sentences(graph, root, **kwargs):
             for word in sent:
                 yield word
 
     def get_settings(self, lang: typing.Optional[str] = None) -> TextProcessorSettings:
         """Gets or creates settings for a language"""
-
         lang = lang or self.default_lang
         lang_settings = self.settings.get(lang)
-        
+
         if lang_settings is not None:
             return lang_settings
 
         # Try again with resolved language
         resolved_lang = resolve_lang(lang)
         lang_settings = self.settings.get(resolved_lang)
-
         if lang_settings is not None:
             # Patch for the future
             self.settings[lang] = self.settings[resolved_lang]
@@ -486,7 +483,6 @@ class TextProcessor:
             graph, root: text graph and root node
 
         """
-        
         if ssml:
             try:
                 root_element = etree.fromstring(text)
@@ -1201,7 +1197,6 @@ class TextProcessor:
             # Post process entire graph
             self.post_process_graph(graph, root)
 
-        
         return graph, root
 
     def post_process_graph(self, graph: GraphType, root: Node):
@@ -1291,7 +1286,6 @@ class TextProcessor:
 
     def _break_words(self, graph: GraphType, node: Node):
         """Break apart words according to work breaks pattern"""
-
         if not isinstance(node, WordNode):
             return
 
@@ -1497,7 +1491,6 @@ class TextProcessor:
         }
 
     def _split_minor_breaks(self, graph: GraphType, node: Node):
-
         if not isinstance(node, WordNode):
             return
 
