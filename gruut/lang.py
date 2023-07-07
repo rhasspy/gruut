@@ -15,7 +15,7 @@ from gruut.pos import PartOfSpeechTagger
 from gruut.text_processor import InterpretAsFormat, TextProcessorSettings
 from gruut.utils import find_lang_dir, remove_non_word_chars, resolve_lang
 
-_LOGGER = logging.getLogger("gruut.lang")
+_LOGGER = logging.getLogger("gruut")
 
 # -----------------------------------------------------------------------------
 
@@ -31,7 +31,6 @@ def get_settings(
     **settings_args,
 ) -> TextProcessorSettings:
     """Get settings for a specific language"""
-
     model_prefix = model_prefix or ""
 
     # Resolve language
