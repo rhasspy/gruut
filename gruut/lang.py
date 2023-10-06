@@ -912,6 +912,24 @@ class DelayedSqlitePhonemizer:
 # Catalan (ca, Catalan)
 # -----------------------------------------------------------------------------
 
+class CatalanPreProcessText:
+    """Pre-processes text"""
+
+    def __init__(self):
+
+        self.STRESSED_VOWELS = ["à", "è", "ò", "é", "í", "ó", "ú"]
+
+    def __call__(self, text: str) -> str:
+
+        print(f"Enter pre-processing.")
+        print(f"Entered text: {text}")
+        text = text.replace("'", "~")
+        print(f"Exit text: {text}")
+
+        print(f"Exit pre-processing.")
+
+        return text
+
 
 def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     
@@ -931,6 +949,7 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             ("-", ""),
             ("l·l", "l"),
             ],  
+        "pre_process_text": CatalanPreProcessText(),
         **settings_args,
     }
     
