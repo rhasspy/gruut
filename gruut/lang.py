@@ -175,10 +175,6 @@ def get_settings(
         # Chinese
         return get_zh_settings(lang_dir, **settings_args)
 
-    if lang_only == "ca":
-        # Catalan
-        return get_ca_settings(lang_dir, **settings_args)
-
     # Default settings only
     return TextProcessorSettings(lang=lang, **settings_args)
 
@@ -837,6 +833,1303 @@ def get_zh_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Catalan (ca, Catalan)
+# -----------------------------------------------------------------------------
+
+# TODO remove this imports
+from typing import List#, Tuple, Set, Dict, Union
+from collections import deque
+
+# TODO explicit input and output type
+def vocal(carac):
+    vocal_chars = ['a', 'à', 'e', 'é', 'è', 'i', 'í', 'ï', 'o', 'ó', 'ò', 'u', 'ü', 'ú']
+    return carac in vocal_chars
+
+def acaba_en_vocal(prefix):
+    darrer = prefix[-1]
+    return vocal(darrer)
+
+def post_prefix_ok(resta):
+    mida = len(resta)
+    primer = resta[0]
+    segon = '\0'
+    if mida > 1:
+        segon = resta[1]
+
+    if primer in "iu":
+        return True
+    elif primer in "rs":
+        if mida > 1 and vocal(segon):
+            return True
+    return False
+
+def nuclitica(carac):
+    nuclitic_chars = ['a', 'à', 'e', 'é', 'è', 'í', 'ï', 'o', 'ó', 'ò', 'ú']
+    return carac in nuclitic_chars
+
+def gicf_suf(mot, pos, mots_voc_ir):
+        
+    mida = len(mot)
+    
+    if mot[pos:].endswith("isme") and len(mot) - pos == 4:
+        return True
+    elif mot[pos:].endswith("ista") and len(mot) - pos == 4:
+        return True
+    elif mot[pos:].endswith("ismes") and len(mot) - pos == 5:
+        return True
+    elif mot[pos:].endswith("istes") and len(mot) - pos == 5:
+        return True
+
+    i1 = mot.find("ir")
+    if i1 == pos and len(mot) - pos == 2:
+        if mot in mots_voc_ir:
+            return False
+        else:
+            return True
+
+    i1 = mot.find("int")
+    if i1 == pos and len(mot) - pos == 3:
+        return True
+
+    i1 = mot.find("iré")
+    if i1 == pos and len(mot) - pos == 3:
+        return True
+
+    i1 = mot.find("iràs")
+    if i1 == pos and len(mot) - pos == 4:
+        return True
+
+    i1 = mot.find("irà")
+    if i1 == pos and len(mot) - pos == 3:
+        return True
+
+    i1 = mot.find("irem")
+    if i1 == pos and len(mot) - pos == 4:
+        return True
+
+    i1 = mot.find("ireu")
+    if i1 == pos and len(mot) - pos == 4:
+        return True
+
+    i1 = mot.find("iran")
+    if i1 == pos and len(mot) - pos == 4:
+        return True
+
+    i1 = mot.find("iria")
+    if i1 == pos and len(mot) - pos == 4:
+        return True
+
+    i1 = mot.find("iries")
+    if i1 == pos and len(mot) - pos == 5:
+        return True
+
+    i1 = mot.find("iríem")
+    if i1 == pos and len(mot) - pos == 5:
+        return True
+
+    i1 = mot.find("iríeu")
+    if i1 == pos and len(mot) - pos == 5:
+        return True
+
+    i1 = mot.find("irien")
+    if i1 == pos and len(mot) - pos == 5:
+        return True
+
+    return False
+
+# TODO explicit input and output type
+class Part:
+    
+    def __init__(self, tros):
+        self.text_ = tros
+        self.transsil_ = deque() # It will be a deque structure with Sillaba instances as elements
+
+    def push_back(self, sil):
+        self.transsil_.append(sil)
+
+    def pop_back(self):
+        self.transsil_.pop()
+
+    def pop_front(self):
+        self.transsil_.popleft()
+
+    def empty(self):
+        return len(self.transsil_) == 0
+
+    def size(self):
+        return len(self.transsil_)
+
+    def tonica(self, silidx):
+        # self.transsil_[silidx] is an Sillaba instance, which has the method tonica_
+        return self.transsil_[silidx].tonica_ 
+
+    def idxgrafnucli(self, silidx):
+        # self.transsil_[silidx] is an Sillaba instance, which has the method grafnuc_
+        return self.transsil_[silidx].grafnuc_
+
+    def grafnucli(self, silidx):
+        # self.transsil_[silidx] is an Sillaba instance, which has an attribute text_ (string) and a method grafnuc_
+        return self.transsil_[silidx].text_[self.transsil_[silidx].grafnuc_]
+
+    def sil(self, silnum):
+        return self.transsil_[silnum]
+
+    def sils(self):
+        return self.transsil_
+
+    def text(self):
+        return self.text_
+
+    def textinici(self, silindex, charindex):
+
+        # Gives the text of the previous syllables, and from the syllable silindex to charindex not included
+
+        mot = ""
+        for i in range(silindex):
+            mot += self.transsil_[i].text_
+        if charindex:
+            mot += self.transsil_[silindex].text_[:charindex]
+        return mot
+
+    def textfinal(self, silindex, charindex):
+
+        # Gives the text starting from the syllable silindex and the character charindex (included) and up to the end of the word
+
+        mot = self.transsil_[silindex].text_[charindex:]
+        for i in range(silindex + 1, len(self.transsil_)):
+            mot += self.transsil_[i].text_
+        return mot
+
+    def textsilini(self, silindex, charindex):
+
+        # gives the text of the syllable silindex, from the beginning to the character charindex not included
+        return self.transsil_[silindex].text_[:charindex]
+
+    def textsilfinal(self, silindex, charindex):
+
+        # Gives the text of the syllable silindex, from charindex inclusive to the end
+        return self.transsil_[silindex].text_[charindex:]
+
+    def charidxsilini(self, silindex):
+
+        # Gives the index of the first character in the string that is neither an apostrophe nor a hyphen
+
+        car = self.transsil_[silindex].text_[0]
+        if car == "'" or car == '-':
+            return 1
+        else:
+            return 0
+
+    def charidxsilfinal(self, silindex):
+
+        # Gives the index of the last character of the string that is not an apostrophe or hyphen
+
+        siltxt = self.transsil_[silindex].text_
+        car = siltxt[-1]
+        if car == "'" or car == '-':
+            return len(siltxt) - 2
+        else:
+            return len(siltxt) - 1
+
+# TODO explicit input and output type
+class MotNuclis:
+
+    def __init__(self, mot: str, es_adverbi: bool):
+        
+        self.adverbi_ = es_adverbi
+        self.el_mot = mot
+        self.pos_nuclis = []
+
+
+        self.omple_insep()
+
+
+    def omple_insep(self):
+
+        # Set self.insep_ and self.mots_voc_ir_
+        
+        self.insep_ = ['bh', 'bl', 'br', 'ch', 'cl', 'cr', 'dh', 'dj', 'dr', 'fh', 'fh', 'fl', 'fr', 'gh', 'gl', 'gr', 'gu', 'gü', 'jh', 'kh', 'kl', 'kr', 'lh', 'll', 'mh', 'nh', 'ny', 'ph', 'pl', 'pr', 'qu', 'qü', 'rh', 'sh', 'th', 'th', 'tr', 'vh', 'wh', 'xh', 'xh', 'yh', 'zh']
+        self.mots_voc_ir_ = ["cuir", "vair"]
+
+
+    def troba_nuclis_mot(self):
+
+        mida = len(self.el_mot)
+        adjectiu = ""
+
+        if self.adverbi_:
+            adjectiu = self.el_mot[0:mida - 4]
+            self.el_mot = adjectiu
+            mida = len(self.el_mot)
+
+        gr = 0
+        while gr < mida:
+
+            car = self.el_mot[gr]
+
+            if nuclitica(car):
+                self.pos_nuclis.append(gr)
+                gr = gr + 1
+                continue
+
+            elif car == 'i':
+                # gicf o sufix
+                if gicf_suf(self.el_mot, gr, self.mots_voc_ir_):
+                    self.pos_nuclis.append(gr)
+                    gr = gr + 1
+                    continue
+                else:
+                    abans = self.el_mot[0:gr]
+                    premida = len(abans)
+
+                    if (premida == 0) or (premida == 1 and abans == "h"):
+                        # casos iode o hiena, i, hi
+                        if gr == mida - 1:
+                            # i, hi
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        elif vocal(self.el_mot[gr+1]):
+                            # hiena iode
+                            gr = gr + 1
+                            continue
+                        # hissar, ira
+                        else:
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+
+                    elif (premida == 1) and (abans == "u"):
+
+                        if gr == mida - 1 or self.el_mot[gr + 1] == 'x':
+                            gr = gr + 1
+                            continue
+                        else:
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+
+                    elif (premida == 2) and (abans == "hu"):
+                        
+                        if gr == mida - 1:
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+
+                        if self.el_mot[gr + 1] == 'x':
+                            gr = gr + 1
+                            continue
+                        else:
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+
+                    elif self.el_mot[gr - 1] == 'u':
+                        # tres vocals seguides vocal+u+i, la u es consonant i la "i" es nucli
+                        if (premida > 1) and vocal(self.el_mot[gr - 2]):
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        elif (premida > 1) and (self.el_mot[gr - 2] == 'q' or self.el_mot[gr - 2] == 'g'):
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        else:
+                            # ui tot sol
+                            gr = gr + 1
+                            continue
+
+                    elif self.el_mot[gr - 1] == 'ü':
+
+                        if (premida > 1) and (self.el_mot[gr - 2] == 'q' or self.el_mot[gr - 2] == 'g'):
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        else:
+                            # üi no precedit de g,q 
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+
+                    elif vocal(self.el_mot[gr - 1]):
+                        # vocal + i, la i no es nucli
+                        gr = gr + 1
+                        continue
+
+                    else:
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                
+            elif car == 'u':
+
+                abans = self.el_mot[0:gr]
+                premida = len(abans)
+
+                if (premida == 0) or (premida == 1 and abans == "h"):
+                    # casos uadi o hu+vocal, u, hu
+                    if gr == mida - 1:
+                        # u, hu
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                    elif self.el_mot == "ui" or self.el_mot == "uix":
+                        # potser se n'han d'afegir mes
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                    elif (pos := self.el_mot.find("ix")) != -1 and pos == gr + 1:
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                    elif vocal(self.el_mot[gr+1]):
+                        # uadi hu+vocal
+                        gr = gr + 1
+                        continue
+                    else:
+                        # huns, una
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                
+                elif (premida == 1) and (abans == "i"):
+                    self.pos_nuclis.append(gr)
+                    gr = gr + 1
+                    continue
+
+                elif self.el_mot[gr - 1] == 'i':
+                    # tres vocals seguides vocal+i+u, la i es consonant i la "u" es nucli
+                    if premida > 2:
+                        boci = self.el_mot[gr - 3 : gr - 1]
+
+                        if boci == "gu" or boci == "qu":
+                            gr = gr + 1
+                            continue
+
+                        elif vocal(self.el_mot[gr - 2]):
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        
+                        else:
+                            gr = gr + 1
+                            continue
+
+                    elif premida == 2:
+                        if vocal(self.el_mot[gr - 2]):
+                            self.pos_nuclis.append(gr)
+                            gr = gr + 1
+                            continue
+                        else:
+                            gr = gr + 1
+                            continue
+                    else:
+                        gr = gr + 1
+                        continue
+
+                elif self.el_mot[gr - 1] == 'g' or self.el_mot[gr - 1] == 'q':
+                    if gr == mida - 1:
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+
+                    elif vocal(self.el_mot[gr + 1]):
+                        gr = gr + 1
+                        continue
+
+                    else:
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+
+                elif self.el_mot[gr - 1] == 'ü':
+                    if (premida > 1) and (self.el_mot[gr - 2] == 'q' or self.el_mot[gr - 2] == 'g'):
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+                    else:
+                        # üu no precedit de g,q 
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+
+                elif vocal(self.el_mot[gr - 1]):
+                    # vocal + u, la u no es nucli
+                    gr = gr + 1
+                    continue
+
+                else:
+                    # tancara l'else de quan no es sufix
+                    self.pos_nuclis.append(gr)
+                    gr = gr + 1
+                    continue
+            
+            elif car == 'ü':
+
+                pos = 0
+
+                if (pos := self.el_mot.find("argü")) != -1:
+                    if pos + 3 == gr:
+                        self.pos_nuclis.append(gr)
+                        self.pos_nuclis.append(gr + 1)
+                        gr += 1
+                        gr = gr + 1
+                        continue
+                    else:
+                        gr = gr + 1
+                        continue
+                elif gr > 0:
+                    if self.el_mot[gr - 1] == 'g' or self.el_mot[gr - 1] == 'q':
+                        gr = gr + 1
+                        continue
+                    else:
+                        self.pos_nuclis.append(gr)
+                        gr = gr + 1
+                        continue
+
+            else:
+                gr = gr + 1
+                continue
+     
+        if self.adverbi_:
+            self.el_mot += "ment"
+            mida = len(self.el_mot)
+            self.pos_nuclis.append(mida - 3)
+
+
+    def inseparable(self, tros):
+        return tros in self.insep_
+    
+    
+    def separa_sillabes(self, vec_sil, els_nuclis):
+        
+        fronteres = []
+
+        if len(self.pos_nuclis) == 1:
+
+            vec_sil.append(self.el_mot)
+            els_nuclis.append(self.pos_nuclis[0])
+
+            return vec_sil, els_nuclis
+
+        # Set the fronteres vector
+        for i in range(len(self.pos_nuclis) - 1):
+
+            longi = self.pos_nuclis[i + 1] - self.pos_nuclis[i] - 1
+            tros = self.el_mot[self.pos_nuclis[i] + 1: self.pos_nuclis[i] + 1 + longi]
+
+            # vocals contigues
+            if longi == 0:
+                fronteres.append(self.pos_nuclis[i])
+
+            elif longi == 1:
+                fronteres.append(self.pos_nuclis[i])
+
+            elif longi == 2:
+                if self.inseparable(self.el_mot[self.pos_nuclis[i] + 1: self.pos_nuclis[i] + 1 + 2]):
+                    fronteres.append(self.pos_nuclis[i])
+                elif self.el_mot[self.pos_nuclis[i] + 2] == 'h':
+                    fronteres.append(self.pos_nuclis[i])
+                else:
+                    fronteres.append(self.pos_nuclis[i] + 1)
+
+            elif longi == 3:
+                if self.inseparable(self.el_mot[self.pos_nuclis[i] + 2: self.pos_nuclis[i] + 2 + 2]):
+                    if self.el_mot[self.pos_nuclis[i] + 1] == '-':
+                        fronteres.append(self.pos_nuclis[i])
+                    else:
+                        fronteres.append(self.pos_nuclis[i] + 1)
+                else:
+                    if self.el_mot[self.pos_nuclis[i] + 3] == '-':
+                        fronteres.append(self.pos_nuclis[i] + 1)
+                    else:
+                        fronteres.append(self.pos_nuclis[i] + 2)
+
+            elif longi == 4:
+                pos = 0
+
+                if (pos := tros.find("s")) != -1:
+                    fronteres.append(self.pos_nuclis[i] + pos + 1)
+                else:
+                    fronteres.append(self.pos_nuclis[i] + 2)
+
+            elif longi == 5:
+                fronteres.append(self.pos_nuclis[i] + 3)
+
+            else:
+                print(f"No puc separar en sillabes el mot {self.el_mot}, cluster massa gran, de longitud {longi}")
+                exit(1)   
+
+        numsil = len(fronteres)
+        for i in range(numsil):
+            if i == 0:
+                if fronteres[i] != 0:
+                    esta_sil = self.el_mot[0:fronteres[i] + 1]
+                    vec_sil.append(esta_sil)
+                else:
+                    esta_sil = self.el_mot[0]
+                    vec_sil.append(esta_sil)
+            else:
+                esta_sil = self.el_mot[fronteres[i - 1] + 1 : fronteres[i] + 1] 
+                vec_sil.append(esta_sil)
+
+        esta_sil = self.el_mot[fronteres[numsil - 1] + 1:]
+        vec_sil.append(esta_sil)
+
+        els_nuclis.append(self.pos_nuclis[0])
+        longitud = len(vec_sil[0])
+
+        for i in range(1, len(self.pos_nuclis)):
+            this_nucli = self.pos_nuclis[i] - longitud
+            els_nuclis.append(this_nucli)
+            longitud += len(vec_sil[i])
+
+        return vec_sil, els_nuclis
+
+
+    def empty(self) -> bool:
+        return len(self.pos_nuclis) == 0
+
+
+    def mot(self) -> str:
+        return self.el_mot
+
+
+    def nucli(self, i: int):
+        if 0 <= i < len(self.pos_nuclis):
+            return self.pos_nuclis[i]
+        return None
+
+
+    def size(self) -> int:
+        return len(self.pos_nuclis)
+
+
+    def nuclis(self) -> List[int]:
+        return self.pos_nuclis
+
+# TODO explicit input and output type
+class Sillaba:
+    
+    def __init__(self, sil):
+
+        self.text_ = sil
+        self.tonica_ = False
+        self.grafnuc_ = -1
+        self.fonnuc_ = -1
+        self.fons_ = deque()
+
+    def grafnuc(self, nuc):
+        self.grafnuc_ = nuc
+
+    def get_grafnuc(self):
+        return self.grafnuc_
+
+    def get_text(self):
+        return self.text_
+
+    def get_text_at_index(self, idx):
+        return self.text_[idx]
+
+    def sizetext(self):
+        return len(self.text_)
+
+    def tonica(self):
+        self.tonica_ = True
+
+    def asktonica(self):
+        return self.tonica_
+
+    def es_sil_tonica(self):
+        
+        if self.tonica_:
+            return "sí"
+        else:
+            return "no"
+
+    def numfons(self):
+        return len(self.fons_)
+
+    def allofon(self, fonidx):
+        return self.fons_[fonidx]
+
+    def allofons(self):
+        return self.fons_
+
+    def push_back(self, fon):
+        self.fons_.append(fon)
+
+    def push_front(self, fon):
+        self.fons_.insert(0, fon)
+
+    def pop_front(self):
+        self.fons_.popleft()
+
+    def pop_back(self):
+        self.fons_.pop()
+
+    def empty(self):
+        return len(self.fons_) == 0
+
+    def fonnuc(self, fnuc):
+        self.fonnuc_ = fnuc
+
+    def get_fonnuc(self):
+        return self.fonnuc_
+    
+# TODO explicit input and output type
+class Transcripcio:
+
+    def __init__(self, mot: str):
+
+        self.motorig_ = mot
+
+        self.prefixos_ = []
+        self.pref_atons = []
+        self.excepcions_prefs = {}
+        self.excepcions_gen = set()
+        self.einesgram_ = set()
+        self.excep_acc = {}
+        self.trossos_ = []
+        self.transpart_ = []
+        
+        self.carrega_einesgram()
+        self.carrega_exc_accent()
+
+
+    def carrega_einesgram(self):
+
+        # Set self.einesgram_
+        self.einesgram_ = ['-de-', '-en', '-hi', '-ho', '-i', '-i-', '-la', '-les', '-li', '-lo', '-los', '-me', '-ne', '-nos', '-se', '-te', '-us', '-vos', 'a', 'a-', 'al', 'als', 'amb', 'bi-', 'co', 'de', 'de-', 'del', 'dels', 'el', 'els', 'em', 'en', 'ens', 'es', 'et', 'hi', 'ho', 'i', 'i-', 'la', 'les', 'li', 'lo', 'ma', 'me', 'mon', 'na', 'pel', 'pels', 'per', 'que', 're', 'sa', 'se', 'ses', 'si', 'sos', 'sub', 'ta', 'te', 'tes', 'ton', 'un', 'uns', 'us']
+
+    
+    def carrega_exc_accent(self):
+
+        # Set self.excep_acc (excepcions d'accentuacio)
+        self.excep_acc = {'antropologico': 'antropològico', 'arterio': 'artèrio', 'artistico': 'artístico', 'basquet': 'bàsquet', 'cardio': 'càrdio', 'catolico': 'catòlico', 'cientifico': 'científico', 'circum': 'círcum', 'civico': 'cívico', 'democrata': 'demòcrata', 'democratico': 'democràtico', 'dumping': 'dúmping', 'economico': 'econòmico', 'edgar': 'èdgar', 'fenicio': 'fenício', 'filosofico': 'filosòfico', 'fisico': 'físico', 'fisio': 'físio', 'geografico': 'geogràfico', 'hetero': 'hétero', 'higenico': 'higènico', 'higienico': 'higiènico', 'hiper': 'híper', 'historico': 'històrico', 'ibero': 'íbero', 'ideologico': 'ideològico', 'input': 'ínput', 'inter': 'ínter', 'jonatan': 'jònatan', 'juridico': 'jurídico', 'labio': 'làbio', 'linguo': 'línguo', 'literario': 'literàrio', 'logico': 'lògico', 'magico': 'màgico', 'maniaco': 'maníaco', 'marketing': 'màrketing', 'oxido': 'òxido', 'petroleo': 'petròleo', 'politico': 'político', 'quantum': 'quàntum', 'quimico': 'químico', 'quimio': 'químio', 'radio': 'ràdio', 'romanico': 'romànico', 'simbolico': 'simbòlico', 'socio': 'sòcio', 'super': 'súper', 'tecnico': 'tècnico', 'teorico': 'teòrico', 'tragico': 'tràgico', 'traqueo': 'tràqueo'}
+
+
+    def normalize_word(self, word):
+
+        #word = word.replace("'", "")
+        #word = word.replace("-", "")
+        #word = word.replace("l·l", "l")
+        word = word.lower()
+
+        return word
+
+
+    def segmenta(self, mot, final):
+
+        # Word with prefixes segmentation 
+
+        no_te_prefix = True
+        for prefix in self.prefixos_:
+            lon = len(prefix)
+            pos = mot.find(prefix)
+            if pos != -1 and pos == 0:
+                no_te_prefix = False
+
+                if lon == len(mot):
+                    final.append(mot)
+                    return final
+                elif lon == len(mot) - 1 and mot[lon] == '-':
+                    final.append(mot)
+                    return final
+                else:
+                    # If there are no exceptions split it
+                    if prefix not in self.excepcions_prefs:
+                        final.append(prefix)
+                        resta = mot[lon:]
+                        self.segmenta(resta, final)
+                        return final
+                    # If there are exceptions check that it is not part of it
+                    else:
+                        if mot not in self.excepcions_prefs[prefix]:
+                            final.append(prefix)
+                            resta = mot[lon:]
+                            self.segmenta(resta, final)
+                            return final
+                        else:
+                            final.append(mot)
+                            return final
+
+        for prefix in self.pref_atons:
+            lon = len(prefix)
+            pos = mot.find(prefix)
+            if pos != -1 and pos == 0:
+                no_te_prefix = False
+
+                if lon == len(mot):
+                    final.append(mot)
+                    return final
+                elif lon == len(mot) - 1 and mot[lon] == '-':
+                    final.append(mot)
+                    return final
+                else:
+                    # It should only be started if: 
+                    #   if the prefix ends in a vowel
+                    #   only if the word continues with i, u, -r+vowel, -s+vowel
+                    #   if the prefix always ends in a consonant
+                    #   except in both cases
+                    #   if it is part of the exceptions, if there are any
+                    if acaba_en_vocal(prefix):
+                        resta = mot[lon:]
+                        if post_prefix_ok(resta):
+                            if prefix not in self.excepcions_prefs:
+                                final.append(prefix)
+                                self.segmenta(resta, final)
+                                return final
+                            else:
+                                if mot not in self.excepcions_prefs[prefix]:
+                                    final.append(prefix)
+                                    self.segmenta(resta, final)
+                                    return final
+                                else:
+                                    final.append(mot)
+                                    return final
+                        else:
+                            final.append(mot)
+                            return final
+                    # It is not an exception
+                    else:
+                        if prefix not in self.excepcions_prefs:
+                            final.append(prefix)
+                            queda = mot[lon:]
+                            self.segmenta(queda, final)
+                            return final
+                        else:
+                            if mot not in self.excepcions_prefs[prefix]:
+                                final.append(prefix)
+                                queda = mot[lon:]
+                                self.segmenta(queda, final)
+                                return final
+                            else:
+                                final.append(mot)
+                                return final
+
+        if no_te_prefix:
+            final.append(mot)
+            return final
+    
+    
+    def tracta_prefixos(self, inici, final):
+
+            # For each start word, 
+            # if there is a prefix at the beginning and the word is not part of the exception list, 
+            # split it after the prefix, unless after the prefix there is a hyphen
+
+            for mot in inici:
+                final = self.segmenta(mot, final)
+            
+            return final
+
+
+    def parteix_mot(self):
+        
+        # Set parts
+        parts = [self.motnorm_]
+        
+        self.trossos_ = self.tracta_prefixos(parts, self.trossos_)
+        
+        for tros in self.trossos_:
+            partmot = Part(tros)
+            self.transpart_.append(partmot)
+
+    
+    def no_es_nom_ment(self, mot):
+            
+            if mot not in self.excepcions_gen:
+                return True
+            else:
+                return False
+    
+    
+    def es_adverbi(self, mot):
+        
+        pos = 0
+        tros = "ment"
+        pos = mot.rfind(tros)
+        if pos != -1:
+            if pos == len(mot) - len(tros):
+                if self.no_es_nom_ment(mot):
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+    
+    
+    def es_exc_accent(self, mot):
+
+        if mot in self.excep_acc:
+            mot = self.excep_acc[mot]
+
+        return mot
+
+
+    def troba_nuclis_mot(self):
+
+        for i in range(len(self.trossos_)):
+            
+            self.trossos_[i] = self.es_exc_accent(self.trossos_[i])
+
+            # Determine if it's an adverb and pass the information to mot_amb_nuclis
+            is_adverb = self.es_adverbi(self.trossos_[i])
+
+            mot_amb_nuclis = MotNuclis(
+                mot = self.trossos_[i], 
+                es_adverbi = is_adverb,
+                )
+
+            mot_amb_nuclis.troba_nuclis_mot()
+            
+            sillabes, nuclis = [], []
+            if not mot_amb_nuclis.empty():
+                sillabes, nuclis = mot_amb_nuclis.separa_sillabes(sillabes, nuclis)
+                for sil in range(len(sillabes)):
+                    sillab = Sillaba(sillabes[sil])
+                    sillab.grafnuc(nuclis[sil])
+                    self.transpart_[i].push_back(sillab)
+            else:
+                sillab = Sillaba(self.trossos_[i])
+                self.transpart_[i].push_back(sillab)
+    
+    
+    def dotze_term(self, pnum):
+
+        # retorna cert quan es mot pla (paroxiton) ja sigui per les dotze terminacions o per ser un diftong decreixent
+
+        dift_decr = ["au", "ai", "eu", "ei", "ou", "oi", "iu", "àu", "ui"]
+        voc_sola = ["a", "e", "i", "o", "u", "ï", "ü"]
+        voc_mes_s = ["as", "es", "is", "os", "us", "às", "ès"]
+        en_in = ["en", "in", "àn"]
+
+        numsil = self.transpart_[pnum].size()
+        darsil = self.transpart_[pnum].transsil_[numsil - 1].get_text()
+        darsil = darsil.lower()  # Convert to lowercase for case-insensitive comparison
+
+        mida = len(darsil)
+
+        # mida de la sillaba 2 o +
+        if mida >= 2:
+            last_dos = darsil[-2:]
+
+            # diftong decreixent, inclou gui, qui
+            for dift in dift_decr:
+                es_dift_decr = last_dos == dift
+                # diftong decreixent i nucli -> agut
+                # diftong decreixent i no es nucli (ex: preui)-> pla
+                if es_dift_decr and (self.transpart_[pnum].transsil_[numsil - 1].grafnuc_ == mida - 2):
+                    return False
+                elif es_dift_decr:
+                    return True
+
+            # vocal sola
+            last_voc = darsil[-1:]
+            if last_voc in voc_sola:
+                return True
+
+            # si la dar sil acaba en s (mida 2 o + encara)
+            if darsil[-1:] == 's':
+                if mida >= 3:
+                    last_dos = darsil[-3:-1]
+                    for dift in dift_decr:
+                        es_dift_decr = last_dos == dift
+                        if es_dift_decr and (self.transpart_[pnum].transsil_[numsil - 1].grafnuc_ == mida - 3):
+                            return False
+                        elif es_dift_decr:
+                            return True
+
+                last_dos = darsil[-2:]
+                if last_dos in voc_mes_s:
+                    return True
+
+            last_dos = darsil[-2:]
+            if last_dos in en_in:
+                return True
+
+        last_voc = darsil[-1:]
+        if last_voc in voc_sola:
+            return True
+
+        return False
+
+    
+    def accentua_mot(self, pnum):
+
+        numsil = self.transpart_[pnum].size()
+        
+        if self.dotze_term(pnum):
+            # If it ends with a vowel or vowel+s, or with o or in, it's flat (plana)
+            # Vowels are aeiouàèéíòóúü
+            self.transpart_[pnum].transsil_[numsil - 2].tonica()
+        else:
+            # Otherwise, it's acute (aguda)
+            self.transpart_[pnum].transsil_[numsil - 1].tonica()
+    
+
+    def einagram(self, mot):
+
+        if mot not in self.einesgram_:
+            return False
+        else:
+            return True
+    
+
+    def troba_accent_tonic_mot(self):
+
+        vocaccent = "áéíóúü"
+        
+        for pnum in range(len(self.trossos_)):
+
+            if not self.transpart_[pnum]:
+                # es una particula sense vocal
+                continue
+
+            numsil = self.transpart_[pnum].size()
+            accent_grafic = False
+            # bucle sobre les sillabes per veure si hi ha accent grafic
+            for snum in range(numsil):
+                sillaba = self.transpart_[pnum].transsil_[snum].get_text()
+                pos = 0
+                if any(accented_vowel in sillaba for accented_vowel in vocaccent):
+                    
+                    last_sil = self.transpart_[pnum].transsil_[numsil - 1].get_text()
+                    accent_grafic = True
+
+                    if last_sil == "ment":
+                        self.transpart_[pnum].transsil_[snum].tonica()
+                        self.transpart_[pnum].transsil_[numsil - 1].tonica()
+                    else:
+                        self.transpart_[pnum].transsil_[snum].tonica()
+                    
+                    break
+
+            if not accent_grafic:
+                
+                # si es monosillab es tonic a menys que sigui eina gramatical
+                # tonic car es morfema lexematic d'una sillaba
+                # si te mes d'una sillaba, estudiar la terminacio, descartant abans
+                # un guio que hi pugui haver al final
+                # prefixos que poden ser d'una o dues sillabes tenen nomes
+                # accent secundari si son tonics i funcionen realment com a prefix
+
+                if numsil == 1:
+                    sillaba = self.transpart_[pnum].transsil_[0].get_text()
+                    if (self.transpart_[pnum].transsil_[0].grafnuc_ == -1):
+                        # es part de mot sense nucli
+                        continue
+                    elif self.einagram(sillaba):
+                        #amb les parts de mot
+                        continue
+                    else:
+                        # soliem mirar si era un prefix tonic o un lexema, ja no cal
+                        self.transpart_[pnum].transsil_[0].tonica()
+                else:
+                    # no es monosillab
+
+                    last_sil = self.transpart_[pnum].transsil_[numsil - 1].get_text()
+                    # no es referencia, last_sil, car volem guardar el valor
+
+                    if last_sil == "ment":
+                        # no cal tractar diferent els prefixos tonics
+                        if self.no_es_nom_ment(self.trossos_[pnum]) and self.no_es_nom_ment(self.motnorm_):
+                            if numsil - 1 > 1:
+                                self.transpart_[pnum].pop_back()  # Remove the last syllable
+                                self.accentua_mot(pnum)  # Accentuate from the syllables
+                                darsil = Sillaba(last_sil)  # Create a syllable like before
+                                self.transpart_[pnum].push_back(darsil)  # Add it and make it tonic
+                                self.transpart_[pnum].transsil_[numsil - 1].tonica()
+                                self.transpart_[pnum].transsil_[numsil - 1].grafnuc_ = 1
+                                # # es la e de ment
+                            else:
+                                self.transpart_[pnum].transsil_[0].tonica()
+                                self.transpart_[pnum].transsil_[numsil - 1].tonica()
+                    else:
+                        self.accentua_mot(pnum)
+
+
+    def sillaba_accentua_mot(self):
+            
+            self.parteix_mot()
+            self.troba_nuclis_mot()
+            self.troba_accent_tonic_mot()
+    
+
+    def stress_tonic(self):
+
+        accent_changes = {
+            "a" : "à",
+            "e" : "é",
+            "i" : "í",
+            "ï" : "í",
+            "o" : "ó",
+            "u" : "ú",
+            "ü" : "ú", 
+        }
+
+        all_vowels = ['a', 'à', 'e', 'é', 'è', 'i', 'í', 'ï', 'o', 'ó', 'ò', 'u', 'ü', 'ú']
+        accented_vowels = ['à', 'é', 'è', 'í', 'ó', 'ò', 'ú']
+        unaccented_vowels = ['a', 'e', 'i', 'ï', 'o', 'u', 'ü']
+
+        original_word = ""
+        stressed_word = ""
+
+        for i in range(len(self.transpart_)):
+
+            word = self.transpart_[i].text_
+
+            if any(ext in word for ext in accented_vowels):
+                stressed_word = stressed_word + word
+            else:
+                for j in range(self.transpart_[i].size()):
+                    sil = self.transpart_[i].transsil_[j]
+                    sillaba_text = sil.get_text()
+                    idxgrafnucli = sil.get_grafnuc()
+                    graf_nucli = sil.get_text_at_index(idxgrafnucli)
+                    is_tonic = sil.es_sil_tonica()
+
+                    if is_tonic == "sí":
+                        sillaba_list = list(sillaba_text)
+                        if sillaba_list[idxgrafnucli] in unaccented_vowels:
+                            if sillaba_list[idxgrafnucli] == "e":
+                                if j == self.transpart_[i].size() - 1:
+                                    # for accute words almost always this is the correct accented e
+                                    sillaba_list[idxgrafnucli] = "è"
+                                elif j == self.transpart_[i].size() - 2:
+                                    # the word has its accent in the penultimate sillabe
+                                    # almost always this is the correct accented e
+                                    sillaba_list[idxgrafnucli] = "è"
+                                else:
+                                    # proparoxytone
+                                    # almost always this is the correct accented e
+                                    sillaba_list[idxgrafnucli] = "è"
+                            elif sillaba_list[idxgrafnucli] == "o":
+                                if j == self.transpart_[i].size() - 1:
+                                    # the word has its accent in the last sillabe
+                                    # almost always this is the correct accented o
+                                    sillaba_list[idxgrafnucli] = "ó"
+                                elif j == self.transpart_[i].size() - 2:
+                                    # the word has its accent in the penultimate sillabe
+                                    # almost always this is the correct accented o
+                                    sillaba_list[idxgrafnucli] = "ò"
+                                else:
+                                    # proparoxytone
+                                    # almost always this is the correct accented o
+                                    sillaba_list[idxgrafnucli] = "ò"
+                            else:
+                                sillaba_list[idxgrafnucli] = accent_changes[sillaba_list[idxgrafnucli]]
+                            
+                            sillaba_text = "".join(sillaba_list)
+
+                    stressed_word = stressed_word + sillaba_text
+            
+            original_word = original_word + word
+        
+        return stressed_word
+
+
+    def stress_word(self):
+        
+        self.motnorm_ = self.normalize_word(self.motorig_)
+        
+        self.sillaba_accentua_mot()
+
+        self.stressed_word = self.stress_tonic()
+        
+        return self.stressed_word
+
+
+class CatalanPreProcessText:
+    """Pre-processes text"""
+
+    def __init__(self, lookup_phonemes):
+
+        self.lookup_phonemes = lookup_phonemes
+    
+
+    def __call__(self, text: str) -> str:
+
+        _LOGGER.debug(f"Original text: {text}")
+
+        is_in_lexicon = self.lookup_phonemes(text) is not None
+        if is_in_lexicon:
+            _LOGGER.debug(f"Text {text} is in lexicon.")
+            processed_text = text
+        else:
+            _LOGGER.debug(f"Stressing text {text}...")
+            tr = Transcripcio(text)
+            processed_text = tr.stress_word()
+
+        _LOGGER.debug(f"Preprocessed text: {processed_text}")
+
+        return processed_text
+
+
+def phoneme_is_vowel(phoneme):
+    vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u", "ə", "i", "u"]
+    return phoneme in vowels
+
+def phoneme_is_stressed_vowel(phoneme):
+    stressed_vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u"]
+    return phoneme in stressed_vowels
+
+def phoneme_is_unstressed_vowel(phoneme):
+    return phoneme_is_vowel(phoneme) and not phoneme_is_stressed_vowel(phoneme)
+
+def phoneme_is_high_vowel(phoneme):
+    high_vowels = ["i", "u", "'i", "'u"]
+    return phoneme in high_vowels
+
+def phoneme_is_high_stressed_vowel(phoneme):
+    return phoneme_is_high_vowel(phoneme) and phoneme_is_stressed_vowel(phoneme)
+
+def phoneme_is_high_unstressed_vowel(phoneme):
+    return phoneme_is_high_vowel(phoneme) and phoneme_is_unstressed_vowel(phoneme)
+
+def phoneme_is_neutral_vowel(phoneme):
+    neutral_vowels = ["ə"]
+    return phoneme in neutral_vowels
+
+def fusion_if_needed(node_1, node_2):
+
+    last_phoneme_word_1 = node_1.phonemes[-1]
+    first_phoneme_word_2 = node_2.phonemes[0]
+
+    # Case 1: high unstressed vowel + stressed vowel of the same timbre
+    if (last_phoneme_word_1 == "i" and first_phoneme_word_2 == "'i"):
+        # Case [i] + ['i] = ['i]
+        node_1.phonemes.pop()
+        _LOGGER.info(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+    elif (last_phoneme_word_1 == "u" and first_phoneme_word_2 == "'u"):
+        # Case [u] + ['u] = ['u]
+        node_1.phonemes.pop()
+        _LOGGER.info(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+    
+    # Case 2: high unstressed vowel + high unstressed vowel of the same timbre
+    elif (last_phoneme_word_1 == "i" and first_phoneme_word_2 == "i"):
+        # Case [i] + [i] = [i]
+        node_1.phonemes.pop()
+        _LOGGER.info(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+    elif (last_phoneme_word_1 == "u" and first_phoneme_word_2 == "u"):
+        # Case [u] + [u] = [u]
+        node_1.phonemes.pop()
+        _LOGGER.info(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+    # Case 3: neutral vowel + neutral vowel (except if any of the vowels is the proposition "a")
+    elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2) and node_1.text != "a" and node_2.text != "a":
+        node_1.phonemes.pop()
+        _LOGGER.info(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+def diphthong_if_needed(node_1, node_2):
+
+    last_phoneme_word_1 = node_1.phonemes[-1]
+    first_phoneme_word_2 = node_2.phonemes[0]
+
+    # Case 1: stressed vowel + high unstressed vowel
+    if phoneme_is_stressed_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
+        if first_phoneme_word_2 == "i":
+            # Case [stressed vowel] + [i] = [stressed vowel + j]
+            # TODO check if this is the correct replacement
+            node_2.phonemes[0] = "j"
+            _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        elif first_phoneme_word_2 == "u":
+            # Case [stressed vowel] + [u] = [stressed vowel + w]
+            # TODO check if this is the correct replacement
+            node_2.phonemes[0] = "w"
+            _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+def elision_if_needed(node_1, node_2):
+
+    last_phoneme_word_1 = node_1.phonemes[-1]
+    first_phoneme_word_2 = node_2.phonemes[0]
+
+    # Case 1: stressed vowel ['a], ['ɛ] or ['ɔ] + neutral vowel (except if any of the vowels is the proposition "a")
+    # TODO en el manual de segre ponen el ejemplo "vindré amb", siendo que el ultimo fonema de la primer palabra es "'e" y no "'ɛ"
+    if (last_phoneme_word_1 in ["'a", "'ɛ", "'ɔ"]) and phoneme_is_neutral_vowel(first_phoneme_word_2) and node_1.text != "a" and node_2.text != "a":
+        node_2.phonemes.pop(0)
+        _LOGGER.info(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        
+
+def ca_post_process_sentence(
+    graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
+):
+    
+    from gruut.text_processor import DATA_PROP, WordNode, BreakWordNode, BreakNode, PunctuationWordNode
+    from gruut.utils import sliding_window
+
+    nodes = []
+    for dfs_node in nx.dfs_preorder_nodes(graph, sent_node.node):
+        
+        node = graph.nodes[dfs_node][DATA_PROP]
+        
+        if not graph.out_degree(dfs_node) == 0:
+            # Only leave
+            continue
+
+        node = graph.nodes[dfs_node][DATA_PROP]
+        if isinstance(node, WordNode):
+            nodes.append(typing.cast(WordNode, node))
+        if isinstance(node, BreakWordNode):
+            nodes.append(typing.cast(BreakWordNode, node))
+        if isinstance(node, BreakNode):
+            nodes.append(typing.cast(BreakNode, node))
+        if isinstance(node, PunctuationWordNode):
+            nodes.append(typing.cast(PunctuationWordNode, node))
+        
+    contiguous_word_nodes = []
+    for node_1, node_2 in sliding_window(nodes, 2):
+        
+        if node_1 is None or node_2 is None:
+            continue
+
+        if isinstance(node_1, WordNode) and isinstance(node_2, WordNode):
+            if not (node_1.text and node_1.phonemes and node_2.text and node_2.phonemes):
+                continue
+            contiguous_word_nodes.append([node_1, node_2])
+
+    for (node_1, node_2) in contiguous_word_nodes:
+
+        fusion_if_needed(node_1, node_2)
+        diphthong_if_needed(node_1, node_2)
+        elision_if_needed(node_1, node_2)
+
+
+def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
+    
+    """Create settings for Catalan"""
+
+    _LOGGER.debug(f"settings_args: {settings_args}")
+
+    lookup_phonemes = settings_args["lookup_phonemes"]
+    
+    settings_args = {
+        "major_breaks": {".", "?", "!"},
+        "minor_breaks": {",", ";", ":", "..."},
+        "word_breaks": {"_"},
+        "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
+        "end_punctuations": {'"', "”", "»", "]", ")", ">", "!", "?"},
+        "default_currency": "EUR",
+        "default_date_format": InterpretAsFormat.DATE_DMY,
+        "replacements": [
+            ("’", "'"), # normalize apostrophe
+            ("'", ""), # remove orthographic apostrophe
+            ("-", ""),
+            #(",", ""),
+            ("l·l", "l"),
+            ],  
+        "pre_process_text": CatalanPreProcessText(lookup_phonemes),
+        "post_process_sentence": ca_post_process_sentence,
+        **settings_args,
+    }
+    
+    return TextProcessorSettings(lang="ca", **settings_args)
+
+# -----------------------------------------------------------------------------
 
 class DelayedGraphemesToPhonemes:
     """Grapheme to phoneme guesser that loads on first use"""
@@ -907,51 +2200,4 @@ class DelayedSqlitePhonemizer:
         assert self.phonemizer is not None
         return self.phonemizer(word, role=role, do_transforms=do_transforms)
 
-
-# -----------------------------------------------------------------------------
-# Catalan (ca, Catalan)
-# -----------------------------------------------------------------------------
-
-class CatalanPreProcessText:
-    """Pre-processes text"""
-
-    def __init__(self):
-
-        self.STRESSED_VOWELS = ["à", "è", "ò", "é", "í", "ó", "ú"]
-
-    def __call__(self, text: str) -> str:
-
-        print(f"Enter pre-processing.")
-        print(f"Entered text: {text}")
-        text = text.replace("'", "~")
-        print(f"Exit text: {text}")
-
-        print(f"Exit pre-processing.")
-
-        return text
-
-
-def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
-    
-    """Create settings for Catalan"""
-    
-    settings_args = {
-        "major_breaks": {".", "?", "!"},
-        "minor_breaks": {",", ";", ":", "..."},
-        "word_breaks": {"_"},
-        "begin_punctuations": {'"', "“", "«", "[", "(", "<", "¡", "¿"},
-        "end_punctuations": {'"', "”", "»", "]", ")", ">", "!", "?"},
-        "default_currency": "EUR",
-        "default_date_format": InterpretAsFormat.DATE_DMY,
-        "replacements": [
-            ("’", "'"), # normalize apostrophe
-            ("'", ""), # remove orthographic apostrophe
-            ("-", ""),
-            ("l·l", "l"),
-            ],  
-        "pre_process_text": CatalanPreProcessText(),
-        **settings_args,
-    }
-    
-    return TextProcessorSettings(lang="ca", **settings_args)
 
