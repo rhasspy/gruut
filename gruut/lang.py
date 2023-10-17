@@ -1947,25 +1947,57 @@ class Transcripcio:
 class CatalanPreProcessText:
     """Pre-processes text"""
 
-    def __init__(self, lookup_phonemes):
+    def __init__(self, lookup_phonemes, settings_values):
 
         self.lookup_phonemes = lookup_phonemes
+        self.settings_values = settings_values
     
 
     def __call__(self, text: str) -> str:
 
-        _LOGGER.debug(f"Original text: {text}")
+        _LOGGER.info(f"Enter preprocessing.")
+        _LOGGER.info(f"Original text: {text}")
+        
+        breaks = [" "]
+        breaks = breaks + list(self.settings_values["major_breaks"])
+        breaks = breaks + list(self.settings_values["minor_breaks"])
+        breaks = breaks + list(self.settings_values["word_breaks"])
+        breaks = breaks + list(self.settings_values["begin_punctuations"])
+        breaks = breaks + list(self.settings_values["end_punctuations"])
 
-        is_in_lexicon = self.lookup_phonemes(text) is not None
-        if is_in_lexicon:
-            _LOGGER.debug(f"Text {text} is in lexicon.")
-            processed_text = text
-        else:
-            _LOGGER.debug(f"Stressing text {text}...")
-            tr = Transcripcio(text)
-            processed_text = tr.stress_word()
+        tokens = [text.strip()]
+        #_LOGGER.info(f"tokens: {tokens}")
+        for char_break in breaks:
+            #_LOGGER.info(f"char_break: {char_break}")
+            tokens = [re.split(f"(\{char_break})", item) for item in tokens]
+            tokens = [item for sublist in tokens for item in sublist if item != ""]
+            #_LOGGER.info(f"tokens: {tokens}")
 
-        _LOGGER.debug(f"Preprocessed text: {processed_text}")
+        #_LOGGER.info(f"tokens: {tokens}")
+        
+        preprocessed_tokens = []
+        for token in tokens:
+
+            #_LOGGER.info(f"token: {token}")
+            
+            if token in breaks:
+                processed_token = token
+            else:
+                is_in_lexicon = self.lookup_phonemes(token) is not None
+                if is_in_lexicon:
+                    #_LOGGER.debug(f"Token {token} is in lexicon.")
+                    processed_token = token
+                else:
+                    #_LOGGER.debug(f"Stressing token {token}...")
+                    tr = Transcripcio(token)
+                    processed_token = tr.stress_word()
+
+            preprocessed_tokens.append(processed_token)
+        
+        processed_text = "".join(preprocessed_tokens)
+
+        _LOGGER.info(f"Preprocessed text: {processed_text}")
+        _LOGGER.info(f"Exit preprocessing.")
 
         return processed_text
 
@@ -1997,64 +2029,99 @@ def phoneme_is_neutral_vowel(phoneme):
 
 def fusion_if_needed(node_1, node_2):
 
-    last_phoneme_word_1 = node_1.phonemes[-1]
-    first_phoneme_word_2 = node_2.phonemes[0]
+    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+        return
+    else:
 
-    # Case 1: high unstressed vowel + stressed vowel of the same timbre
-    if (last_phoneme_word_1 == "i" and first_phoneme_word_2 == "'i"):
-        # Case [i] + ['i] = ['i]
-        node_1.phonemes.pop()
-        _LOGGER.info(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-    elif (last_phoneme_word_1 == "u" and first_phoneme_word_2 == "'u"):
-        # Case [u] + ['u] = ['u]
-        node_1.phonemes.pop()
-        _LOGGER.info(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-    
-    # Case 2: high unstressed vowel + high unstressed vowel of the same timbre
-    elif (last_phoneme_word_1 == "i" and first_phoneme_word_2 == "i"):
-        # Case [i] + [i] = [i]
-        node_1.phonemes.pop()
-        _LOGGER.info(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-    elif (last_phoneme_word_1 == "u" and first_phoneme_word_2 == "u"):
-        # Case [u] + [u] = [u]
-        node_1.phonemes.pop()
-        _LOGGER.info(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        last_phoneme_word_1 = node_1.phonemes[-1]
+        first_phoneme_word_2 = node_2.phonemes[0]
 
-    # Case 3: neutral vowel + neutral vowel (except if any of the vowels is the proposition "a")
-    elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2) and node_1.text != "a" and node_2.text != "a":
-        node_1.phonemes.pop()
-        _LOGGER.info(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        # Case 1: high unstressed vowel + stressed vowel of the same timbre
+        if phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_stressed_vowel(first_phoneme_word_2) \
+            and last_phoneme_word_1 == first_phoneme_word_2.replace("'", ""):
+            # Case [i] + [i'] = [i'] or [u] + [u'] = [u']
+            node_1.phonemes.pop()
+            _LOGGER.info(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+            
+        # Case 2: high unstressed vowel + high unstressed vowel of the same timbre
+        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2) \
+            and last_phoneme_word_1 == first_phoneme_word_2:
+            # Case [i] + [i] = [i] or [u] + [u] = [u]
+            node_1.phonemes.pop()
+            _LOGGER.info(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+        # Case 3: neutral vowel + neutral vowel (except if any of the vowels is the proposition "a")
+        elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2) \
+            and node_1.text != "a" and node_2.text != "a":
+            node_1.phonemes.pop()
+            _LOGGER.info(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+            
+def elision_if_needed(node_1, node_2):
+
+    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+        return
+    else:
+
+        last_phoneme_word_1 = node_1.phonemes[-1]
+        first_phoneme_word_2 = node_2.phonemes[0]
+
+        # Case 1: stressed vowel ['a], ['ɛ] or ['ɔ] + neutral vowel (except if any of the vowels is the proposition "a")
+        if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
+            and (phoneme_is_neutral_vowel(first_phoneme_word_2) and node_2.text != "a"):
+            node_2.phonemes.pop(0)
+            _LOGGER.info(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+            
 
 def diphthong_if_needed(node_1, node_2):
 
-    last_phoneme_word_1 = node_1.phonemes[-1]
-    first_phoneme_word_2 = node_2.phonemes[0]
+    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+        return
+    else:
 
-    # Case 1: stressed vowel + high unstressed vowel
-    if phoneme_is_stressed_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
-        if first_phoneme_word_2 == "i":
-            # Case [stressed vowel] + [i] = [stressed vowel + j]
-            # TODO check if this is the correct replacement
-            node_2.phonemes[0] = "j"
-            _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-        elif first_phoneme_word_2 == "u":
-            # Case [stressed vowel] + [u] = [stressed vowel + w]
-            # TODO check if this is the correct replacement
-            node_2.phonemes[0] = "w"
-            _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-
-def elision_if_needed(node_1, node_2):
-
-    last_phoneme_word_1 = node_1.phonemes[-1]
-    first_phoneme_word_2 = node_2.phonemes[0]
-
-    # Case 1: stressed vowel ['a], ['ɛ] or ['ɔ] + neutral vowel (except if any of the vowels is the proposition "a")
-    # TODO en el manual de segre ponen el ejemplo "vindré amb", siendo que el ultimo fonema de la primer palabra es "'e" y no "'ɛ"
-    if (last_phoneme_word_1 in ["'a", "'ɛ", "'ɔ"]) and phoneme_is_neutral_vowel(first_phoneme_word_2) and node_1.text != "a" and node_2.text != "a":
-        node_2.phonemes.pop(0)
-        _LOGGER.info(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        last_phoneme_word_1 = node_1.phonemes[-1]
+        first_phoneme_word_2 = node_2.phonemes[0]
         
+        # Case 1: stressed vowel + high unstressed vowel
+        if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
+            and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
+            if first_phoneme_word_2 == "i":
+                # Case [stressed vowel] + [i] = [stressed vowel + j], stressed vowel not 'i or 'u 
+                node_2.phonemes[0] = "j"
+                _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                
+            elif first_phoneme_word_2 == "u":
+                # Case [stressed vowel] + [u] = [stressed vowel + uw], stressed vowel not 'i or 'u 
+                node_2.phonemes[0] = "uw"
+                _LOGGER.info(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
 
+        # Case 2: high unstressed vowel + stressed vowel
+        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_stressed_vowel(first_phoneme_word_2):
+            if last_phoneme_word_1 == "i" and first_phoneme_word_2 not in ["'i"] and node_1.text in ["hi", "ho", "i"]:
+                # Case [i] + [stressed] = [y + stressed vowel], i only from "hi", "ho" or "i"  
+                node_1.phonemes[-1] = "y" 
+                _LOGGER.info(f"DIPTHONG CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                 
+            elif last_phoneme_word_1 == "u" and first_phoneme_word_2 not in ["'u"] and node_1.text in ["hi", "ho", "i"]:
+                # Case [u] + [stressed] = [u + stressed vowel], i only from "hi", "ho" or "i"  
+                pass
+        
+        # Case 3: unstressed vowel + high unstressed vowel
+        elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
+            if first_phoneme_word_2 == "i":
+                # Case [neutral vowel] + [i] = [neutral vowel + j]
+                node_2.phonemes[0] = "j"
+                _LOGGER.info(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                
+            elif first_phoneme_word_2 == "u":
+                # Case [neutral vowel] + [u] = [neutral vowel + uw]
+                node_2.phonemes[0] = "uw"
+                _LOGGER.info(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                
+        # Case 4: unstressed vowel + high unstressed vowel
+        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2):
+            pass
+            
+        
 def ca_post_process_sentence(
     graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
 ):
@@ -2094,8 +2161,8 @@ def ca_post_process_sentence(
 
     for (node_1, node_2) in contiguous_word_nodes:
 
-        fusion_if_needed(node_1, node_2)
         diphthong_if_needed(node_1, node_2)
+        fusion_if_needed(node_1, node_2)
         elision_if_needed(node_1, node_2)
 
 
@@ -2103,11 +2170,11 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     
     """Create settings for Catalan"""
 
-    _LOGGER.debug(f"settings_args: {settings_args}")
+    _LOGGER.info(f"Enter get_ca_settings")
 
     lookup_phonemes = settings_args["lookup_phonemes"]
-    
-    settings_args = {
+
+    settings_values = {
         "major_breaks": {".", "?", "!"},
         "minor_breaks": {",", ";", ":", "..."},
         "word_breaks": {"_"},
@@ -2119,10 +2186,13 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
             ("’", "'"), # normalize apostrophe
             ("'", ""), # remove orthographic apostrophe
             ("-", ""),
-            #(",", ""),
             ("l·l", "l"),
-            ],  
-        "pre_process_text": CatalanPreProcessText(lookup_phonemes),
+            ], 
+    }
+    
+    settings_args = {
+        **settings_values, 
+        "pre_process_text": CatalanPreProcessText(lookup_phonemes, settings_values),
         "post_process_sentence": ca_post_process_sentence,
         **settings_args,
     }
