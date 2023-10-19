@@ -1,54 +1,44 @@
-# v2
+# https://en.wikipedia.org/wiki/Catalan_phonology
+# Catalan Central accent phonemes
 
-a c[a]sa
-ə cas[a]
-b can[v]i
-β ca[v]a
-k [c]asa
-d heràl[d]ic
+p [p]ala
+b [b]ala
+t [t]ela
+d [d]onar
+k [k]ala
+ɡ [g]ala
+m [m]ala
+ɲ fa[ng]
+β aca[b]a
 ð ca[d]a
-e p[e]ça
-ɛ tel[è]fon
-f [f]usta
-g pin[g]üí
-ɣ pe[g]a
-i un[i]tat
-j a[i]gua
+ɣ ama[g]ar
+f [f]als
+v a[f]ganès
+s [s]ala
+z ca[s]a
+ʃ [x]oc
+ʒ mà[g]ic
+tʃ co[tx]e
+dʒ me[tg]e
 l [l]íquid
-ʎ [ll]una
-m llu[m]
-n llu[n]a
-ɲ lle[ny]a
-ŋ pi[n]güí
-o d[o]s
-ɔ al·l[ò]fon
-p [p]es
+ʎ [ll]amp
 r ca[rr]o
 ɾ ca[r]a
-s [s]ac
-t car[t]a
+w ve[u]en
+uw ca[u]re
+j ca[i]re
+y [i]a[i]a
+n [n]ena
+ŋ pi[n]güí
 ts po[ts]er
-u [u]nitat
-w a[u]la
-z [z]ona
-ʃ [x]oc
-tʃ co[tx]e
-ʒ [j]oc
 dz do[tz]e
-dʒ pla[tj]a
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Vowels
+i r[i]c
+e c[e]c
+ɛ s[e]c
+a s[a]c
+ɔ f[o]c
+o s[ó]c
+u s[u]c
+ə [a]mor
