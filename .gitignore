@@ -16,6 +16,4 @@ g2p.corpus
 lexicon*.txt
 words.txt
 
-#/data/
-notebooks/
-fede/
+/data/
