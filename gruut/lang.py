@@ -115,7 +115,7 @@ def get_settings(
         # Arabic
         return get_ar_settings(lang_dir, **settings_args)
 
-    if lang_only == "ca":
+    if lang_only in {"ca-ce", "ca-ba"}:
         # Catalan
         return get_ca_settings(lang_dir, **settings_args)
 
@@ -832,25 +832,23 @@ def get_zh_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 
 
 # -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
 # Catalan (ca, Catalan)
 # -----------------------------------------------------------------------------
 
-# TODO remove this imports
-from typing import List#, Tuple, Set, Dict, Union
+# Pre-Process functions and classes
+
 from collections import deque
 
-# TODO explicit input and output type
-def vocal(carac):
+def vocal(carac: str) -> bool:
     vocal_chars = ['a', 'à', 'e', 'é', 'è', 'i', 'í', 'ï', 'o', 'ó', 'ò', 'u', 'ü', 'ú']
     return carac in vocal_chars
 
-def acaba_en_vocal(prefix):
+def acaba_en_vocal(prefix: str) -> bool:
     darrer = prefix[-1]
     return vocal(darrer)
 
-def post_prefix_ok(resta):
+def post_prefix_ok(resta: str) -> bool:
+
     mida = len(resta)
     primer = resta[0]
     segon = '\0'
@@ -864,11 +862,11 @@ def post_prefix_ok(resta):
             return True
     return False
 
-def nuclitica(carac):
+def nuclitica(carac: str) -> bool:
     nuclitic_chars = ['a', 'à', 'e', 'é', 'è', 'í', 'ï', 'o', 'ó', 'ò', 'ú']
     return carac in nuclitic_chars
 
-def gicf_suf(mot, pos, mots_voc_ir):
+def gicf_suf(mot: str, pos: int, mots_voc_ir: typing.List[str]) -> bool:
         
     mida = len(mot)
     
@@ -938,14 +936,83 @@ def gicf_suf(mot, pos, mots_voc_ir):
 
     return False
 
-# TODO explicit input and output type
+
+class Sillaba:
+    
+    def __init__(self, sil: str):
+
+        self.text_ = sil
+        self.tonica_ = False
+        self.grafnuc_ = -1
+        self.fonnuc_ = -1
+        self.fons_ = deque()
+
+    def grafnuc(self, nuc: int):
+        self.grafnuc_ = nuc
+
+    def get_grafnuc(self) -> int:
+        return self.grafnuc_
+
+    def get_text(self) -> str:
+        return self.text_
+
+    def get_text_at_index(self, idx: int) -> str:
+        return self.text_[idx]
+
+    def sizetext(self) -> int:
+        return len(self.text_)
+
+    def tonica(self) -> bool:
+        self.tonica_ = True
+
+    def asktonica(self) -> bool:
+        return self.tonica_
+
+    def es_sil_tonica(self) -> bool:
+        
+        if self.tonica_:
+            return "sí"
+        else:
+            return "no"
+
+    def numfons(self) -> int:
+        return len(self.fons_)
+
+    def allofon(self, fonidx: int) -> str:
+        return self.fons_[fonidx]
+
+    def allofons(self) -> deque:
+        return self.fons_
+
+    def push_back(self, fon: str):
+        self.fons_.append(fon)
+
+    def push_front(self, fon: str):
+        self.fons_.insert(0, fon)
+
+    def pop_front(self):
+        self.fons_.popleft()
+
+    def pop_back(self):
+        self.fons_.pop()
+
+    def empty(self) -> bool:
+        return len(self.fons_) == 0
+
+    def fonnuc(self, fnuc: int):
+        self.fonnuc_ = fnuc
+
+    def get_fonnuc(self) -> int:
+        return self.fonnuc_
+
+
 class Part:
     
-    def __init__(self, tros):
+    def __init__(self, tros: str):
         self.text_ = tros
         self.transsil_ = deque() # It will be a deque structure with Sillaba instances as elements
 
-    def push_back(self, sil):
+    def push_back(self, sil: Sillaba):
         self.transsil_.append(sil)
 
     def pop_back(self):
@@ -954,34 +1021,34 @@ class Part:
     def pop_front(self):
         self.transsil_.popleft()
 
-    def empty(self):
+    def empty(self) -> bool:
         return len(self.transsil_) == 0
 
-    def size(self):
+    def size(self) -> int:
         return len(self.transsil_)
 
-    def tonica(self, silidx):
-        # self.transsil_[silidx] is an Sillaba instance, which has the method tonica_
+    def tonica(self, silidx: int) -> bool:
+        # self.transsil_[silidx] is an Sillaba instance, which has the attribute tonica_
         return self.transsil_[silidx].tonica_ 
 
-    def idxgrafnucli(self, silidx):
-        # self.transsil_[silidx] is an Sillaba instance, which has the method grafnuc_
+    def idxgrafnucli(self, silidx: int) -> int:
+        # self.transsil_[silidx] is an Sillaba instance, which has the attribute grafnuc_
         return self.transsil_[silidx].grafnuc_
 
-    def grafnucli(self, silidx):
-        # self.transsil_[silidx] is an Sillaba instance, which has an attribute text_ (string) and a method grafnuc_
+    def grafnucli(self, silidx: int) -> str:
+        # self.transsil_[silidx] is an Sillaba instance, which has an attributes text_ and grafnuc_
         return self.transsil_[silidx].text_[self.transsil_[silidx].grafnuc_]
 
-    def sil(self, silnum):
+    def sil(self, silnum: int) -> Sillaba:
         return self.transsil_[silnum]
 
-    def sils(self):
+    def sils(self) -> deque:
         return self.transsil_
 
-    def text(self):
+    def text(self) -> str:
         return self.text_
 
-    def textinici(self, silindex, charindex):
+    def textinici(self, silindex: int, charindex: int) -> str:
 
         # Gives the text of the previous syllables, and from the syllable silindex to charindex not included
 
@@ -992,7 +1059,7 @@ class Part:
             mot += self.transsil_[silindex].text_[:charindex]
         return mot
 
-    def textfinal(self, silindex, charindex):
+    def textfinal(self, silindex: int, charindex: int) -> str:
 
         # Gives the text starting from the syllable silindex and the character charindex (included) and up to the end of the word
 
@@ -1001,19 +1068,17 @@ class Part:
             mot += self.transsil_[i].text_
         return mot
 
-    def textsilini(self, silindex, charindex):
+    def textsilini(self, silindex: int, charindex: int) -> str:
 
         # gives the text of the syllable silindex, from the beginning to the character charindex not included
         return self.transsil_[silindex].text_[:charindex]
 
-    def textsilfinal(self, silindex, charindex):
+    def textsilfinal(self, silindex: int, charindex: int) -> str:
 
         # Gives the text of the syllable silindex, from charindex inclusive to the end
         return self.transsil_[silindex].text_[charindex:]
 
-    def charidxsilini(self, silindex):
-
-        # Gives the index of the first character in the string that is neither an apostrophe nor a hyphen
+    def charidxsilini(self, silindex: int) -> int:
 
         car = self.transsil_[silindex].text_[0]
         if car == "'" or car == '-':
@@ -1021,9 +1086,7 @@ class Part:
         else:
             return 0
 
-    def charidxsilfinal(self, silindex):
-
-        # Gives the index of the last character of the string that is not an apostrophe or hyphen
+    def charidxsilfinal(self, silindex: int) -> int:
 
         siltxt = self.transsil_[silindex].text_
         car = siltxt[-1]
@@ -1032,7 +1095,7 @@ class Part:
         else:
             return len(siltxt) - 1
 
-# TODO explicit input and output type
+
 class MotNuclis:
 
     def __init__(self, mot: str, es_adverbi: bool):
@@ -1041,15 +1104,19 @@ class MotNuclis:
         self.el_mot = mot
         self.pos_nuclis = []
 
+        self.load_insep()
 
-        self.omple_insep()
 
-
-    def omple_insep(self):
+    def load_insep(self):
 
         # Set self.insep_ and self.mots_voc_ir_
         
-        self.insep_ = ['bh', 'bl', 'br', 'ch', 'cl', 'cr', 'dh', 'dj', 'dr', 'fh', 'fh', 'fl', 'fr', 'gh', 'gl', 'gr', 'gu', 'gü', 'jh', 'kh', 'kl', 'kr', 'lh', 'll', 'mh', 'nh', 'ny', 'ph', 'pl', 'pr', 'qu', 'qü', 'rh', 'sh', 'th', 'th', 'tr', 'vh', 'wh', 'xh', 'xh', 'yh', 'zh']
+        self.insep_ = [
+            'bh', 'bl', 'br', 'ch', 'cl', 'cr', 'dh', 'dj', 'dr', 'fh', 'fh', 'fl', 'fr', \
+            'gh', 'gl', 'gr', 'gu', 'gü', 'jh', 'kh', 'kl', 'kr', 'lh', 'll', 'mh', \
+            'nh', 'ny', 'ph', 'pl', 'pr', 'qu', 'qü', 'rh', 'sh', 'th', 'th', 'tr', \
+            'vh', 'wh', 'xh', 'xh', 'yh', 'zh',
+            ]
         self.mots_voc_ir_ = ["cuir", "vair"]
 
 
@@ -1298,11 +1365,11 @@ class MotNuclis:
             self.pos_nuclis.append(mida - 3)
 
 
-    def inseparable(self, tros):
+    def inseparable(self, tros: str) -> bool:
         return tros in self.insep_
     
     
-    def separa_sillabes(self, vec_sil, els_nuclis):
+    def separa_sillabes(self, vec_sil: typing.List[str], els_nuclis: typing.List[int]) -> typing.Tuple[typing.List[str], typing.List[int]]:
         
         fronteres = []
 
@@ -1396,7 +1463,7 @@ class MotNuclis:
         return self.el_mot
 
 
-    def nucli(self, i: int):
+    def nucli(self, i: int) -> typing.Union[int, None]:
         if 0 <= i < len(self.pos_nuclis):
             return self.pos_nuclis[i]
         return None
@@ -1406,79 +1473,10 @@ class MotNuclis:
         return len(self.pos_nuclis)
 
 
-    def nuclis(self) -> List[int]:
+    def nuclis(self) -> typing.List[int]:
         return self.pos_nuclis
+   
 
-# TODO explicit input and output type
-class Sillaba:
-    
-    def __init__(self, sil):
-
-        self.text_ = sil
-        self.tonica_ = False
-        self.grafnuc_ = -1
-        self.fonnuc_ = -1
-        self.fons_ = deque()
-
-    def grafnuc(self, nuc):
-        self.grafnuc_ = nuc
-
-    def get_grafnuc(self):
-        return self.grafnuc_
-
-    def get_text(self):
-        return self.text_
-
-    def get_text_at_index(self, idx):
-        return self.text_[idx]
-
-    def sizetext(self):
-        return len(self.text_)
-
-    def tonica(self):
-        self.tonica_ = True
-
-    def asktonica(self):
-        return self.tonica_
-
-    def es_sil_tonica(self):
-        
-        if self.tonica_:
-            return "sí"
-        else:
-            return "no"
-
-    def numfons(self):
-        return len(self.fons_)
-
-    def allofon(self, fonidx):
-        return self.fons_[fonidx]
-
-    def allofons(self):
-        return self.fons_
-
-    def push_back(self, fon):
-        self.fons_.append(fon)
-
-    def push_front(self, fon):
-        self.fons_.insert(0, fon)
-
-    def pop_front(self):
-        self.fons_.popleft()
-
-    def pop_back(self):
-        self.fons_.pop()
-
-    def empty(self):
-        return len(self.fons_) == 0
-
-    def fonnuc(self, fnuc):
-        self.fonnuc_ = fnuc
-
-    def get_fonnuc(self):
-        return self.fonnuc_
-    
-# TODO explicit input and output type
 class Transcripcio:
 
     def __init__(self, mot: str):
@@ -1501,26 +1499,40 @@ class Transcripcio:
     def carrega_einesgram(self):
 
         # Set self.einesgram_
-        self.einesgram_ = ['-de-', '-en', '-hi', '-ho', '-i', '-i-', '-la', '-les', '-li', '-lo', '-los', '-me', '-ne', '-nos', '-se', '-te', '-us', '-vos', 'a', 'a-', 'al', 'als', 'amb', 'bi-', 'co', 'de', 'de-', 'del', 'dels', 'el', 'els', 'em', 'en', 'ens', 'es', 'et', 'hi', 'ho', 'i', 'i-', 'la', 'les', 'li', 'lo', 'ma', 'me', 'mon', 'na', 'pel', 'pels', 'per', 'que', 're', 'sa', 'se', 'ses', 'si', 'sos', 'sub', 'ta', 'te', 'tes', 'ton', 'un', 'uns', 'us']
+        self.einesgram_ = [
+            '-de-', '-en', '-hi', '-ho', '-i', '-i-', '-la', '-les', '-li', '-lo', '-los', '-me', '-ne', '-nos', \
+            '-se', '-te', '-us', '-vos', 'a', 'a-', 'al', 'als', 'amb', 'bi-', 'co', 'de', 'de-', 'del', 'dels', \
+            'el', 'els', 'em', 'en', 'ens', 'es', 'et', 'hi', 'ho', 'i', 'i-', 'la', 'les', 'li', 'lo', 'ma', \
+            'me', 'mon', 'na', 'pel', 'pels', 'per', 'que', 're', 'sa', 'se', 'ses', 'si', 'sos', 'sub', \
+            'ta', 'te', 'tes', 'ton', 'un', 'uns', 'us',
+        ]
 
     
     def carrega_exc_accent(self):
 
         # Set self.excep_acc (excepcions d'accentuacio)
-        self.excep_acc = {'antropologico': 'antropològico', 'arterio': 'artèrio', 'artistico': 'artístico', 'basquet': 'bàsquet', 'cardio': 'càrdio', 'catolico': 'catòlico', 'cientifico': 'científico', 'circum': 'círcum', 'civico': 'cívico', 'democrata': 'demòcrata', 'democratico': 'democràtico', 'dumping': 'dúmping', 'economico': 'econòmico', 'edgar': 'èdgar', 'fenicio': 'fenício', 'filosofico': 'filosòfico', 'fisico': 'físico', 'fisio': 'físio', 'geografico': 'geogràfico', 'hetero': 'hétero', 'higenico': 'higènico', 'higienico': 'higiènico', 'hiper': 'híper', 'historico': 'històrico', 'ibero': 'íbero', 'ideologico': 'ideològico', 'input': 'ínput', 'inter': 'ínter', 'jonatan': 'jònatan', 'juridico': 'jurídico', 'labio': 'làbio', 'linguo': 'línguo', 'literario': 'literàrio', 'logico': 'lògico', 'magico': 'màgico', 'maniaco': 'maníaco', 'marketing': 'màrketing', 'oxido': 'òxido', 'petroleo': 'petròleo', 'politico': 'político', 'quantum': 'quàntum', 'quimico': 'químico', 'quimio': 'químio', 'radio': 'ràdio', 'romanico': 'romànico', 'simbolico': 'simbòlico', 'socio': 'sòcio', 'super': 'súper', 'tecnico': 'tècnico', 'teorico': 'teòrico', 'tragico': 'tràgico', 'traqueo': 'tràqueo'}
+        self.excep_acc = {
+            'antropologico': 'antropològico', 'arterio': 'artèrio', 'artistico': 'artístico', 'basquet': 'bàsquet', 'cardio': 'càrdio', \
+            'catolico': 'catòlico', 'cientifico': 'científico', 'circum': 'círcum', 'civico': 'cívico', 'democrata': 'demòcrata', \
+            'democratico': 'democràtico', 'dumping': 'dúmping', 'economico': 'econòmico', 'edgar': 'èdgar', 'fenicio': 'fenício', \
+            'filosofico': 'filosòfico', 'fisico': 'físico', 'fisio': 'físio', 'geografico': 'geogràfico', 'hetero': 'hétero', \
+            'higenico': 'higènico', 'higienico': 'higiènico', 'hiper': 'híper', 'historico': 'històrico', 'ibero': 'íbero', \
+            'ideologico': 'ideològico', 'input': 'ínput', 'inter': 'ínter', 'jonatan': 'jònatan', 'juridico': 'jurídico', 'labio': 'làbio', \
+            'linguo': 'línguo', 'literario': 'literàrio', 'logico': 'lògico', 'magico': 'màgico', 'maniaco': 'maníaco', 'marketing': 'màrketing', \
+            'oxido': 'òxido', 'petroleo': 'petròleo', 'politico': 'político', 'quantum': 'quàntum', 'quimico': 'químico', 'quimio': 'químio', \
+            'radio': 'ràdio', 'romanico': 'romànico', 'simbolico': 'simbòlico', 'socio': 'sòcio', 'super': 'súper', 'tecnico': 'tècnico', \
+            'teorico': 'teòrico', 'tragico': 'tràgico', 'traqueo': 'tràqueo',
+        }   
 
 
-    def normalize_word(self, word):
+    def normalize_word(self, word: str) -> str:
 
-        #word = word.replace("'", "")
-        #word = word.replace("-", "")
-        #word = word.replace("l·l", "l")
         word = word.lower()
 
         return word
 
 
-    def segmenta(self, mot, final):
+    def segmenta(self, mot: str, final: typing.List[str]) -> typing.List[str]:
 
         # Word with prefixes segmentation 
 
@@ -1614,7 +1626,7 @@ class Transcripcio:
             return final
     
     
-    def tracta_prefixos(self, inici, final):
+    def tracta_prefixos(self, inici: typing.List[str], final: typing.List[str]) -> typing.List[str]:
 
             # For each start word, 
             # if there is a prefix at the beginning and the word is not part of the exception list, 
@@ -1638,7 +1650,7 @@ class Transcripcio:
             self.transpart_.append(partmot)
 
     
-    def no_es_nom_ment(self, mot):
+    def no_es_nom_ment(self, mot: str) -> bool:
             
             if mot not in self.excepcions_gen:
                 return True
@@ -1646,7 +1658,7 @@ class Transcripcio:
                 return False
     
     
-    def es_adverbi(self, mot):
+    def es_adverbi(self, mot: str) -> bool:
         
         pos = 0
         tros = "ment"
@@ -1663,7 +1675,7 @@ class Transcripcio:
             return False
     
     
-    def es_exc_accent(self, mot):
+    def es_exc_accent(self, mot: str) -> str:
 
         if mot in self.excep_acc:
             mot = self.excep_acc[mot]
@@ -1699,7 +1711,7 @@ class Transcripcio:
                 self.transpart_[i].push_back(sillab)
     
     
-    def dotze_term(self, pnum):
+    def dotze_term(self, pnum: int) -> bool:
 
         # retorna cert quan es mot pla (paroxiton) ja sigui per les dotze terminacions o per ser un diftong decreixent
 
@@ -1759,7 +1771,7 @@ class Transcripcio:
         return False
 
     
-    def accentua_mot(self, pnum):
+    def accentua_mot(self, pnum: int):
 
         numsil = self.transpart_[pnum].size()
         
@@ -1772,7 +1784,7 @@ class Transcripcio:
             self.transpart_[pnum].transsil_[numsil - 1].tonica()
     
 
-    def einagram(self, mot):
+    def einagram(self, mot: str) -> bool:
 
         if mot not in self.einesgram_:
             return False
@@ -1782,7 +1794,9 @@ class Transcripcio:
 
     def troba_accent_tonic_mot(self):
 
-        vocaccent = "áéíóúü"
+        # TODO which one is ok?
+        # original -> vocaccent = "áéíóúü"
+        vocaccent = ['à', 'é', 'è', 'í', 'ó', 'ò', 'ú']
         
         for pnum in range(len(self.trossos_)):
 
@@ -1860,7 +1874,7 @@ class Transcripcio:
             self.troba_accent_tonic_mot()
     
 
-    def stress_tonic(self):
+    def stress_tonic(self) -> str:
 
         accent_changes = {
             "a" : "à",
@@ -1933,7 +1947,7 @@ class Transcripcio:
         return stressed_word
 
 
-    def stress_word(self):
+    def stress_word(self) -> str:
         
         self.motnorm_ = self.normalize_word(self.motorig_)
         
@@ -1943,19 +1957,19 @@ class Transcripcio:
         
         return self.stressed_word
 
-
+    
 class CatalanPreProcessText:
     """Pre-processes text"""
 
-    def __init__(self, lookup_phonemes, settings_values):
+    def __init__(self, lookup_phonemes, settings_values: dict, lang: str):
 
         self.lookup_phonemes = lookup_phonemes
         self.settings_values = settings_values
+        self.lang = lang
     
 
     def __call__(self, text: str) -> str:
 
-        _LOGGER.info(f"Enter preprocessing.")
         _LOGGER.info(f"Original text: {text}")
         
         breaks = [" "]
@@ -1966,29 +1980,20 @@ class CatalanPreProcessText:
         breaks = breaks + list(self.settings_values["end_punctuations"])
 
         tokens = [text.strip()]
-        #_LOGGER.info(f"tokens: {tokens}")
         for char_break in breaks:
-            #_LOGGER.info(f"char_break: {char_break}")
             tokens = [re.split(f"(\{char_break})", item) for item in tokens]
             tokens = [item for sublist in tokens for item in sublist if item != ""]
-            #_LOGGER.info(f"tokens: {tokens}")
-
-        #_LOGGER.info(f"tokens: {tokens}")
         
         preprocessed_tokens = []
         for token in tokens:
-
-            #_LOGGER.info(f"token: {token}")
             
             if token in breaks:
                 processed_token = token
             else:
                 is_in_lexicon = self.lookup_phonemes(token) is not None
                 if is_in_lexicon:
-                    #_LOGGER.debug(f"Token {token} is in lexicon.")
                     processed_token = token
                 else:
-                    #_LOGGER.debug(f"Stressing token {token}...")
                     tr = Transcripcio(token)
                     processed_token = tr.stress_word()
 
@@ -1997,37 +2002,55 @@ class CatalanPreProcessText:
         processed_text = "".join(preprocessed_tokens)
 
         _LOGGER.info(f"Preprocessed text: {processed_text}")
-        _LOGGER.info(f"Exit preprocessing.")
 
         return processed_text
 
 
-def phoneme_is_vowel(phoneme):
+# Post-Process functions and classes
+
+from gruut.text_processor import DATA_PROP, WordNode, BreakWordNode, BreakNode, PunctuationWordNode
+from gruut.utils import sliding_window
+
+def identify_lang(nodes: typing.List[typing.Union[WordNode, BreakWordNode, BreakNode, PunctuationWordNode]]) -> str:
+
+    from gruut.text_processor import WordNode
+    
+    try:
+        for node in nodes:
+            if isinstance(node, WordNode):
+                lang = node.lang
+                break
+    except:
+        lang = "ca"
+    
+    return lang
+
+def phoneme_is_vowel(phoneme: str) -> bool:
     vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u", "ə", "i", "u"]
     return phoneme in vowels
 
-def phoneme_is_stressed_vowel(phoneme):
+def phoneme_is_stressed_vowel(phoneme: str) -> bool:
     stressed_vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u"]
     return phoneme in stressed_vowels
 
-def phoneme_is_unstressed_vowel(phoneme):
+def phoneme_is_unstressed_vowel(phoneme: str) -> bool:
     return phoneme_is_vowel(phoneme) and not phoneme_is_stressed_vowel(phoneme)
 
-def phoneme_is_high_vowel(phoneme):
+def phoneme_is_high_vowel(phoneme: str) -> bool:
     high_vowels = ["i", "u", "'i", "'u"]
     return phoneme in high_vowels
 
-def phoneme_is_high_stressed_vowel(phoneme):
+def phoneme_is_high_stressed_vowel(phoneme: str) -> bool:
     return phoneme_is_high_vowel(phoneme) and phoneme_is_stressed_vowel(phoneme)
 
-def phoneme_is_high_unstressed_vowel(phoneme):
+def phoneme_is_high_unstressed_vowel(phoneme: str) -> bool:
     return phoneme_is_high_vowel(phoneme) and phoneme_is_unstressed_vowel(phoneme)
 
-def phoneme_is_neutral_vowel(phoneme):
+def phoneme_is_neutral_vowel(phoneme: str) -> bool:
     neutral_vowels = ["ə"]
     return phoneme in neutral_vowels
 
-def fusion_if_needed(node_1, node_2):
+def fusion_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
     if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
         return
@@ -2056,7 +2079,7 @@ def fusion_if_needed(node_1, node_2):
             node_1.phonemes.pop()
             _LOGGER.info(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
             
-def elision_if_needed(node_1, node_2):
+def elision_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
     if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
         return
@@ -2071,8 +2094,7 @@ def elision_if_needed(node_1, node_2):
             node_2.phonemes.pop(0)
             _LOGGER.info(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
             
-
-def diphthong_if_needed(node_1, node_2):
+def diphthong_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
     if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
         return
@@ -2121,14 +2143,10 @@ def diphthong_if_needed(node_1, node_2):
         elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2):
             pass
             
-        
 def ca_post_process_sentence(
     graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
 ):
     
-    from gruut.text_processor import DATA_PROP, WordNode, BreakWordNode, BreakNode, PunctuationWordNode
-    from gruut.utils import sliding_window
-
     nodes = []
     for dfs_node in nx.dfs_preorder_nodes(graph, sent_node.node):
         
@@ -2148,6 +2166,8 @@ def ca_post_process_sentence(
         if isinstance(node, PunctuationWordNode):
             nodes.append(typing.cast(PunctuationWordNode, node))
         
+    lang = identify_lang(nodes)
+    
     contiguous_word_nodes = []
     for node_1, node_2 in sliding_window(nodes, 2):
         
@@ -2161,16 +2181,23 @@ def ca_post_process_sentence(
 
     for (node_1, node_2) in contiguous_word_nodes:
 
-        diphthong_if_needed(node_1, node_2)
-        fusion_if_needed(node_1, node_2)
-        elision_if_needed(node_1, node_2)
+        diphthong_if_needed(node_1, node_2, lang)
+        fusion_if_needed(node_1, node_2, lang)
+        elision_if_needed(node_1, node_2, lang)
 
+
+# Settings
 
 def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     
     """Create settings for Catalan"""
 
-    _LOGGER.info(f"Enter get_ca_settings")
+    try:
+        lang = str(lang_dir).split("/")[-1]
+        main_lang, lang_version = lang.split("-")
+        lang = f"{main_lang.lower()}-{lang_version.upper()}"
+    except:
+        lang = "ca"
 
     lookup_phonemes = settings_args["lookup_phonemes"]
 
@@ -2192,7 +2219,7 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
     
     settings_args = {
         **settings_values, 
-        "pre_process_text": CatalanPreProcessText(lookup_phonemes, settings_values),
+        "pre_process_text": CatalanPreProcessText(lookup_phonemes, settings_values, lang),
         "post_process_sentence": ca_post_process_sentence,
         **settings_args,
     }
