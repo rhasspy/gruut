@@ -1,0 +1,50 @@
+---
+
+language:
+  name: "Central Catalan"
+  code: "ca-ce"
+  phonemes: !env "${config_dir}/phonemes.txt"
+  keep_stress: true
+
+lexicon: !env "${config_dir}/lexicon.db"
+
+g2p:
+  model: !env "${config_dir}/g2p.fst"
+
+symbols:
+  casing: "lower"
+  number_regex: "^-?\\d+([,.]\\d+)*$"
+  token_split: "\\s+"
+  token_join: " "
+  minor_breaks:
+    - ","
+    - ":"
+    - ";"
+    - "..."
+  major_breaks:
+    - "."
+    - "?"
+    - "!"
+  replace:
+    "[\\<\\>\\(\\)\\[\\]\"]+": ""
+    "\\B'": "\""
+    "'\\B": "\""
+    "’": "'"
+    "'": ""
+    "-": ""
+    "l·l": "l"
+  punctuations:
+    - "\""
+    - "„"
+    - "“"
+    - "”"
+    - "«"
+    - "»"
+    - ","
+    - ":"
+    - ";"
+    - "."
+    - "?"
+    - "¿" 
+    - "!"
+    - "¡"
