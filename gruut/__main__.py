@@ -132,37 +132,6 @@ def main():
                 sentence_dict = dataclasses.asdict(sentence)
                 writer.write(sentence_dict)
         
-        # HACK [TEST]
-        def custom_output_transcription(
-                sentences, 
-                writer, 
-                text_data=None,
-                word_begin_sep = '[', 
-                word_end_sep = ']',
-                g2p_word_begin_sep = '{', 
-                g2p_word_end_sep = '}',
-                ):
-            
-            transcription = ""
-            for sentence in sentences:
-                sentence_dict = dataclasses.asdict(sentence)
-                for word_dict in sentence_dict["words"]:
-                    
-                    word_phonemes = word_dict["phonemes"]
-                    if word_phonemes is None:
-                        word_phonemes = [word_dict["text"]]
-
-                    in_lexicon = text_processor._is_word_in_lexicon(
-                        word_dict["text"], 
-                        text_processor.get_settings(lang = args.language),
-                        )
-                    if in_lexicon == False:
-                        transcription = f"{transcription.strip()} {' '.join([g2p_word_begin_sep] + word_phonemes + [g2p_word_end_sep]).strip()}".strip()
-                    else:
-                        transcription = f"{transcription.strip()} {' '.join([word_begin_sep] + word_phonemes + [word_end_sep]).strip()}".strip()
-            
-            writer.write(transcription)
-
     for text, text_data in input_text(lines):
         try:
             graph, root = text_processor(
@@ -196,15 +165,9 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
+ 
+            output_sentences(sentences, writer, text_data)
 
-            # HACK [TEST]
-            #Original line -> 
-            #output_sentences(sentences, writer, text_data)
-            custom_output_transcription(
-                    sentences, 
-                    writer, 
-                    text_data, 
-                    )
         except Exception as e:
             _LOGGER.exception(text)
 
