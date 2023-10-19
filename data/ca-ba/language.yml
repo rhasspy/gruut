@@ -1,8 +1,8 @@
 ---
 
 language:
-  name: "Catalan"
-  code: "ca"
+  name: "Balear Catalan"
+  code: "ca-ba"
   phonemes: !env "${config_dir}/phonemes.txt"
   keep_stress: true
 
