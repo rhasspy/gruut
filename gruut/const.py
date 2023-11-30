@@ -19,6 +19,8 @@ LANG_ALIASES = {
     "ca": "ca-ce",
     "ca-ce": "ca-ce",
     "ca-ba": "ca-ba",
+    "ca-no": "ca-no",
+    "ca-va": "ca-va",
     "cs": "cs-cz",
     "de": "de-de",
     "en": "en-us",
