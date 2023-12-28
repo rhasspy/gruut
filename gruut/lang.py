@@ -2180,7 +2180,26 @@ def ca_post_process_sentence(
             nodes.append(typing.cast(PunctuationWordNode, node))
         
     lang = identify_lang(nodes)
-    
+
+    # HACK
+    # Training corpora includes an invalid sequence of phonemes: l ʎ l
+    # We fix that here, in the next iteration will be properly solved
+    phonemes_to_fix = "l ʎ l"
+    fixed_phonemes = "l l"
+    for node in nodes:
+
+        if node is None:
+            continue
+
+        if isinstance(node, WordNode):
+            if not (node.text and node.phonemes):
+                continue
+            phonemes_text = " ".join(node.phonemes)
+            if phonemes_to_fix in phonemes_text:
+                phonemes_text = phonemes_text.replace(phonemes_to_fix, fixed_phonemes)
+                node.phonemes = phonemes_text.split(" ")
+                _LOGGER.debug(f"FIX: phoneme sequence '{phonemes_to_fix}' fixed at {node.text}. Fixed transcription: {node.phonemes}")
+        
     # Create a list of contiguous word nodes
     contiguous_word_nodes = []
     for node_1, node_2 in sliding_window(nodes, 2):
@@ -2310,5 +2329,3 @@ class DelayedSqlitePhonemizer:
 
         assert self.phonemizer is not None
         return self.phonemizer(word, role=role, do_transforms=do_transforms)
-
-
