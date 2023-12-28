@@ -115,7 +115,7 @@ def get_settings(
         # Arabic
         return get_ar_settings(lang_dir, **settings_args)
 
-    if lang_only in {"ca-ce", "ca-ba"}:
+    if lang_only in {"ca-ce", "ca-ba", "ca-no", "ca-va"}:
         # Catalan
         return get_ca_settings(lang_dir, **settings_args)
 
@@ -835,13 +835,60 @@ def get_zh_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
 # Catalan (ca, Catalan)
 # -----------------------------------------------------------------------------
 
+# Pre-Process constants
+# Same for all accents in this version
+VOWEL_CHARS = ['a', 'ä', 'à', 'e', 'ë', 'é', 'è', 'i', 'í', 'ï', 'o', 'ö', 'ó', 'ò', 'u', 'ü', 'ú']
+ACCENTED_VOWEL_CHARS = ['à', 'é', 'è', 'í', 'ó', 'ò', 'ú']
+NUCLITIC_CHARS = ['a', 'à', 'e', 'é', 'è', 'í', 'ï', 'o', 'ó', 'ò', 'ú']
+ACCENT_CHANGES = {
+    "a" : "à",
+    "e" : "é",
+    "i" : "í",
+    "ï" : "í",
+    "o" : "ó",
+    "u" : "ú",
+    "ü" : "ú", 
+}
+INSEPARABLES = [
+    'bh', 'bl', 'br', 'ch', 'cl', 'cr', 'dh', 'dj', 'dr', 'fh', 'fh', 'fl', 'fr', \
+    'gh', 'gl', 'gr', 'gu', 'gü', 'jh', 'kh', 'kl', 'kr', 'lh', 'll', 'mh', \
+    'nh', 'ny', 'ph', 'pl', 'pr', 'qu', 'qü', 'rh', 'sh', 'th', 'th', 'tr', \
+    'vh', 'wh', 'xh', 'xh', 'yh', 'zh',
+]
+VOC_IR = ["cuir", "vair"]
+EINESGRAM = [
+    '-de-', '-en', '-hi', '-ho', '-i', '-i-', '-la', '-les', '-li', '-lo', '-los', '-me', '-ne', '-nos', \
+    '-se', '-te', '-us', '-vos', 'a', 'a-', 'al', 'als', 'amb', 'bi-', 'co', 'de', 'de-', 'del', 'dels', \
+    'el', 'els', 'em', 'en', 'ens', 'es', 'et', 'hi', 'ho', 'i', 'i-', 'la', 'les', 'li', 'lo', 'ma', \
+    'me', 'mon', 'na', 'pel', 'pels', 'per', 'que', 're', 'sa', 'se', 'ses', 'si', 'sos', 'sub', \
+    'ta', 'te', 'tes', 'ton', 'un', 'uns', 'us',
+]
+EXCEP_ACC = {
+    'antropologico': 'antropològico', 'arterio': 'artèrio', 'artistico': 'artístico', 'basquet': 'bàsquet', 'cardio': 'càrdio', \
+    'catolico': 'catòlico', 'cientifico': 'científico', 'circum': 'círcum', 'civico': 'cívico', 'democrata': 'demòcrata', \
+    'democratico': 'democràtico', 'dumping': 'dúmping', 'economico': 'econòmico', 'edgar': 'èdgar', 'fenicio': 'fenício', \
+    'filosofico': 'filosòfico', 'fisico': 'físico', 'fisio': 'físio', 'geografico': 'geogràfico', 'hetero': 'hétero', \
+    'higenico': 'higènico', 'higienico': 'higiènico', 'hiper': 'híper', 'historico': 'històrico', 'ibero': 'íbero', \
+    'ideologico': 'ideològico', 'input': 'ínput', 'inter': 'ínter', 'jonatan': 'jònatan', 'juridico': 'jurídico', 'labio': 'làbio', \
+    'linguo': 'línguo', 'literario': 'literàrio', 'logico': 'lògico', 'magico': 'màgico', 'maniaco': 'maníaco', 'marketing': 'màrketing', \
+    'oxido': 'òxido', 'petroleo': 'petròleo', 'politico': 'político', 'quantum': 'quàntum', 'quimico': 'químico', 'quimio': 'químio', \
+    'radio': 'ràdio', 'romanico': 'romànico', 'simbolico': 'simbòlico', 'socio': 'sòcio', 'super': 'súper', 'tecnico': 'tècnico', \
+    'teorico': 'teòrico', 'tragico': 'tràgico', 'traqueo': 'tràqueo',
+} 
+DIFT_DECR = ["au", "ai", "eu", "ei", "ou", "oi", "iu", "àu", "ui"]
+VOC_SOLA = ["a", "e", "i", "o", "u", "ï", "ü"]
+VOC_MES_S = ["as", "es", "is", "os", "us", "às", "ès"]
+EN_IN = ["en", "in", "àn"]
+
 # Pre-Process functions and classes
 
 from collections import deque
 
+# TODO review all functions, may need refactor
+# TODO define depending the dialect
 def vocal(carac: str) -> bool:
-    vocal_chars = ['a', 'à', 'e', 'é', 'è', 'i', 'í', 'ï', 'o', 'ó', 'ò', 'u', 'ü', 'ú']
-    return carac in vocal_chars
+    
+    return carac in VOWEL_CHARS
 
 def acaba_en_vocal(prefix: str) -> bool:
     darrer = prefix[-1]
@@ -863,8 +910,7 @@ def post_prefix_ok(resta: str) -> bool:
     return False
 
 def nuclitica(carac: str) -> bool:
-    nuclitic_chars = ['a', 'à', 'e', 'é', 'è', 'í', 'ï', 'o', 'ó', 'ò', 'ú']
-    return carac in nuclitic_chars
+    return carac in NUCLITIC_CHARS
 
 def gicf_suf(mot: str, pos: int, mots_voc_ir: typing.List[str]) -> bool:
         
@@ -1106,19 +1152,12 @@ class MotNuclis:
 
         self.load_insep()
 
-
     def load_insep(self):
 
         # Set self.insep_ and self.mots_voc_ir_
         
-        self.insep_ = [
-            'bh', 'bl', 'br', 'ch', 'cl', 'cr', 'dh', 'dj', 'dr', 'fh', 'fh', 'fl', 'fr', \
-            'gh', 'gl', 'gr', 'gu', 'gü', 'jh', 'kh', 'kl', 'kr', 'lh', 'll', 'mh', \
-            'nh', 'ny', 'ph', 'pl', 'pr', 'qu', 'qü', 'rh', 'sh', 'th', 'th', 'tr', \
-            'vh', 'wh', 'xh', 'xh', 'yh', 'zh',
-            ]
-        self.mots_voc_ir_ = ["cuir", "vair"]
-
+        self.insep_ = INSEPARABLES
+        self.mots_voc_ir_ = VOC_IR
 
     def troba_nuclis_mot(self):
 
@@ -1364,10 +1403,8 @@ class MotNuclis:
             mida = len(self.el_mot)
             self.pos_nuclis.append(mida - 3)
 
-
     def inseparable(self, tros: str) -> bool:
         return tros in self.insep_
-    
     
     def separa_sillabes(self, vec_sil: typing.List[str], els_nuclis: typing.List[int]) -> typing.Tuple[typing.List[str], typing.List[int]]:
         
@@ -1425,7 +1462,7 @@ class MotNuclis:
                 fronteres.append(self.pos_nuclis[i] + 3)
 
             else:
-                _LOGGER.info(f"No puc separar en sillabes el mot {self.el_mot}, cluster massa gran, de longitud {longi}")
+                _LOGGER.debug(f"No puc separar en sillabes el mot {self.el_mot}, cluster massa gran, de longitud {longi}")
                 exit(1)   
 
         numsil = len(fronteres)
@@ -1454,24 +1491,19 @@ class MotNuclis:
 
         return vec_sil, els_nuclis
 
-
     def empty(self) -> bool:
         return len(self.pos_nuclis) == 0
 
-
     def mot(self) -> str:
         return self.el_mot
-
 
     def nucli(self, i: int) -> typing.Union[int, None]:
         if 0 <= i < len(self.pos_nuclis):
             return self.pos_nuclis[i]
         return None
 
-
     def size(self) -> int:
         return len(self.pos_nuclis)
-
 
     def nuclis(self) -> typing.List[int]:
         return self.pos_nuclis
@@ -1495,42 +1527,19 @@ class Transcripcio:
         self.carrega_einesgram()
         self.carrega_exc_accent()
 
-
     def carrega_einesgram(self):
-
         # Set self.einesgram_
-        self.einesgram_ = [
-            '-de-', '-en', '-hi', '-ho', '-i', '-i-', '-la', '-les', '-li', '-lo', '-los', '-me', '-ne', '-nos', \
-            '-se', '-te', '-us', '-vos', 'a', 'a-', 'al', 'als', 'amb', 'bi-', 'co', 'de', 'de-', 'del', 'dels', \
-            'el', 'els', 'em', 'en', 'ens', 'es', 'et', 'hi', 'ho', 'i', 'i-', 'la', 'les', 'li', 'lo', 'ma', \
-            'me', 'mon', 'na', 'pel', 'pels', 'per', 'que', 're', 'sa', 'se', 'ses', 'si', 'sos', 'sub', \
-            'ta', 'te', 'tes', 'ton', 'un', 'uns', 'us',
-        ]
-
-    
+        self.einesgram_ = EINESGRAM
+  
     def carrega_exc_accent(self):
-
         # Set self.excep_acc (excepcions d'accentuacio)
-        self.excep_acc = {
-            'antropologico': 'antropològico', 'arterio': 'artèrio', 'artistico': 'artístico', 'basquet': 'bàsquet', 'cardio': 'càrdio', \
-            'catolico': 'catòlico', 'cientifico': 'científico', 'circum': 'círcum', 'civico': 'cívico', 'democrata': 'demòcrata', \
-            'democratico': 'democràtico', 'dumping': 'dúmping', 'economico': 'econòmico', 'edgar': 'èdgar', 'fenicio': 'fenício', \
-            'filosofico': 'filosòfico', 'fisico': 'físico', 'fisio': 'físio', 'geografico': 'geogràfico', 'hetero': 'hétero', \
-            'higenico': 'higènico', 'higienico': 'higiènico', 'hiper': 'híper', 'historico': 'històrico', 'ibero': 'íbero', \
-            'ideologico': 'ideològico', 'input': 'ínput', 'inter': 'ínter', 'jonatan': 'jònatan', 'juridico': 'jurídico', 'labio': 'làbio', \
-            'linguo': 'línguo', 'literario': 'literàrio', 'logico': 'lògico', 'magico': 'màgico', 'maniaco': 'maníaco', 'marketing': 'màrketing', \
-            'oxido': 'òxido', 'petroleo': 'petròleo', 'politico': 'político', 'quantum': 'quàntum', 'quimico': 'químico', 'quimio': 'químio', \
-            'radio': 'ràdio', 'romanico': 'romànico', 'simbolico': 'simbòlico', 'socio': 'sòcio', 'super': 'súper', 'tecnico': 'tècnico', \
-            'teorico': 'teòrico', 'tragico': 'tràgico', 'traqueo': 'tràqueo',
-        }   
-
+        self.excep_acc =   EXCEP_ACC
 
     def normalize_word(self, word: str) -> str:
 
         word = word.lower()
 
         return word
-
 
     def segmenta(self, mot: str, final: typing.List[str]) -> typing.List[str]:
 
@@ -1624,8 +1633,7 @@ class Transcripcio:
         if no_te_prefix:
             final.append(mot)
             return final
-    
-    
+     
     def tracta_prefixos(self, inici: typing.List[str], final: typing.List[str]) -> typing.List[str]:
 
             # For each start word, 
@@ -1636,7 +1644,6 @@ class Transcripcio:
                 final = self.segmenta(mot, final)
             
             return final
-
 
     def parteix_mot(self):
         
@@ -1649,15 +1656,13 @@ class Transcripcio:
             partmot = Part(tros)
             self.transpart_.append(partmot)
 
-    
     def no_es_nom_ment(self, mot: str) -> bool:
             
             if mot not in self.excepcions_gen:
                 return True
             else:
                 return False
-    
-    
+     
     def es_adverbi(self, mot: str) -> bool:
         
         pos = 0
@@ -1673,15 +1678,13 @@ class Transcripcio:
                 return False
         else:
             return False
-    
-    
+     
     def es_exc_accent(self, mot: str) -> str:
 
         if mot in self.excep_acc:
             mot = self.excep_acc[mot]
 
         return mot
-
 
     def troba_nuclis_mot(self):
 
@@ -1709,16 +1712,15 @@ class Transcripcio:
             else:
                 sillab = Sillaba(self.trossos_[i])
                 self.transpart_[i].push_back(sillab)
-    
-    
+
     def dotze_term(self, pnum: int) -> bool:
 
         # retorna cert quan es mot pla (paroxiton) ja sigui per les dotze terminacions o per ser un diftong decreixent
 
-        dift_decr = ["au", "ai", "eu", "ei", "ou", "oi", "iu", "àu", "ui"]
-        voc_sola = ["a", "e", "i", "o", "u", "ï", "ü"]
-        voc_mes_s = ["as", "es", "is", "os", "us", "às", "ès"]
-        en_in = ["en", "in", "àn"]
+        dift_decr = DIFT_DECR
+        voc_sola = VOC_SOLA
+        voc_mes_s = VOC_MES_S
+        en_in = EN_IN
 
         numsil = self.transpart_[pnum].size()
         darsil = self.transpart_[pnum].transsil_[numsil - 1].get_text()
@@ -1769,8 +1771,7 @@ class Transcripcio:
             return True
 
         return False
-
-    
+  
     def accentua_mot(self, pnum: int):
 
         numsil = self.transpart_[pnum].size()
@@ -1783,18 +1784,16 @@ class Transcripcio:
             # Otherwise, it's acute (aguda)
             self.transpart_[pnum].transsil_[numsil - 1].tonica()
     
-
     def einagram(self, mot: str) -> bool:
 
         if mot not in self.einesgram_:
             return False
         else:
-            return True
-    
+            return True 
 
     def troba_accent_tonic_mot(self):
 
-        vocaccent = ['à', 'é', 'è', 'í', 'ó', 'ò', 'ú']
+        vocaccent = ACCENTED_VOWEL_CHARS
         
         for pnum in range(len(self.trossos_)):
 
@@ -1864,29 +1863,19 @@ class Transcripcio:
                     else:
                         self.accentua_mot(pnum)
 
-
     def sillaba_accentua_mot(self):
             
             self.parteix_mot()
             self.troba_nuclis_mot()
             self.troba_accent_tonic_mot()
     
-
     def stress_tonic(self) -> str:
 
-        accent_changes = {
-            "a" : "à",
-            "e" : "é",
-            "i" : "í",
-            "ï" : "í",
-            "o" : "ó",
-            "u" : "ú",
-            "ü" : "ú", 
-        }
+        accent_changes = ACCENT_CHANGES
 
-        all_vowels = ['a', 'à', 'e', 'é', 'è', 'i', 'í', 'ï', 'o', 'ó', 'ò', 'u', 'ü', 'ú']
-        accented_vowels = ['à', 'é', 'è', 'í', 'ó', 'ò', 'ú']
-        unaccented_vowels = ['a', 'e', 'i', 'ï', 'o', 'u', 'ü']
+        all_vowels = VOWEL_CHARS
+        accented_vowels = ACCENTED_VOWEL_CHARS
+        unaccented_vowels = list(set(all_vowels) - set(accented_vowels))
 
         original_word = ""
         stressed_word = ""
@@ -1944,7 +1933,6 @@ class Transcripcio:
         
         return stressed_word
 
-
     def stress_word(self) -> str:
         
         self.motnorm_ = self.normalize_word(self.motorig_)
@@ -1958,6 +1946,8 @@ class Transcripcio:
     
 class CatalanPreProcessText:
     """Pre-processes text"""
+
+    # The preprocessing is the same for all accents in this version (variable lang is not used)
 
     def __init__(self, lookup_phonemes, settings_values: dict, lang: str):
 
@@ -1983,22 +1973,37 @@ class CatalanPreProcessText:
         preprocessed_tokens = []
         for token in tokens:
             
-            if token in breaks:
-                processed_token = token
-            else:
-                is_in_lexicon = self.lookup_phonemes(token) is not None
-                if is_in_lexicon:
+            try:
+                if token in breaks:
                     processed_token = token
                 else:
-                    tr = Transcripcio(token)
-                    processed_token = tr.stress_word()
+                    is_in_lexicon = self.lookup_phonemes(token) is not None
+                    if is_in_lexicon:
+                        processed_token = token
+                    else:
+                        tr = Transcripcio(token)
+                        processed_token = tr.stress_word()                    
+            except:
+                processed_token = token
+                _LOGGER.debug(f"Unable to stress token {token}.")
 
             preprocessed_tokens.append(processed_token)
         
         processed_text = "".join(preprocessed_tokens)
 
+        _LOGGER.debug(f"{text} preprocessed obtaining: {processed_text}")
+
         return processed_text
 
+
+# Post-Process constants
+# Only defined for "ca", "ca-ce" accent.
+# For the rest of accents, not post-processing is done
+
+PHONEME_VOWELS = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u", "ə", "i", "u"]
+PHONEME_STRESSED_VOWELS = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u"]
+PHONEME_HIGH_VOWELS = ["i", "u", "'i", "'u"]
+PHONEME_NEUTRAL_VOWELS = ["ə"]
 
 # Post-Process functions and classes
 
@@ -2020,19 +2025,16 @@ def identify_lang(nodes: typing.List[typing.Union[WordNode, BreakWordNode, Break
     return lang
 
 def phoneme_is_vowel(phoneme: str) -> bool:
-    vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u", "ə", "i", "u"]
-    return phoneme in vowels
+    return phoneme in PHONEME_VOWELS
 
 def phoneme_is_stressed_vowel(phoneme: str) -> bool:
-    stressed_vowels = ["'a", "'ɛ", "'ɔ", "'e", "'i", "'o", "'u"]
-    return phoneme in stressed_vowels
+    return phoneme in PHONEME_STRESSED_VOWELS
 
 def phoneme_is_unstressed_vowel(phoneme: str) -> bool:
     return phoneme_is_vowel(phoneme) and not phoneme_is_stressed_vowel(phoneme)
 
 def phoneme_is_high_vowel(phoneme: str) -> bool:
-    high_vowels = ["i", "u", "'i", "'u"]
-    return phoneme in high_vowels
+    return phoneme in PHONEME_HIGH_VOWELS
 
 def phoneme_is_high_stressed_vowel(phoneme: str) -> bool:
     return phoneme_is_high_vowel(phoneme) and phoneme_is_stressed_vowel(phoneme)
@@ -2041,106 +2043,123 @@ def phoneme_is_high_unstressed_vowel(phoneme: str) -> bool:
     return phoneme_is_high_vowel(phoneme) and phoneme_is_unstressed_vowel(phoneme)
 
 def phoneme_is_neutral_vowel(phoneme: str) -> bool:
-    neutral_vowels = ["ə"]
-    return phoneme in neutral_vowels
+    return phoneme in PHONEME_NEUTRAL_VOWELS
 
 def fusion_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
-    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
-        return
+    if lang in ["ca", "ca-ce"]:
+        if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+            return
+        else:
+
+            last_phoneme_word_1 = node_1.phonemes[-1]
+            first_phoneme_word_2 = node_2.phonemes[0]
+
+            # Case 1: high unstressed vowel + stressed vowel of the same timbre
+            if phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_stressed_vowel(first_phoneme_word_2) \
+                and last_phoneme_word_1 == first_phoneme_word_2.replace("'", ""):
+                # Case [i] + [i'] = [i'] or [u] + [u'] = [u']
+                node_1.phonemes.pop()
+                _LOGGER.debug(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                
+            # Case 2: high unstressed vowel + high unstressed vowel of the same timbre
+            elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2) \
+                and last_phoneme_word_1 == first_phoneme_word_2:
+                # Case [i] + [i] = [i] or [u] + [u] = [u]
+                node_1.phonemes.pop()
+                _LOGGER.debug(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+            # Case 3: neutral vowel + neutral vowel (except if any of the vowels is the proposition "a")
+            elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2) \
+                and node_1.text != "a" and node_2.text != "a":
+                node_1.phonemes.pop()
+                _LOGGER.debug(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
     else:
-
-        last_phoneme_word_1 = node_1.phonemes[-1]
-        first_phoneme_word_2 = node_2.phonemes[0]
-
-        # Case 1: high unstressed vowel + stressed vowel of the same timbre
-        if phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_stressed_vowel(first_phoneme_word_2) \
-            and last_phoneme_word_1 == first_phoneme_word_2.replace("'", ""):
-            # Case [i] + [i'] = [i'] or [u] + [u'] = [u']
-            node_1.phonemes.pop()
-            _LOGGER.debug(f"FUSION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-            
-        # Case 2: high unstressed vowel + high unstressed vowel of the same timbre
-        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2) \
-            and last_phoneme_word_1 == first_phoneme_word_2:
-            # Case [i] + [i] = [i] or [u] + [u] = [u]
-            node_1.phonemes.pop()
-            _LOGGER.debug(f"FUSION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-
-        # Case 3: neutral vowel + neutral vowel (except if any of the vowels is the proposition "a")
-        elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2) \
-            and node_1.text != "a" and node_2.text != "a":
-            node_1.phonemes.pop()
-            _LOGGER.debug(f"FUSION CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        pass
             
 def elision_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
-    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
-        return
-    else:
+    if lang in ["ca", "ca-ce"]:
 
-        last_phoneme_word_1 = node_1.phonemes[-1]
-        first_phoneme_word_2 = node_2.phonemes[0]
+        if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+            return
+        else:
 
-        # Case 1: stressed vowel ['a], ['ɛ] or ['ɔ] + neutral vowel (except if any of the vowels is the proposition "a")
-        if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
-            and (phoneme_is_neutral_vowel(first_phoneme_word_2) and node_2.text != "a"):
-            node_2.phonemes.pop(0)
-            _LOGGER.debug(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+            last_phoneme_word_1 = node_1.phonemes[-1]
+            first_phoneme_word_2 = node_2.phonemes[0]
+
+            # Case 1: stressed vowel ['a], ['ɛ], ['e], ['o] or ['ɔ] + neutral vowel (except if any of the vowels is the proposition "a")
+            if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
+                and (phoneme_is_neutral_vowel(first_phoneme_word_2) and node_2.text != "a"):
+                node_2.phonemes.pop(0)
+                _LOGGER.debug(f"ELISION CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
             
+            # Case 2: neutral vowel + stressed vowel ['a], ['ɛ], ['e], ['o] or ['ɔ]
+            elif phoneme_is_neutral_vowel(last_phoneme_word_1) \
+                and (phoneme_is_stressed_vowel(first_phoneme_word_2) and not phoneme_is_high_vowel(first_phoneme_word_2)):
+                node_1.phonemes.pop()
+                _LOGGER.debug(f"ELISION CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+    else:
+        pass    
+
 def diphthong_if_needed(node_1: WordNode, node_2: WordNode, lang: str):
 
-    if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
-        return
-    else:
+    if lang in ["ca", "ca-ce"]:
 
-        last_phoneme_word_1 = node_1.phonemes[-1]
-        first_phoneme_word_2 = node_2.phonemes[0]
-        
-        # Case 1: stressed vowel + high unstressed vowel
-        if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
-            and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
-            if first_phoneme_word_2 == "i":
-                # Case [stressed vowel] + [i] = [stressed vowel + j], stressed vowel not 'i or 'u 
-                node_2.phonemes[0] = "j"
-                _LOGGER.debug(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-                
-            elif first_phoneme_word_2 == "u":
-                # Case [stressed vowel] + [u] = [stressed vowel + uw], stressed vowel not 'i or 'u 
-                node_2.phonemes[0] = "uw"
-                _LOGGER.debug(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+        if len(node_1.phonemes) == 0 or len(node_2.phonemes) == 0:
+            return
+        else:
 
-        # Case 2: high unstressed vowel + stressed vowel
-        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_stressed_vowel(first_phoneme_word_2):
-            if last_phoneme_word_1 == "i" and first_phoneme_word_2 not in ["'i"] and node_1.text in ["hi", "ho", "i"]:
-                # Case [i] + [stressed] = [y + stressed vowel], i only from "hi", "ho" or "i"  
-                node_1.phonemes[-1] = "y" 
-                _LOGGER.debug(f"DIPTHONG CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-                 
-            elif last_phoneme_word_1 == "u" and first_phoneme_word_2 not in ["'u"] and node_1.text in ["hi", "ho", "i"]:
-                # Case [u] + [stressed] = [u + stressed vowel], i only from "hi", "ho" or "i"  
-                pass
-        
-        # Case 3: unstressed vowel + high unstressed vowel
-        elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
-            if first_phoneme_word_2 == "i":
-                # Case [neutral vowel] + [i] = [neutral vowel + j]
-                node_2.phonemes[0] = "j"
-                _LOGGER.debug(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-                
-            elif first_phoneme_word_2 == "u":
-                # Case [neutral vowel] + [u] = [neutral vowel + uw]
-                node_2.phonemes[0] = "uw"
-                _LOGGER.debug(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
-                
-        # Case 4: unstressed vowel + high unstressed vowel
-        elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2):
-            pass
+            last_phoneme_word_1 = node_1.phonemes[-1]
+            first_phoneme_word_2 = node_2.phonemes[0]
             
+            # Case 1: stressed vowel + high unstressed vowel
+            if (phoneme_is_stressed_vowel(last_phoneme_word_1) and not phoneme_is_high_vowel(last_phoneme_word_1)) \
+                and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
+                if first_phoneme_word_2 == "i":
+                    # Case [stressed vowel] + [i] = [stressed vowel + j], stressed vowel not 'i or 'u 
+                    node_2.phonemes[0] = "j"
+                    _LOGGER.debug(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                    
+                elif first_phoneme_word_2 == "u":
+                    # Case [stressed vowel] + [u] = [stressed vowel + uw], stressed vowel not 'i or 'u 
+                    node_2.phonemes[0] = "uw"
+                    _LOGGER.debug(f"DIPTHONG CASE 1 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+
+            # Case 2: high unstressed vowel + stressed vowel
+            elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_stressed_vowel(first_phoneme_word_2):
+                if last_phoneme_word_1 == "i" and first_phoneme_word_2 not in ["'i"] and node_1.text in ["hi", "ho", "i"]:
+                    # Case [i] + [stressed] = [y + stressed vowel], i only from "hi", "ho" or "i"  
+                    node_1.phonemes[-1] = "y" 
+                    _LOGGER.debug(f"DIPTHONG CASE 2 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                    
+                elif last_phoneme_word_1 == "u" and first_phoneme_word_2 not in ["'u"] and node_1.text in ["hi", "ho", "i"]:
+                    # Case [u] + [stressed] = [u + stressed vowel], i only from "hi", "ho" or "i"  
+                    pass
+            
+            # Case 3: unstressed vowel + high unstressed vowel
+            elif phoneme_is_neutral_vowel(last_phoneme_word_1) and phoneme_is_high_unstressed_vowel(first_phoneme_word_2):
+                if first_phoneme_word_2 == "i":
+                    # Case [neutral vowel] + [i] = [neutral vowel + j]
+                    node_2.phonemes[0] = "j"
+                    _LOGGER.debug(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                    
+                elif first_phoneme_word_2 == "u":
+                    # Case [neutral vowel] + [u] = [neutral vowel + uw]
+                    node_2.phonemes[0] = "uw"
+                    _LOGGER.debug(f"DIPTHONG CASE 3 {node_1.text} {node_2.text}: {node_1.phonemes} {node_2.phonemes}")
+                    
+            # Case 4: unstressed vowel + high unstressed vowel
+            elif phoneme_is_high_unstressed_vowel(last_phoneme_word_1) and phoneme_is_neutral_vowel(first_phoneme_word_2):
+                pass
+    else:
+        pass   
+
 def ca_post_process_sentence(
     graph: GraphType, sent_node: SentenceNode, settings: TextProcessorSettings
 ):
     
+    # Create a list of relevant nodes
     nodes = []
     for dfs_node in nx.dfs_preorder_nodes(graph, sent_node.node):
         
@@ -2161,7 +2180,27 @@ def ca_post_process_sentence(
             nodes.append(typing.cast(PunctuationWordNode, node))
         
     lang = identify_lang(nodes)
-    
+
+    # HACK
+    # Training corpora includes an invalid sequence of phonemes: l ʎ l
+    # We fix that here, in the next iteration will be properly solved
+    phonemes_to_fix = "l ʎ l"
+    fixed_phonemes = "l l"
+    for node in nodes:
+
+        if node is None:
+            continue
+
+        if isinstance(node, WordNode):
+            if not (node.text and node.phonemes):
+                continue
+            phonemes_text = " ".join(node.phonemes)
+            if phonemes_to_fix in phonemes_text:
+                phonemes_text = phonemes_text.replace(phonemes_to_fix, fixed_phonemes)
+                node.phonemes = phonemes_text.split(" ")
+                _LOGGER.debug(f"FIX: phoneme sequence '{phonemes_to_fix}' fixed at {node.text}. Fixed transcription: {node.phonemes}")
+        
+    # Create a list of contiguous word nodes
     contiguous_word_nodes = []
     for node_1, node_2 in sliding_window(nodes, 2):
         
@@ -2194,7 +2233,7 @@ def get_ca_settings(lang_dir=None, **settings_args) -> TextProcessorSettings:
         lang = "ca"
 
     lookup_phonemes = settings_args["lookup_phonemes"]
-
+    
     settings_values = {
         "major_breaks": {".", "?", "!"},
         "minor_breaks": {",", ";", ":", "..."},
@@ -2290,5 +2329,3 @@ class DelayedSqlitePhonemizer:
 
         assert self.phonemizer is not None
         return self.phonemizer(word, role=role, do_transforms=do_transforms)
-
-
