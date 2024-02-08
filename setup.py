@@ -48,6 +48,7 @@ extras = {
 # Create language-specific extras
 for lang in [
     "ar",
+    "ca",
     "cs",
     "de",
     "es",

@@ -1,0 +1,44 @@
+# https://en.wikipedia.org/wiki/Catalan_phonology
+# Catalan phonemes
+
+p [p]ala
+b [b]ala
+t [t]ela
+d [d]onar
+k [k]ala
+ɡ [g]ala
+m [m]ala
+ɲ fa[ng]
+β aca[b]a
+ð ca[d]a
+ɣ ama[g]ar
+f [f]als
+v a[f]ganès
+s [s]ala
+z ca[s]a
+ʃ [x]oc
+ʒ mà[g]ic
+tʃ co[tx]e
+dʒ me[tg]e
+l [l]íquid
+ʎ [ll]amp
+r ca[rr]o
+ɾ ca[r]a
+w ve[u]en
+uw ca[u]re
+j ca[i]re
+y [i]a[i]a
+n [n]ena
+ŋ pi[n]güí
+ts po[ts]er
+dz do[tz]e
+
+# Vowels
+i r[i]c
+e c[e]c
+ɛ s[e]c
+a s[a]c
+ɔ f[o]c
+o s[ó]c
+u s[u]c
+ə [a]mor

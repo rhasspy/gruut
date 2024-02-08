@@ -16,6 +16,11 @@ import babel.numbers
 # alias -> full language name
 LANG_ALIASES = {
     "ar": "ar",
+    "ca": "ca-ce",
+    "ca-ce": "ca-ce",
+    "ca-ba": "ca-ba",
+    "ca-no": "ca-no",
+    "ca-va": "ca-va",
     "cs": "cs-cz",
     "de": "de-de",
     "en": "en-us",

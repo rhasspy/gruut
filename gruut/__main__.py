@@ -64,7 +64,6 @@ def main():
         args.model_prefix = "espeak"
 
     # -------------------------------------------------------------------------
-
     text_processor = TextProcessor(
         default_lang=args.language, model_prefix=args.model_prefix,
     )
@@ -132,7 +131,7 @@ def main():
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
                 writer.write(sentence_dict)
-
+        
     for text, text_data in input_text(lines):
         try:
             graph, root = text_processor(
@@ -166,8 +165,9 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
-
+ 
             output_sentences(sentences, writer, text_data)
+
         except Exception as e:
             _LOGGER.exception(text)
 
