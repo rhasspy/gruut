@@ -17,7 +17,28 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("حَوّامتي مُمْتِلئة", "ar"),
             [
                 ("حَوَّامَتُي", ["ħ", "a", "u", "aː", "m", "t", "iː"]),
-                ("مُمْتِلِئَة", ["m", "u", "m", "t", "i", "l", "i", "ʔ", "i"],),
+                (
+                    "مُمْتِلِئَة",
+                    ["m", "u", "m", "t", "i", "l", "i", "ʔ", "i"],
+                ),
+            ],
+        )
+
+    def test_ca(self):
+        """Catalan tests"""
+        self.assertEqual(
+            get_phonemes("El meu aerolliscador està ple d'anguiles.", "ca-ce"),
+            [
+                ("el", ["ə", "l"]),
+                ("meu", ["m", "'e", "uw"]),
+                (
+                    "aerolliscadór",
+                    ["ə", "ə", "ɾ", "u", "ʎ", "i", "s", "k", "ə", "ð", "'o"],
+                ),
+                ("està", ["s", "t", "'a"]),
+                ("plè", ["p", "l", "'ɛ"]),
+                ("danguíles", ["d", "ə", "ŋ", "g", "'i", "l", "ə", "s"]),
+                (".", ["‖"]),
             ],
         )
 
@@ -77,7 +98,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("My hovercraft is full of eels.", "en_US"),
             [
                 ("My", ["m", "ˈaɪ"]),
-                ("hovercraft", ["h", "ˈʌ", "v", "ɚ", "k", "ɹ", "ˌæ", "f", "t"],),
+                (
+                    "hovercraft",
+                    ["h", "ˈʌ", "v", "ɚ", "k", "ɹ", "ˌæ", "f", "t"],
+                ),
                 ("is", ["ˈɪ", "z"]),
                 ("full", ["f", "ˈʊ", "l"]),
                 ("of", ["ə", "v"]),
@@ -128,7 +152,10 @@ class PhonemizerTestCase(unittest.TestCase):
                     "هاورکرافت",
                     ["h", "ɒː", "v", "æ", "ɾ", "k", "æ", "ɾ", "ɒː", "f", "t", "e̞"],
                 ),
-                ("من", ["m", "æ", "n"],),
+                (
+                    "من",
+                    ["m", "æ", "n"],
+                ),
                 ("پر", ["p", "o", "ɾ"]),
                 ("مارماهى", ["m", "ɒː", "ɾ", "æ", "m", "ɒː", "h", "e̞", "l"]),
                 ("است", ["æ", "s", "t"]),
@@ -141,7 +168,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("Mon aéroglisseur est plein d'anguilles.", "fr_FR"),
             [
                 ("Mon", ["m", "ɔ̃", "n"]),
-                ("aéroglisseur", ["a", "e", "ʁ", "ɔ", "ɡ", "l", "i", "s", "œ", "ʁ"],),
+                (
+                    "aéroglisseur",
+                    ["a", "e", "ʁ", "ɔ", "ɡ", "l", "i", "s", "œ", "ʁ"],
+                ),
                 ("est", ["ɛ"]),
                 ("plein", ["p", "l", "ɛ̃"]),
                 ("d'anguilles", ["d", "ɑ̃", "ɡ", "i", "j"]),
@@ -155,7 +185,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("Il mio hovercraft è pieno di anguille.", "it_IT"),
             [
                 ("Il", ["i", "l"]),
-                ("mio", ["ˈm", "i", "o"],),
+                (
+                    "mio",
+                    ["ˈm", "i", "o"],
+                ),
                 ("hovercraft", ["o", "v", "e", "r", "k", "r", "a", "f", "t"]),
                 ("è", ["ɛ"]),
                 ("pieno", ["ˈp", "j", "ɛ", "n", "o"]),
@@ -173,7 +206,10 @@ class PhonemizerTestCase(unittest.TestCase):
             ),
             [
                 ("An", ["ɑ", "n"]),
-                ("der", ["d", "ɐ"],),
+                (
+                    "der",
+                    ["d", "ɐ"],
+                ),
                 ("Zäit", ["ʦ", "æːɪ", "t"]),
                 ("hunn", ["h", "u", "n"]),
                 ("sech", ["z", "ə", "ɕ"]),
@@ -209,7 +245,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("O meu hovercraft está cheio de enguias.", "pt"),
             [
                 ("O", ["u"]),
-                ("meu", ["m", "ew"],),
+                (
+                    "meu",
+                    ["m", "ew"],
+                ),
                 ("hovercraft", ["o", "v", "e", "ɹ", "k", "ɾ", "ɐ", "f", "t", "ʃ"]),
                 ("está", ["e", "s", "t", "ɐ"]),
                 ("cheio", ["ʃ", "ej", "u"]),
@@ -225,7 +264,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("Моё судно на воздушной подушке полно угрей.", "ru_RU"),
             [
                 ("Моё", ["m", "o", "j", "oː"]),
-                ("судно", ["s", "uː", "d", "n", "o"],),
+                (
+                    "судно",
+                    ["s", "uː", "d", "n", "o"],
+                ),
                 ("на", ["n", "aː"]),
                 ("воздушной", ["v", "o", "z", "d", "uː", "ʂ", "n", "o", "j"]),
                 ("подушке", ["p", "o", "d", "uː", "ʂ", "kʲ", "e"]),
@@ -241,7 +283,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("Min svävare är full med ål.", "sv_SE"),
             [
                 ("Min", ["m", "iː", "n"]),
-                ("svävare", ["²s", "v", "'ɛː", "v", "a", "r", "ɛ"],),
+                (
+                    "svävare",
+                    ["²s", "v", "'ɛː", "v", "a", "r", "ɛ"],
+                ),
                 ("är", ["ɛː", "r"]),
                 ("full", ["f", "ɵ", "l"]),
                 ("med", ["m", "eː", "d"]),
@@ -256,7 +301,10 @@ class PhonemizerTestCase(unittest.TestCase):
             get_phonemes("Gari langu linaloangama limejaa na mikunga.", "sw"),
             [
                 ("Gari", ["ɠ", "ɑ", "ɾ", "i"]),
-                ("langu", ["l", "ɑ", "ᵑg", "u"],),
+                (
+                    "langu",
+                    ["l", "ɑ", "ᵑg", "u"],
+                ),
                 (
                     "linaloangama",
                     ["l", "i", "n", "ɑ", "l", "ɔ", "ɑ", "ᵑg", "ɑ", "m", "ɑ"],
