@@ -381,7 +381,8 @@ class SSMLTestCase(unittest.TestCase):
         ]
 
         self.assertEqual(
-            results, [(0, 0, ["t", "ə", "m", "e", "i̥", "ɾ", "o", "u̥"])],
+            results,
+            [(0, 0, ["t", "ə", "m", "e", "i̥", "ɾ", "o", "u̥"])],
         )
 
 

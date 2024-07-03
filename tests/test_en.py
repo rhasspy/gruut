@@ -80,7 +80,8 @@ class EnglishTestCase(unittest.TestCase):
         sentence = next(sentences(text, lang="en_US"))
 
         self.assertEqual(
-            ["A", "B", "C", "abc", "A", "B", "C"], [word.text for word in sentence],
+            ["A", "B", "C", "abc", "A", "B", "C"],
+            [word.text for word in sentence],
         )
 
     def test_dates(self):

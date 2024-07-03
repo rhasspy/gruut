@@ -23,7 +23,9 @@ def main():
     )
     parser.add_argument("--database", required=True, help="SQLite database to write")
     parser.add_argument(
-        "--role", action="store_true", help="Lexicon includes word roles (2nd column)",
+        "--role",
+        action="store_true",
+        help="Lexicon includes word roles (2nd column)",
     )
     parser.add_argument(
         "--empty-role",

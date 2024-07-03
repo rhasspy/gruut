@@ -65,7 +65,8 @@ def main():
 
     # -------------------------------------------------------------------------
     text_processor = TextProcessor(
-        default_lang=args.language, model_prefix=args.model_prefix,
+        default_lang=args.language,
+        model_prefix=args.model_prefix,
     )
 
     if args.debug:
@@ -131,7 +132,7 @@ def main():
             for sentence in sentences:
                 sentence_dict = dataclasses.asdict(sentence)
                 writer.write(sentence_dict)
-        
+
     for text, text_data in input_text(lines):
         try:
             graph, root = text_processor(
@@ -165,7 +166,7 @@ def main():
                     punctuations=(not args.no_punctuation),
                 )
             )
- 
+
             output_sentences(sentences, writer, text_data)
 
         except Exception as e:
@@ -199,7 +200,9 @@ def get_args() -> argparse.Namespace:
 
     parser.add_argument("text", nargs="*", help="Text to tokenize (default: stdin)")
     parser.add_argument(
-        "--ssml", action="store_true", help="Input text is SSML",
+        "--ssml",
+        action="store_true",
+        help="Input text is SSML",
     )
     parser.add_argument(
         "--stdin-format",
@@ -230,13 +233,19 @@ def get_args() -> argparse.Namespace:
         help="Disable time replacement (4:01pm -> four oh one P M)",
     )
     parser.add_argument(
-        "--no-pos", action="store_true", help="Disable part of speech tagger",
+        "--no-pos",
+        action="store_true",
+        help="Disable part of speech tagger",
     )
     parser.add_argument(
-        "--no-lexicon", action="store_true", help="Disable phoneme lexicon database",
+        "--no-lexicon",
+        action="store_true",
+        help="Disable phoneme lexicon database",
     )
     parser.add_argument(
-        "--no-g2p", action="store_true", help="Disable grapheme to phoneme guesser",
+        "--no-g2p",
+        action="store_true",
+        help="Disable grapheme to phoneme guesser",
     )
     parser.add_argument(
         "--no-punctuation",
@@ -259,7 +268,9 @@ def get_args() -> argparse.Namespace:
         help="Disable post-processing of sentences (e.g., liasons)",
     )
     parser.add_argument(
-        "--no-fail", action="store_true", help="Skip lines that result in errors",
+        "--no-fail",
+        action="store_true",
+        help="Skip lines that result in errors",
     )
 
     # Miscellaneous

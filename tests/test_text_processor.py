@@ -89,7 +89,9 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_punctuation_with_inner_break(self):
         """Test break inside of punctuation"""
         processor = TextProcessor(
-            begin_punctuations={'"'}, end_punctuations={'"'}, major_breaks={"."},
+            begin_punctuations={'"'},
+            end_punctuations={'"'},
+            major_breaks={"."},
         )
         graph, root = processor('Test "one." Test two.')
         words = list(processor.words(graph, root, **WORDS_KWARGS))
@@ -879,10 +881,30 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="World", text_with_ws="World ",),
-                Word(idx=1, sent_idx=0, text="Wide", text_with_ws="Wide ",),
-                Word(idx=2, sent_idx=0, text="Web", text_with_ws="Web ",),
-                Word(idx=3, sent_idx=0, text="Consortium", text_with_ws="Consortium",),
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    text="World",
+                    text_with_ws="World ",
+                ),
+                Word(
+                    idx=1,
+                    sent_idx=0,
+                    text="Wide",
+                    text_with_ws="Wide ",
+                ),
+                Word(
+                    idx=2,
+                    sent_idx=0,
+                    text="Web",
+                    text_with_ws="Web ",
+                ),
+                Word(
+                    idx=3,
+                    sent_idx=0,
+                    text="Consortium",
+                    text_with_ws="Consortium",
+                ),
             ],
         )
 
@@ -928,7 +950,12 @@ class TextProcessorTestCase(unittest.TestCase):
                             pause_before_ms=(3 * 1000),
                             pause_after_ms=(4 * 1000),
                         ),
-                        Word(idx=1, sent_idx=0, text="here", text_with_ws="here",),
+                        Word(
+                            idx=1,
+                            sent_idx=0,
+                            text="here",
+                            text_with_ws="here",
+                        ),
                     ],
                 ),
             ],
@@ -976,7 +1003,12 @@ class TextProcessorTestCase(unittest.TestCase):
                             marks_before=["c"],
                             marks_after=["d"],
                         ),
-                        Word(idx=1, sent_idx=0, text="here", text_with_ws="here",),
+                        Word(
+                            idx=1,
+                            sent_idx=0,
+                            text="here",
+                            text_with_ws="here",
+                        ),
                     ],
                 ),
             ],
@@ -985,15 +1017,28 @@ class TextProcessorTestCase(unittest.TestCase):
     def test_missing_speak(self):
         """Test SSML with missing <speak> tag"""
         processor = TextProcessor()
-        graph, root = processor("<s>hello</s><s>world</s>", ssml=True,)
+        graph, root = processor(
+            "<s>hello</s><s>world</s>",
+            ssml=True,
+        )
         words = list(processor.words(graph, root, **WORDS_KWARGS))
 
         # <speak> is automatically added when XML fails to parse
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, text="hello", text_with_ws="hello",),
-                Word(idx=0, sent_idx=1, text="world", text_with_ws="world",),
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    text="hello",
+                    text_with_ws="hello",
+                ),
+                Word(
+                    idx=0,
+                    sent_idx=1,
+                    text="world",
+                    text_with_ws="world",
+                ),
             ],
         )
 
@@ -1001,15 +1046,28 @@ class TextProcessorTestCase(unittest.TestCase):
         """Test SSML with adjacent <voice> tags"""
         processor = TextProcessor()
         graph, root = processor(
-            '<voice name="a">hello.</voice><voice name="b">world.</voice>', ssml=True,
+            '<voice name="a">hello.</voice><voice name="b">world.</voice>',
+            ssml=True,
         )
         words = list(processor.words(graph, root, major_breaks=False, **WORDS_KWARGS))
 
         self.assertEqual(
             words,
             [
-                Word(idx=0, sent_idx=0, voice="a", text="hello", text_with_ws="hello",),
-                Word(idx=0, sent_idx=1, voice="b", text="world", text_with_ws="world",),
+                Word(
+                    idx=0,
+                    sent_idx=0,
+                    voice="a",
+                    text="hello",
+                    text_with_ws="hello",
+                ),
+                Word(
+                    idx=0,
+                    sent_idx=1,
+                    voice="b",
+                    text="world",
+                    text_with_ws="world",
+                ),
             ],
         )
 
@@ -1024,11 +1082,31 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, text="A", text_with_ws="A ",),
-                Word(idx=1, text="B", text_with_ws="B ",),
-                Word(idx=2, text="C", text_with_ws="C ",),
-                Word(idx=3, text="D", text_with_ws="D ",),
-                Word(idx=4, text="ten", text_with_ws="ten",),
+                Word(
+                    idx=0,
+                    text="A",
+                    text_with_ws="A ",
+                ),
+                Word(
+                    idx=1,
+                    text="B",
+                    text_with_ws="B ",
+                ),
+                Word(
+                    idx=2,
+                    text="C",
+                    text_with_ws="C ",
+                ),
+                Word(
+                    idx=3,
+                    text="D",
+                    text_with_ws="D ",
+                ),
+                Word(
+                    idx=4,
+                    text="ten",
+                    text_with_ws="ten",
+                ),
             ],
         )
 
@@ -1042,8 +1120,16 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, text="nan", text_with_ws="nan ",),
-                Word(idx=1, text="inf", text_with_ws="inf",),
+                Word(
+                    idx=0,
+                    text="nan",
+                    text_with_ws="nan ",
+                ),
+                Word(
+                    idx=1,
+                    text="inf",
+                    text_with_ws="inf",
+                ),
             ],
         )
 
@@ -1057,12 +1143,36 @@ class TextProcessorTestCase(unittest.TestCase):
         self.assertEqual(
             words,
             [
-                Word(idx=0, text="R", text_with_ws="R ",),
-                Word(idx=1, text="O", text_with_ws="O ",),
-                Word(idx=2, text="O", text_with_ws="O ",),
-                Word(idx=3, text="F", text_with_ws="F ",),
-                Word(idx=4, text="U", text_with_ws="U ",),
-                Word(idx=5, text="S", text_with_ws="S",),
+                Word(
+                    idx=0,
+                    text="R",
+                    text_with_ws="R ",
+                ),
+                Word(
+                    idx=1,
+                    text="O",
+                    text_with_ws="O ",
+                ),
+                Word(
+                    idx=2,
+                    text="O",
+                    text_with_ws="O ",
+                ),
+                Word(
+                    idx=3,
+                    text="F",
+                    text_with_ws="F ",
+                ),
+                Word(
+                    idx=4,
+                    text="U",
+                    text_with_ws="U ",
+                ),
+                Word(
+                    idx=5,
+                    text="S",
+                    text_with_ws="S",
+                ),
             ],
         )
 
@@ -1083,7 +1193,14 @@ class TextProcessorTestCase(unittest.TestCase):
 
         # Word is *not* interpreted as initialism
         self.assertEqual(
-            words, [Word(idx=0, text="ROOFUS", text_with_ws="ROOFUS",)],
+            words,
+            [
+                Word(
+                    idx=0,
+                    text="ROOFUS",
+                    text_with_ws="ROOFUS",
+                )
+            ],
         )
 
 

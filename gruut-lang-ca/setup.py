@@ -44,8 +44,8 @@ setuptools.setup(
             "VERSION",
             "lexicon.db",
             "g2p/model.crf",
-            #"espeak/lexicon.db",
-            #"espeak/g2p/model.crf",
+            # "espeak/lexicon.db",
+            # "espeak/g2p/model.crf",
         ]
         + extra_files
     },

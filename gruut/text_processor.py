@@ -1894,7 +1894,11 @@ class TextProcessor:
 
         return True
 
-    def _transform_currency(self, graph: GraphType, node: Node,) -> bool:
+    def _transform_currency(
+        self,
+        graph: GraphType,
+        node: Node,
+    ) -> bool:
         if not isinstance(node, WordNode):
             return False
 
@@ -2335,7 +2339,9 @@ class TextProcessor:
                 graph.add_edge(time_word.node, new_node.node)
 
     def _verbalize_currency(
-        self, graph: GraphType, node: Node,
+        self,
+        graph: GraphType,
+        node: Node,
     ):
         """Split currency amounts into words"""
         if not isinstance(node, WordNode):

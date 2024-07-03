@@ -531,7 +531,10 @@ class PostProcessSentence:
     """Post-process each sentence node after tokenization/phonemization"""
 
     def __call__(
-        self, graph: GraphType, sentence_node: SentenceNode, settings: typing.Any,
+        self,
+        graph: GraphType,
+        sentence_node: SentenceNode,
+        settings: typing.Any,
     ):
         pass
 

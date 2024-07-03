@@ -28,21 +28,24 @@ class GoldenRulesTestCase(unittest.TestCase):
     def test_rule_3(self):
         """Exclamation point to end sentence"""
         self.assertEqual(
-            _get_sentences("There it is! I found it."), ["There it is!", "I found it."],
+            _get_sentences("There it is! I found it."),
+            ["There it is!", "I found it."],
         )
 
     def test_rule_4(self):
         """One letter upper case abbreviations"""
         # NOTE: gruut removes the "." from E
         self.assertEqual(
-            _get_sentences("My name is Jonas E. Smith."), ["My name is Jonas E Smith."],
+            _get_sentences("My name is Jonas E. Smith."),
+            ["My name is Jonas E Smith."],
         )
 
     def test_rule_5(self):
         """One letter lower case abbreviations"""
         # NOTE: gruut removes the "." from p
         self.assertEqual(
-            _get_sentences("Please turn to p. 55."), ["Please turn to p 55."],
+            _get_sentences("Please turn to p. 55."),
+            ["Please turn to p 55."],
         )
 
     def test_rule_6(self):
@@ -94,7 +97,8 @@ class GoldenRulesTestCase(unittest.TestCase):
         """Possesive two letter abbreviations"""
         # NOTE: gruut expands abbreviations
         self.assertEqual(
-            _get_sentences("That is JFK Jr.'s book."), ["That is J F K Junior's book."],
+            _get_sentences("That is JFK Jr.'s book."),
+            ["That is J F K Junior's book."],
         )
 
     def test_rule_13(self):
@@ -170,19 +174,22 @@ class GoldenRulesTestCase(unittest.TestCase):
     def test_rule_28(self):
         """Double punctuation (question mark)"""
         self.assertEqual(
-            _get_sentences("Hello?? Who is there?"), ["Hello??", "Who is there?"],
+            _get_sentences("Hello?? Who is there?"),
+            ["Hello??", "Who is there?"],
         )
 
     def test_rule_29(self):
         """Double punctuation (exclamation point / question mark)"""
         self.assertEqual(
-            _get_sentences("Hello!? Is that you?"), ["Hello!?", "Is that you?"],
+            _get_sentences("Hello!? Is that you?"),
+            ["Hello!?", "Is that you?"],
         )
 
     def test_rule_30(self):
         """Double punctuation (question mark / exclamation point)"""
         self.assertEqual(
-            _get_sentences("Hello?! Is that you?"), ["Hello?!", "Is that you?"],
+            _get_sentences("Hello?! Is that you?"),
+            ["Hello?!", "Is that you?"],
         )
 
     # 31) List (period followed by parens and no period to end item)
