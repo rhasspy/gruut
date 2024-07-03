@@ -772,8 +772,9 @@ class TextProcessor:
                         # End of sentence
                         last_sentence = None
                     elif end_tag == "p":
-                        # End of paragraph
+                        # End of paragraph and sentence
                         last_paragraph = None
+                        last_sentence = None
                     elif end_tag == "speak":
                         # End of speak
                         last_speak = root
