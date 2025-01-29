@@ -308,6 +308,7 @@ class WordNode(Node):
     text_with_ws: str = ""
     interpret_as: typing.Union[str, InterpretAs] = ""
     format: typing.Union[str, InterpretAsFormat] = ""
+    rate: str = ""
 
     number: typing.Optional[Decimal] = None
     date: typing.Optional[datetime] = None
@@ -403,6 +404,9 @@ class Word:
     voice: str = ""
     """Voice (from SSML)"""
 
+    rate: str = ""
+    """Prosody rate from SSML"""
+
     pos: typing.Optional[str] = None
     """Part of speech (None if not set)"""
 
@@ -470,6 +474,9 @@ class Sentence:
 
     voice: str = ""
     """Voice (from SSML)"""
+
+    rate: str = ""
+    """Prosody rate (from SSML)"""
 
     words: typing.List[Word] = field(default_factory=list)
     """Words in the sentence"""

@@ -174,6 +174,7 @@ class TextProcessor:
                             pos=word_node.pos if pos else None,
                             lang=get_lang(node.lang),
                             voice=node.voice,
+                            rate=node.rate,
                             pause_before_ms=word_pause_before_ms,
                             marks_before=(
                                 word_marks_before if word_marks_before else None
@@ -368,6 +369,27 @@ class TextProcessor:
                 w.text for w in sentence.words if w.is_spoken
             )
 
+            # Normalize rate
+            sent_rate = sentence.rate
+
+            # Get rate used across all words
+            for word in sentence.words:
+                if word.rate:
+                    if sent_rate and (sent_rate != word.rate):
+                        # Multiple rates
+                        sent_rate = ""
+                        break
+
+                    sent_rate = word.rate
+
+            if sent_rate:
+                sentence.rate = sent_rate
+
+                # Set rate on all words
+                for word in sentence.words:
+                    word.rate = sent_rate
+
+
             # Normalize voice
             sent_voice = sentence.voice
 
@@ -515,6 +537,9 @@ class TextProcessor:
         # [voice]
         voice_stack: typing.List[str] = []
 
+        # [rate]
+        prosody_stack: typing.List[str] = []
+
         # [(interpret_as, format)]
         say_as_stack: typing.List[typing.Tuple[str, str]] = []
 
@@ -556,6 +581,9 @@ class TextProcessor:
             if target_class is WordNode:
                 if say_as_stack:
                     scope["interpret_as"], scope["format"] = say_as_stack[-1]
+
+                if prosody_stack:
+                    scope["rate"] = prosody_stack[-1]
 
                 if word_role is not None:
                     scope["role"] = word_role
@@ -707,6 +735,9 @@ class TextProcessor:
                 elif end_tag == "say-as":
                     if say_as_stack:
                         say_as_stack.pop()
+                elif end_tag == "prosody":
+                    if prosody_stack:
+                        prosody_stack.pop()
                 elif end_tag == "lookup":
                     if lookup_stack:
                         lookup_stack.pop()
@@ -920,6 +951,9 @@ class TextProcessor:
                             attrib_no_namespace(elem, "format", ""),
                         )
                     )
+                elif elem_tag == "prosody":
+                    prosody_rate = attrib_no_namespace(elem, "rate", "1")
+                    prosody_stack.append(prosody_rate)
                 elif elem_tag == "sub":
                     # Sub
                     last_alias = attrib_no_namespace(elem, "alias", "")
@@ -2391,8 +2425,9 @@ class TextProcessor:
 
         # Post-process currency words
         if num_has_frac:
-            # Discard num2words separator
-            num_str = num_str.replace("|", "")
+            # Replace num2words separator with and
+            num_str = num_str.replace("|", " and")
+            num_str = num_str.replace(" and ", " ", num_str.count(" and ") - 1)  # Only the last "and" is retained
         else:
             # Remove 'zero cents' part
             num_str = num_str.split("|", maxsplit=1)[0]
